@@ -1,10 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, OAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDfuTaN4yugRx25mEaAPvyrF1_8lk8dOSA",
-  authDomain: "fin-nine-flax.vercel.app",
+  authDomain: "finance-826f6.firebaseapp.com",
   projectId: "finance-826f6",
   storageBucket: "finance-826f6.firebasestorage.app",
   messagingSenderId: "1050683301564",
@@ -14,8 +14,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
 export const appleProvider = new OAuthProvider("apple.com");

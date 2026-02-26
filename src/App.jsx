@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { auth, db, googleProvider, appleProvider } from "./firebase.js";
 import {
-  signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged,
+  signInWithPopup, signOut, onAuthStateChanged,
   createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile
 } from "firebase/auth";
 import { collection, doc, addDoc, deleteDoc, updateDoc, getDocs, onSnapshot, setDoc, getDoc } from "firebase/firestore";
@@ -1801,10 +1801,6 @@ export default function App(){
   const tRef=useRef();
 
 
-  useEffect(()=>{
-    // Handle Google redirect result on mobile
-    getRedirectResult(auth).catch(e=>console.error("Redirect error:",e));
-  },[]);
   useEffect(()=>{ return onAuthStateChanged(auth,u=>{setUser(u);setAuthLoading(false);}); },[]);
 
   useEffect(()=>{
@@ -1842,21 +1838,8 @@ export default function App(){
     showT("Recorrente removido.","error");
   }
 
-  const isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  async function handleGoogle(){
-    setLoginLoading("google");setLoginError("");
-    try{
-      if(isMobile){await signInWithRedirect(auth,googleProvider);}
-      else{await signInWithPopup(auth,googleProvider);}
-    }catch(e){setLoginError("Erro ao entrar com Google.");setLoginLoading("");}
-  }
-  async function handleApple(){
-    setLoginLoading("apple");setLoginError("");
-    try{
-      if(isMobile){await signInWithRedirect(auth,appleProvider);}
-      else{await signInWithPopup(auth,appleProvider);}
-    }catch(e){setLoginError("Erro ao entrar com Apple. Verifique se está configurado no Firebase.");setLoginLoading("");}
-  }
+  async function handleGoogle(){setLoginLoading("google");setLoginError("");try{await signInWithPopup(auth,googleProvider);}catch(e){setLoginError("Erro ao entrar com Google.");}setLoginLoading("");}
+  async function handleApple(){setLoginLoading("apple");setLoginError("");try{await signInWithPopup(auth,appleProvider);}catch(e){setLoginError("Erro ao entrar com Apple. Verifique se está configurado no Firebase.");}setLoginLoading("");}
   async function handleEmail(email,senha,nome){
     setLoginLoading("email");setLoginError("");
     try{
