@@ -234,9 +234,9 @@ const NH=62,HH=52;
 const getCSS=(theme)=>`
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Figtree:wght@400;500;600&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html{height:100%;height:-webkit-fill-available;overflow:hidden;position:fixed;width:100%;max-width:100vw}
-  body{background:${theme==="light"?LIGHT.bg:DARK.bg};color:${theme==="light"?LIGHT.text:DARK.text};font-family:'Figtree',sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;height:100%;height:-webkit-fill-available;overflow:hidden;position:fixed;width:100%;max-width:100vw;overscroll-behavior:none;transition:background .2s,color .2s}
-  #root{height:100%;height:-webkit-fill-available;overflow:hidden;position:fixed;width:100%;max-width:100vw;display:flex;flex-direction:column}
+  html{height:100%;overflow:hidden;width:100%;max-width:100vw}
+  body{background:${theme==="light"?LIGHT.bg:DARK.bg};color:${theme==="light"?LIGHT.text:DARK.text};font-family:'Figtree',sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden;width:100%;max-width:100vw;overscroll-behavior:none;transition:background .2s,color .2s;margin:0;padding:0}
+  #root{height:100%;height:100dvh;overflow:hidden;width:100%;max-width:100vw;display:flex;flex-direction:column}
   input,select,button,textarea{font-family:inherit;-webkit-appearance:none;appearance:none}
   input[type=date]::-webkit-calendar-picker-indicator{filter:${theme==="light"?"invert(.3)":"invert(.55)"}}
   input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
@@ -251,7 +251,8 @@ const getCSS=(theme)=>`
   @keyframes slideInLeft{from{transform:translateX(-100%)}to{transform:translateX(0)}}
   .press:active{opacity:.7;transform:scale(.97)}
   @supports(padding:max(0px)){
-    .safe-bottom{padding-bottom:max(0px,env(safe-area-inset-bottom))}
+    .safe-bottom{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .nav-bar{position:fixed;bottom:0;left:0;right:0;z-index:200;background:${theme==="light"?LIGHT.card:DARK.card};border-top:1px solid ${theme==="light"?LIGHT.border:DARK.border};display:flex;min-height:${NH}px;padding-bottom:max(8px,env(safe-area-inset-bottom));box-sizing:border-box}
     .safe-top{padding-top:max(0px,env(safe-area-inset-top))}
   }
   .inp{width:100%;padding:12px 14px;background:${theme==="light"?LIGHT.card2:DARK.card2};border:1px solid ${theme==="light"?LIGHT.border2:DARK.border2};border-radius:12px;color:${theme==="light"?LIGHT.text:DARK.text};font-size:15px;outline:none;transition:background .2s,border .2s,color .2s}
@@ -295,7 +296,7 @@ function Nav({view,setView}){
     {id:"chat",icon:"✦",l:"IA"},
   ];
   return(
-    <div className="safe-bottom" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,background:G.card,borderTop:`1px solid ${G.border}`,display:"flex",height:NH}}>
+    <div className="nav-bar">
       {items.map(it=>(
         <button key={it.id} onClick={()=>setView(it.id)} className="press" style={{flex:1,padding:"8px 0",background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:view===it.id?G.accent:G.muted,position:"relative"}}>
           {view===it.id&&<div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:2,borderRadius:"0 0 2px 2px",background:G.accent}}/>}
@@ -401,7 +402,7 @@ function Head({view,onRec,onDep,user,onDrawer}){
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
   const showAdd=["dashboard","receitas","despesas"].includes(view);
   return(
-    <div style={{position:"fixed",top:0,left:0,right:0,zIndex:300,height:HH,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px"}}>
+    <div className="safe-top" style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",height:"auto",minHeight:HH}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <button onClick={onDrawer} className="press" style={{width:34,height:34,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:0,flexShrink:0}}>
           {[0,1,2].map(i=><div key={i} style={{width:16,height:2,borderRadius:1,background:G.text}}/>)}
@@ -2086,10 +2087,13 @@ function FamiliaView({uid,lancs,user}){
   const [lancsCompartilhados,setLancsCompartilhados]=useState([]);
   const [divisoes,setDivisoes]=useState([]);
   const [divisoesComp,setDivisoesComp]=useState([]);
+  const [contatos,setContatos]=useState([]);
   const [sheetLanc,setSheetLanc]=useState(false);
   const [sheetDiv,setSheetDiv]=useState(false);
+  const [sheetContato,setSheetContato]=useState(false);
+  const [formContato,setFormContato]=useState({nome:""});
   const [formLanc,setFormLanc]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",tipo:"Despesa",escopo:"pessoal"});
-  const [formDiv,setFormDiv]=useState({desc:"",valor:"",pessoas:["",""],data:today()});
+  const [formDiv,setFormDiv]=useState({desc:"",valor:"",selecionados:[],data:today()});
 
   // Ouvir conexao do usuario
   useEffect(()=>{
@@ -2097,6 +2101,15 @@ function FamiliaView({uid,lancs,user}){
     const unsub=onSnapshot(doc(db,"users",uid,"config","conexao"),snap=>{
       if(snap.exists())setConexao(snap.data());
       else setConexao(null);
+    });
+    return()=>unsub();
+  },[uid]);
+
+  // Ouvir contatos
+  useEffect(()=>{
+    if(!uid)return;
+    const unsub=onSnapshot(collection(db,"users",uid,"contatos"),snap=>{
+      setContatos(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
     return()=>unsub();
   },[uid]);
@@ -2147,27 +2160,68 @@ function FamiliaView({uid,lancs,user}){
     setErroConexao("");
     const cod=codInput.trim().toUpperCase();
     if(!cod||cod.length<6){setErroConexao("Codigo invalido");return;}
-    const convSnap=await getDoc(doc(db,"convites",cod));
-    if(!convSnap.exists()){setErroConexao("Codigo nao encontrado");return;}
-    const conv=convSnap.data();
-    if(conv.criadoPor===uid){setErroConexao("Este e o seu proprio codigo");return;}
-    if(conv.status!=="aguardando"){setErroConexao("Codigo ja utilizado");return;}
-    const casalId=conv.casalId;
-    // Atualiza convite
-    await updateDoc(doc(db,"convites",cod),{status:"conectado",parceiroUid:uid});
-    // Conecta os dois
-    await setDoc(doc(db,"users",uid,"config","conexao"),{
-      casalId,status:"conectado",meuUid:uid,parceiroUid:conv.criadoPor
-    });
-    await updateDoc(doc(db,"users",conv.criadoPor,"config","conexao"),{
-      status:"conectado",parceiroUid:uid
-    });
-    setCodInput("");
+    try{
+      const convSnap=await getDoc(doc(db,"convites",cod));
+      if(!convSnap.exists()){setErroConexao("Codigo nao encontrado. Verifique as regras do Firestore.");return;}
+      const conv=convSnap.data();
+      if(conv.criadoPor===uid){setErroConexao("Este e o seu proprio codigo");return;}
+      if(conv.status!=="aguardando"){setErroConexao("Codigo ja utilizado");return;}
+      const casalId=conv.casalId;
+      await updateDoc(doc(db,"convites",cod),{status:"conectado",parceiroUid:uid});
+      await setDoc(doc(db,"users",uid,"config","conexao"),{
+        casalId,status:"conectado",meuUid:uid,parceiroUid:conv.criadoPor
+      });
+      await updateDoc(doc(db,"users",conv.criadoPor,"config","conexao"),{
+        status:"conectado",parceiroUid:uid
+      });
+      // Salva parceiro como contato automaticamente
+      try{
+        const parceiroSnap=await getDoc(doc(db,"users",conv.criadoPor,"config","conexao"));
+        // Tenta pegar nome do parceiro de seu perfil
+        const perfilSnap=await getDoc(doc(db,"users",conv.criadoPor,"carreira","perfil"));
+        const nomeParc=perfilSnap.exists()?perfilSnap.data().nome||"Parceiro":"Parceiro";
+        await setDoc(doc(db,"users",uid,"contatos",conv.criadoPor),{
+          nome:nomeParc,uid:conv.criadoPor,vinculado:true,criadoEm:today()
+        });
+        // Salva voce como contato do parceiro
+        const meuPerfil=await getDoc(doc(db,"users",uid,"carreira","perfil"));
+        const meuNome=meuPerfil.exists()?meuPerfil.data().nome||"Parceiro":"Parceiro";
+        await setDoc(doc(db,"users",conv.criadoPor,"contatos",uid),{
+          nome:meuNome,uid,vinculado:true,criadoEm:today()
+        });
+      }catch(_){}
+      setCodInput("");
+    }catch(e){
+      if(e.code==="permission-denied")setErroConexao("Erro de permissao — adicione as regras no Firestore Console (aba Rules)");
+      else setErroConexao("Erro: "+e.message);
+    }
   }
 
   async function desconectar(){
     await deleteDoc(doc(db,"users",uid,"config","conexao"));
     setConexao(null);
+  }
+
+  async function salvarContato(){
+    if(!formContato.nome.trim())return;
+    await addDoc(collection(db,"users",uid,"contatos"),{
+      nome:formContato.nome.trim(),vinculado:false,criadoEm:today()
+    });
+    setSheetContato(false);
+    setFormContato({nome:""});
+  }
+
+  async function deletarContato(id){
+    await deleteDoc(doc(db,"users",uid,"contatos",id));
+  }
+
+  function toggleSelecionado(nome){
+    setFormDiv(f=>{
+      const sel=f.selecionados.includes(nome)
+        ?f.selecionados.filter(n=>n!==nome)
+        :[...f.selecionados,nome];
+      return {...f,selecionados:sel};
+    });
   }
 
   // Salvar lancamento casal
@@ -2189,7 +2243,7 @@ function FamiliaView({uid,lancs,user}){
   // Salvar divisao
   async function salvarDiv(){
     const v=parseFloat(formDiv.valor);
-    const pessoas=formDiv.pessoas.filter(p=>p.trim());
+    const pessoas=formDiv.selecionados.length>=2?formDiv.selecionados:[];
     if(!formDiv.desc||!v||pessoas.length<2)return;
     const valorPorPessoa=v/pessoas.length;
     const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
@@ -2198,7 +2252,7 @@ function FamiliaView({uid,lancs,user}){
       :collection(db,"users",uid,"divisoes");
     await addDoc(col,{desc:formDiv.desc,total:v,data:formDiv.data,partes,criadoEm:today()});
     setSheetDiv(false);
-    setFormDiv({desc:"",valor:"",pessoas:["",""],data:today()});
+    setFormDiv({desc:"",valor:"",selecionados:[],data:today()});
   }
 
   async function marcarPago(divId,parteIdx){
@@ -2243,7 +2297,7 @@ function FamiliaView({uid,lancs,user}){
     <div style={{display:"flex",gap:8,background:G.card2,borderRadius:14,padding:4}}>
       <TabBtn id="casal" icon="👫" label="Casal"/>
       <TabBtn id="divisoes" icon="÷" label="Divisoes"/>
-      <TabBtn id="conexao" icon="🔗" label="Conexao"/>
+      <TabBtn id="conexao" icon="👥" label="Contatos"/>
     </div>
 
     {/* ── TAB CASAL ── */}
@@ -2398,24 +2452,37 @@ function FamiliaView({uid,lancs,user}){
             <div><Lbl>Data</Lbl><input type="date" value={formDiv.data} onChange={e=>setFormDiv(f=>({...f,data:e.target.value}))} className="inp"/></div>
           </div>
           <div>
-            <Lbl>Participantes</Lbl>
-            {formDiv.pessoas.map((p,i)=>(
-              <div key={i} style={{display:"flex",gap:8,marginBottom:8}}>
-                <input value={p} onChange={e=>{const ps=[...formDiv.pessoas];ps[i]=e.target.value;setFormDiv(f=>({...f,pessoas:ps}));}}
-                  placeholder={i===0?"Voce":"Nome da pessoa..."} className="inp" style={{flex:1}}/>
-                {formDiv.pessoas.length>2&&<button onClick={()=>setFormDiv(f=>({...f,pessoas:f.pessoas.filter((_,j)=>j!==i)}))}
-                  style={{width:36,height:44,borderRadius:10,border:"none",background:G.card2,color:G.muted,cursor:"pointer",flexShrink:0,fontSize:18}}>×</button>}
-              </div>
-            ))}
-            <button onClick={()=>setFormDiv(f=>({...f,pessoas:[...f.pessoas,""]}))} className="press"
-              style={{width:"100%",padding:"9px",borderRadius:10,border:"1px dashed "+G.border2,background:"none",color:G.muted,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
-              + Adicionar pessoa
-            </button>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <Lbl>Participantes</Lbl>
+              <span style={{fontSize:11,color:G.muted}}>{formDiv.selecionados.length} selecionados</span>
+            </div>
+            {contatos.length===0&&<div style={{fontSize:12,color:G.muted,padding:"10px 0",textAlign:"center"}}>
+              Nenhum contato ainda. Adicione na aba Contatos.
+            </div>}
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
+              {contatos.map(c=>{
+                const sel=formDiv.selecionados.includes(c.nome);
+                return(<button key={c.id} onClick={()=>toggleSelecionado(c.nome)} className="press"
+                  style={{padding:"8px 14px",borderRadius:20,border:"1px solid "+(sel?G.accent+"88":G.border),
+                    background:sel?G.accent+"22":G.card2,color:sel?G.accent:G.muted,fontSize:13,fontWeight:sel?700:500,
+                    cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:22,height:22,borderRadius:"50%",background:sel?G.accent:G.border2,color:"#fff",
+                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
+                    {c.nome[0]?.toUpperCase()}
+                  </div>
+                  {c.nome}
+                  {sel&&<span style={{fontSize:11}}>✓</span>}
+                </button>);
+              })}
+            </div>
+            {formDiv.selecionados.length<2&&<div style={{fontSize:11,color:G.yellow,marginTop:4}}>
+              Selecione pelo menos 2 pessoas
+            </div>}
           </div>
-          {formDiv.valor&&formDiv.pessoas.filter(p=>p.trim()).length>=2&&(
+          {formDiv.valor&&formDiv.selecionados.length>=2&&(
             <div style={{background:G.accentL,border:"1px solid "+G.accent+"33",borderRadius:12,padding:12,textAlign:"center"}}>
               <div style={{fontSize:12,color:G.muted}}>Cada pessoa paga</div>
-              <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/formDiv.pessoas.filter(p=>p.trim()).length)}</div>
+              <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/formDiv.selecionados.length)}</div>
             </div>
           )}
           <button onClick={salvarDiv} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -2427,6 +2494,41 @@ function FamiliaView({uid,lancs,user}){
 
     {/* ── TAB CONEXAO ── */}
     {tab==="conexao"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {/* Lista de contatos */}
+      <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>SEUS CONTATOS</div>
+          <button onClick={()=>setSheetContato(true)} className="press"
+            style={{padding:"5px 12px",borderRadius:16,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            + Adicionar
+          </button>
+        </div>
+        {contatos.length===0&&<div style={{textAlign:"center",padding:"16px 0",color:G.muted,fontSize:13}}>
+          Nenhum contato ainda
+        </div>}
+        {contatos.map(c=>(
+          <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid "+G.border}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:c.vinculado?G.accent:G.border2,
+              color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0}}>
+              {c.nome[0]?.toUpperCase()}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:600}}>{c.nome}</div>
+              <div style={{fontSize:11,color:G.muted}}>{c.vinculado?"🔗 Vinculado pelo app":"Contato manual"}</div>
+            </div>
+            <button onClick={()=>deletarContato(c.id)}
+              style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px 6px"}}
+              onMouseEnter={e=>e.currentTarget.style.color=G.red}
+              onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Divisor */}
+      <div style={{fontSize:11,fontWeight:700,color:G.muted,letterSpacing:1,textTransform:"uppercase",textAlign:"center",padding:"4px 0"}}>
+        — Conexao com parceiro —
+      </div>
+
       {!conexao&&<>
         <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:20,textAlign:"center"}}>
           <div style={{fontSize:36,marginBottom:12}}>🔗</div>
@@ -2494,6 +2596,21 @@ function FamiliaView({uid,lancs,user}){
         </div>
       </>}
     </div>}
+
+      {/* Sheet novo contato */}
+      <Sheet open={sheetContato} onClose={()=>setSheetContato(false)} title="Novo Contato">
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{fontSize:13,color:G.muted,lineHeight:1.6}}>
+            Adicione pessoas que aparecem na divisao de contas. Parceiros conectados pelo app entram automaticamente.
+          </div>
+          <div><Lbl>Nome</Lbl><input value={formContato.nome} onChange={e=>setFormContato({nome:e.target.value})}
+            placeholder="Ex: Maria, Joao..." className="inp" autoFocus/></div>
+          <button onClick={salvarContato} className="press"
+            style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            Salvar contato
+          </button>
+        </div>
+      </Sheet>
   </div>);
 }
 
@@ -2599,7 +2716,7 @@ export default function App(){
           <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
-        <main key={view} style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
+        <main key={view} style={{position:"fixed",top:`calc(${HH}px + env(safe-area-inset-top, 0px))`,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
