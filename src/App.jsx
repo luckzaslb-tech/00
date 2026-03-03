@@ -316,12 +316,11 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
   const finActive=drawerViews.includes(view);
 
   const items=[
+    {id:"carreira",icon:"👤",l:"Perfil"},
     {id:"dashboard",icon:"⬡",l:"Dashboard"},
     {id:"cartoes",icon:"💳",l:"Cartões de Crédito"},
-    {id:"familia",icon:"👥",l:"Família / Casal"},
-    {id:"divisao",icon:"÷",l:"Divisão de Contas"},
+    {id:"familia",icon:"👫",l:"Família / Casal"},
     {id:"importar",icon:"📁",l:"Importar Extrato"},
-    {id:"carreira",icon:"👤",l:"Perfil"},
   ];
 
   const finSubs=[
@@ -1938,6 +1937,7 @@ function CartoesView({uid,lancs}){
   const [cartoes,setCartoes]=useState([]);
   const [sheet,setSheet]=useState(false);
   const [form,setForm]=useState({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
+  const [confirmDel,setConfirmDel]=useState(null);
 
   useEffect(()=>{
     if(!uid)return;
@@ -1966,28 +1966,32 @@ function CartoesView({uid,lancs}){
   const CORES=["#7C6AF7","#FB923C","#34D399","#60A5FA","#F472B6","#FBBF24","#F87171","#2DD4BF"];
 
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    {/* Header */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>SEUS CARTOES</div>
+      <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>SEUS CARTÕES</div>
       <button onClick={()=>setSheet(true)} className="press"
-        style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+        style={{padding:"7px 14px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
         + Adicionar
       </button>
     </div>
 
     {cartoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
-      <div style={{fontSize:40,marginBottom:12}}>{"\U0001F4B3"}</div>
-      <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhum cartao cadastrado</div>
-      <div style={{fontSize:12}}>Adicione seus cartoes para controlar faturas e limites</div>
+      <div style={{fontSize:40,marginBottom:12}}>💳</div>
+      <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhum cartão cadastrado</div>
+      <div style={{fontSize:12}}>Adicione seus cartões para controlar faturas e limites</div>
     </div>}
 
     {cartoes.map(c=>{
+      // gastos do mês neste cartão (forma = nome do cartão ou "Cartão Crédito")
       const gastosMes=lancs.filter(l=>l.data?.startsWith(mes)&&l.tipo==="Despesa"&&l.cartaoId===c.id);
       const totalGasto=gastosMes.reduce((s,l)=>s+l.valor,0);
       const pctUsado=c.limite>0?(totalGasto/c.limite)*100:0;
       const disponivel=Math.max(0,c.limite-totalGasto);
       const corBarra=pctUsado>90?G.red:pctUsado>70?G.yellow:G.green;
-      return(<div key={c.id} style={{borderRadius:20,overflow:"hidden"}}>
-        <div style={{background:"linear-gradient(135deg,"+c.cor+"dd,"+c.cor+"88)",padding:"20px 20px 16px",position:"relative",overflow:"hidden"}}>
+
+      return(<div key={c.id} style={{borderRadius:20,overflow:"hidden",position:"relative"}}>
+        {/* Card visual */}
+        <div style={{background:`linear-gradient(135deg,${c.cor}dd,${c.cor}88)`,padding:"20px 20px 16px",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
           <div style={{position:"absolute",bottom:-30,right:20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
@@ -1995,7 +1999,13 @@ function CartoesView({uid,lancs}){
               <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{c.nome}</div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{c.bandeira}</div>
             </div>
-            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(200,0,0,.7)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:20,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,position:"relative",zIndex:10}}>x</button>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {confirmDel===c.id
+                ?<><button onClick={()=>{deletarCartao(c.id);setConfirmDel(null);}} style={{background:"#ff4444",border:"none",color:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>Confirmar</button>
+                   <button onClick={()=>setConfirmDel(null)} style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12}}>Não</button></>
+                :<button onClick={()=>setConfirmDel(c.id)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"rgba(255,255,255,.8)",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              }
+            </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div>
@@ -2008,203 +2018,187 @@ function CartoesView({uid,lancs}){
             </div>
           </div>
         </div>
-        <div style={{background:G.card,border:"1px solid "+G.border,borderTop:"none",borderRadius:"0 0 20px 20px",padding:16}}>
+        {/* Barra de uso */}
+        <div style={{background:G.card,border:`1px solid ${G.border}`,borderTop:"none",borderRadius:"0 0 20px 20px",padding:16}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-            <div style={{fontSize:12,color:G.muted}}>Gasto este mes</div>
+            <div style={{fontSize:12,color:G.muted}}>Gasto este mês</div>
             <div style={{fontSize:12,fontWeight:700,color:corBarra}}>{pctUsado.toFixed(0)}% usado</div>
           </div>
           <div style={{height:6,background:G.card2,borderRadius:3,overflow:"hidden",marginBottom:8}}>
-            <div style={{height:"100%",width:Math.min(100,pctUsado)+"%",background:corBarra,borderRadius:3,transition:"width .5s ease"}}/>
+            <div style={{height:"100%",width:`${Math.min(100,pctUsado)}%`,background:corBarra,borderRadius:3,transition:"width .5s ease"}}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div style={{fontSize:13,fontWeight:700,color:G.red}}>- {fmt(totalGasto)}</div>
-            <div style={{fontSize:13,fontWeight:700,color:G.green}}>Disponivel: {fmt(disponivel)}</div>
+            <div style={{fontSize:13,fontWeight:700,color:G.green}}>Disponível: {fmt(disponivel)}</div>
           </div>
-          {gastosMes.length>0&&<div style={{marginTop:12,borderTop:"1px solid "+G.border,paddingTop:12}}>
-            <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:8,letterSpacing:.8}}>ULTIMOS GASTOS</div>
+          {/* Últimos gastos */}
+          {gastosMes.length>0&&<div style={{marginTop:12,borderTop:`1px solid ${G.border}`,paddingTop:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:8,letterSpacing:.8}}>ÚLTIMOS GASTOS</div>
             {gastosMes.slice(0,3).map((l,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid "+G.border+"33"}}>
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${G.border}33`}}>
                 <div style={{fontSize:12,color:G.text}}>{l.desc||l.cat}</div>
                 <div style={{fontSize:12,fontWeight:700,color:G.red}}>-{fmt(l.valor)}</div>
               </div>
             ))}
+            {gastosMes.length>3&&<div style={{fontSize:11,color:G.muted,textAlign:"center",marginTop:6}}>+{gastosMes.length-3} mais este mês</div>}
           </div>}
         </div>
       </div>);
     })}
 
-    <Sheet open={sheet} onClose={()=>setSheet(false)} title="Novo Cartao">
+    {/* Sheet novo cartão */}
+    <Sheet open={sheet} onClose={()=>setSheet(false)} title="Novo Cartão">
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Nome do cartao</Lbl><input value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))} placeholder="Ex: Nubank, Itau..." className="inp"/></div>
-        <div><Lbl>Bandeira</Lbl><select value={form.bandeira} onChange={e=>setForm(f=>({...f,bandeira:e.target.value}))} className="inp">{BANDEIRAS.map(b=><option key={b}>{b}</option>)}</select></div>
+        <div><Lbl>Nome do cartão</Lbl><input value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))} placeholder="Ex: Nubank, Itaú Platinum..." className="inp"/></div>
+        <div><Lbl>Bandeira</Lbl>
+          <select value={form.bandeira} onChange={e=>setForm(f=>({...f,bandeira:e.target.value}))} className="inp">
+            {BANDEIRAS.map(b=><option key={b}>{b}</option>)}
+          </select>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div><Lbl>Limite (R$)</Lbl><input type="number" value={form.limite} onChange={e=>setForm(f=>({...f,limite:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl>Vencimento (dia)</Lbl><input type="text" inputMode="numeric" value={form.vencimento} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,vencimento:v}));}} onBlur={()=>{const v=parseInt(form.vencimento)||10;setForm(f=>({...f,vencimento:String(Math.min(31,Math.max(1,v)))}));}} placeholder="10" className="inp"/></div>
+          <div><Lbl>Vencimento (dia)</Lbl><input type="text" inputMode="numeric" pattern="[0-9]*" value={form.vencimento} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,vencimento:v}));}} onBlur={e=>{const v=parseInt(form.vencimento)||10;setForm(f=>({...f,vencimento:String(Math.min(31,Math.max(1,v)))}));}} placeholder="10" className="inp"/></div>
         </div>
-        <div><Lbl>Cor</Lbl><div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:4}}>
-          {CORES.map(cor=>(<button key={cor} onClick={()=>setForm(f=>({...f,cor}))} style={{width:32,height:32,borderRadius:"50%",background:cor,border:form.cor===cor?"3px solid "+G.text:"2px solid transparent",cursor:"pointer"}}/>))}
-        </div></div>
-        <button onClick={salvarCartao} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
-          Salvar Cartao
+        <div><Lbl>Cor do cartão</Lbl>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:4}}>
+            {CORES.map(c=>(
+              <button key={c} onClick={()=>setForm(f=>({...f,cor:c}))}
+                style={{width:32,height:32,borderRadius:"50%",background:c,border:form.cor===c?`3px solid ${G.text}`:`2px solid transparent`,cursor:"pointer"}}/>
+            ))}
+          </div>
+        </div>
+        <button onClick={salvarCartao} className="press"
+          style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
+          💳 Salvar Cartão
         </button>
       </div>
     </Sheet>
   </div>);
 }
 
-
-function FamiliaView({uid,lancs}){
-  const [perfil,setPerfil]=useState({tipo:"individual",parceiro:"",codPartilha:""});
-  const [lancPessoais,setLancPessoais]=useState([]);
-  const [lancCasal,setLancCasal]=useState([]);
-  const [sheet,setSheet]=useState(false);
+// ─── FAMÍLIA / CASAL VIEW ──────────────────────────────────────────────────────
+function FamiliaView({uid,lancs,user}){
+  const [tab,setTab]=useState("casal");
+  const [conexao,setConexao]=useState(null); // {parceirUid, status}
+  const [codInput,setCodInput]=useState("");
+  const [gerandoCod,setGerandoCod]=useState(false);
+  const [erroConexao,setErroConexao]=useState("");
+  const [lancsCompartilhados,setLancsCompartilhados]=useState([]);
+  const [divisoes,setDivisoes]=useState([]);
+  const [divisoesComp,setDivisoesComp]=useState([]);
+  const [sheetLanc,setSheetLanc]=useState(false);
+  const [sheetDiv,setSheetDiv]=useState(false);
   const [formLanc,setFormLanc]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",tipo:"Despesa",escopo:"pessoal"});
+  const [formDiv,setFormDiv]=useState({desc:"",valor:"",pessoas:["",""],data:today()});
 
+  // Ouvir conexao do usuario
   useEffect(()=>{
     if(!uid)return;
-    const unsub=onSnapshot(doc(db,"users",uid,"familia","config"),snap=>{
-      if(snap.exists())setPerfil(snap.data());
+    const unsub=onSnapshot(doc(db,"users",uid,"config","conexao"),snap=>{
+      if(snap.exists())setConexao(snap.data());
+      else setConexao(null);
     });
     return()=>unsub();
   },[uid]);
 
-  const mes=curMes();
-  const pessoal=lancs.filter(l=>l.data?.startsWith(mes)&&l.escopo!=="casal");
-  const casal=lancs.filter(l=>l.data?.startsWith(mes)&&l.escopo==="casal");
-  const tRPessoal=pessoal.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-  const tDPessoal=pessoal.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-  const tRCasal=casal.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-  const tDCasal=casal.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
+  // Ouvir lancamentos compartilhados (se conectado)
+  useEffect(()=>{
+    if(!conexao?.casalId)return;
+    const unsub=onSnapshot(collection(db,"casais",conexao.casalId,"lancamentos"),snap=>{
+      setLancsCompartilhados(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
+    return()=>unsub();
+  },[conexao?.casalId]);
 
+  // Ouvir divisoes compartilhadas (se conectado) ou proprias
+  useEffect(()=>{
+    if(!uid)return;
+    if(conexao?.casalId){
+      const unsub=onSnapshot(collection(db,"casais",conexao.casalId,"divisoes"),snap=>{
+        setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
+      });
+      return()=>unsub();
+    } else {
+      const unsub=onSnapshot(collection(db,"users",uid,"divisoes"),snap=>{
+        setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
+      });
+      return()=>unsub();
+    }
+  },[uid,conexao?.casalId]);
+
+  // Gerar codigo de convite
+  async function gerarCodigo(){
+    setGerandoCod(true);setErroConexao("");
+    const cod=Math.random().toString(36).substring(2,8).toUpperCase();
+    const casalId=uid+"_"+Date.now();
+    // Salva convite
+    await setDoc(doc(db,"convites",cod),{
+      criadoPor:uid,casalId,criadoEm:new Date().toISOString(),status:"aguardando"
+    });
+    // Salva conexao do usuario
+    await setDoc(doc(db,"users",uid,"config","conexao"),{
+      casalId,codigo:cod,status:"aguardando",meuUid:uid
+    });
+    setGerandoCod(false);
+  }
+
+  // Entrar com codigo
+  async function entrarComCodigo(){
+    setErroConexao("");
+    const cod=codInput.trim().toUpperCase();
+    if(!cod||cod.length<6){setErroConexao("Codigo invalido");return;}
+    const convSnap=await getDoc(doc(db,"convites",cod));
+    if(!convSnap.exists()){setErroConexao("Codigo nao encontrado");return;}
+    const conv=convSnap.data();
+    if(conv.criadoPor===uid){setErroConexao("Este e o seu proprio codigo");return;}
+    if(conv.status!=="aguardando"){setErroConexao("Codigo ja utilizado");return;}
+    const casalId=conv.casalId;
+    // Atualiza convite
+    await updateDoc(doc(db,"convites",cod),{status:"conectado",parceiroUid:uid});
+    // Conecta os dois
+    await setDoc(doc(db,"users",uid,"config","conexao"),{
+      casalId,status:"conectado",meuUid:uid,parceiroUid:conv.criadoPor
+    });
+    await updateDoc(doc(db,"users",conv.criadoPor,"config","conexao"),{
+      status:"conectado",parceiroUid:uid
+    });
+    setCodInput("");
+  }
+
+  async function desconectar(){
+    await deleteDoc(doc(db,"users",uid,"config","conexao"));
+    setConexao(null);
+  }
+
+  // Salvar lancamento casal
   async function salvarLanc(){
     const v=parseFloat(formLanc.valor);
     if(!formLanc.data||!v||v<=0)return;
-    await addDoc(collection(db,"users",uid,"lancamentos"),{
+    const col=conexao?.casalId
+      ?collection(db,"casais",conexao.casalId,"lancamentos")
+      :collection(db,"users",uid,"lancamentos");
+    await addDoc(col,{
       tipo:formLanc.tipo,desc:formLanc.desc,cat:formLanc.cat,
-      forma:formLanc.forma,valor:v,data:formLanc.data,escopo:formLanc.escopo
+      forma:formLanc.forma,valor:v,data:formLanc.data,
+      escopo:"casal",autorUid:uid,
+      autorNome:user?.displayName||user?.email||"Voce"
     });
-    setSheet(false);
+    setSheetLanc(false);
   }
 
-  const Card2=({label,rec,dep,color})=>(
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,flex:1}}>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color,marginBottom:10}}>{label}</div>
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
-        <div style={{display:"flex",justifyContent:"space-between"}}>
-          <span style={{fontSize:12,color:G.muted}}>Receitas</span>
-          <span style={{fontSize:13,fontWeight:700,color:G.green}}>{fmtK(rec)}</span>
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between"}}>
-          <span style={{fontSize:12,color:G.muted}}>Despesas</span>
-          <span style={{fontSize:13,fontWeight:700,color:G.red}}>{fmtK(dep)}</span>
-        </div>
-        <div style={{height:1,background:G.border,margin:"4px 0"}}/>
-        <div style={{display:"flex",justifyContent:"space-between"}}>
-          <span style={{fontSize:12,color:G.muted}}>Saldo</span>
-          <span style={{fontSize:14,fontWeight:700,color:rec-dep>=0?G.green:G.red}}>{fmtK(rec-dep)}</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
-    {/* Visão resumo */}
-    <div style={{display:"flex",gap:12}}>
-      <Card2 label="👤 Pessoal" rec={tRPessoal} dep={tDPessoal} color={G.accent}/>
-      <Card2 label="👫 Casal" rec={tRCasal} dep={tDCasal} color={G.yellow}/>
-    </div>
-
-    {/* Botão novo lançamento */}
-    <div style={{display:"flex",gap:10}}>
-      <button onClick={()=>{setFormLanc(f=>({...f,escopo:"pessoal",tipo:"Despesa"}));setSheet(true);}} className="press"
-        style={{flex:1,padding:"10px",borderRadius:14,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-        + Pessoal
-      </button>
-      <button onClick={()=>{setFormLanc(f=>({...f,escopo:"casal",tipo:"Despesa"}));setSheet(true);}} className="press"
-        style={{flex:1,padding:"10px",borderRadius:14,border:`1px solid ${G.yellow}55`,background:G.yellow+"18",color:G.yellow,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-        + Casal
-      </button>
-    </div>
-
-    {/* Lançamentos do casal */}
-    {casal.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-      <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:12,letterSpacing:.8}}>LANÇAMENTOS DO CASAL — {mesLbl(mes)}</div>
-      <div style={{display:"flex",flexDirection:"column",gap:0}}>
-        {casal.slice(0,8).map((l,i)=>(
-          <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${G.border}33`}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:600}}>{l.desc||l.cat}</div>
-              <div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}</div>
-            </div>
-            <div style={{fontSize:14,fontWeight:700,color:l.tipo==="Receita"?G.green:G.red}}>
-              {l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>}
-
-    {casal.length===0&&<div style={{textAlign:"center",padding:"30px 20px",color:G.muted,background:G.card,border:`1px solid ${G.border}`,borderRadius:16}}>
-      <div style={{fontSize:32,marginBottom:8}}>👫</div>
-      <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Nenhum lançamento do casal</div>
-      <div style={{fontSize:12}}>Use "+ Casal" para registrar despesas compartilhadas</div>
-    </div>}
-
-    {/* Sheet */}
-    <Sheet open={sheet} onClose={()=>setSheet(false)} title={`Novo — ${formLanc.escopo==="casal"?"Casal 👫":"Pessoal 👤"}`}>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"flex",background:G.card2,borderRadius:12,padding:4}}>
-          {["Despesa","Receita"].map(t=>(
-            <button key={t} onClick={()=>setFormLanc(f=>({...f,tipo:t,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}))}
-              style={{flex:1,padding:"9px",borderRadius:9,border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:600,fontSize:13,background:formLanc.tipo===t?G.card:"none",color:formLanc.tipo===t?G.text:G.muted}}>
-              {t==="Despesa"?"↓ Despesa":"↑ Receita"}
-            </button>
-          ))}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Valor (R$)</Lbl><input type="number" value={formLanc.valor} onChange={e=>setFormLanc(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl>Data</Lbl><input type="date" value={formLanc.data} onChange={e=>setFormLanc(f=>({...f,data:e.target.value}))} className="inp"/></div>
-        </div>
-        <div><Lbl>Descrição</Lbl><input value={formLanc.desc} onChange={e=>setFormLanc(f=>({...f,desc:e.target.value}))} placeholder="Ex: Jantar fora..." className="inp"/></div>
-        <div><Lbl>Categoria</Lbl>
-          <select value={formLanc.cat} onChange={e=>setFormLanc(f=>({...f,cat:e.target.value}))} className="inp">
-            {(formLanc.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}
-          </select>
-        </div>
-        <button onClick={salvarLanc} className="press"
-          style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
-          💾 Salvar
-        </button>
-      </div>
-    </Sheet>
-  </div>);
-}
-
-// ─── DIVISÃO DE CONTAS VIEW ────────────────────────────────────────────────────
-function DivisaoView({uid}){
-  const [divisoes,setDivisoes]=useState([]);
-  const [sheet,setSheet]=useState(false);
-  const [form,setForm]=useState({desc:"",valor:"",pessoas:["",""],data:today()});
-
-  useEffect(()=>{
-    if(!uid)return;
-    const unsub=onSnapshot(collection(db,"users",uid,"divisoes"),snap=>{
-      setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
-    });
-    return()=>unsub();
-  },[uid]);
-
-  async function salvar(){
-    const v=parseFloat(form.valor);
-    const pessoas=form.pessoas.filter(p=>p.trim());
-    if(!form.desc||!v||pessoas.length<2)return;
+  // Salvar divisao
+  async function salvarDiv(){
+    const v=parseFloat(formDiv.valor);
+    const pessoas=formDiv.pessoas.filter(p=>p.trim());
+    if(!formDiv.desc||!v||pessoas.length<2)return;
     const valorPorPessoa=v/pessoas.length;
     const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
-    await addDoc(collection(db,"users",uid,"divisoes"),{
-      desc:form.desc,total:v,data:form.data,partes,criadoEm:today()
-    });
-    setSheet(false);
-    setForm({desc:"",valor:"",pessoas:["",""],data:today()});
+    const col=conexao?.casalId
+      ?collection(db,"casais",conexao.casalId,"divisoes")
+      :collection(db,"users",uid,"divisoes");
+    await addDoc(col,{desc:formDiv.desc,total:v,data:formDiv.data,partes,criadoEm:today()});
+    setSheetDiv(false);
+    setFormDiv({desc:"",valor:"",pessoas:["",""],data:today()});
   }
 
   async function marcarPago(divId,parteIdx){
@@ -2212,122 +2206,297 @@ function DivisaoView({uid}){
     if(!div)return;
     const partes=[...div.partes];
     partes[parteIdx]={...partes[parteIdx],pago:!partes[parteIdx].pago};
-    await updateDoc(doc(db,"users",uid,"divisoes",divId),{partes});
+    const ref=conexao?.casalId
+      ?doc(db,"casais",conexao.casalId,"divisoes",divId)
+      :doc(db,"users",uid,"divisoes",divId);
+    await updateDoc(ref,{partes});
   }
 
-  async function deletarDivisao(id){
-    if(!window.confirm("Remover divisão?"))return;
-    await deleteDoc(doc(db,"users",uid,"divisoes",id));
+  async function deletarDiv(id){
+    const ref=conexao?.casalId
+      ?doc(db,"casais",conexao.casalId,"divisoes",id)
+      :doc(db,"users",uid,"divisoes",id);
+    await deleteDoc(ref);
   }
 
+  const mes=curMes();
+  // Lancamentos para aba casal: se conectado usa compartilhados, senao usa proprios com escopo=casal
+  const lancCasal=conexao?.casalId
+    ?lancsCompartilhados.filter(l=>l.data?.startsWith(mes))
+    :lancs.filter(l=>l.data?.startsWith(mes)&&l.escopo==="casal");
+  const tR=lancCasal.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
+  const tD=lancCasal.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
   const abertas=divisoes.filter(d=>d.partes?.some(p=>!p.pago));
   const concluidas=divisoes.filter(d=>d.partes?.every(p=>p.pago));
 
+  const TabBtn=({id,icon,label})=>(
+    <button onClick={()=>setTab(id)} className="press" style={{flex:1,padding:"9px 4px",borderRadius:10,border:"none",
+      cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:tab===id?700:500,
+      background:tab===id?G.accent+"22":G.card2,color:tab===id?G.accent:G.muted,
+      display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+      <span style={{fontSize:15}}>{icon}</span>{label}
+    </button>
+  );
+
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>DIVISÃO DE CONTAS</div>
-      <button onClick={()=>setSheet(true)} className="press"
-        style={{padding:"7px 14px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-        + Nova
-      </button>
+    {/* Tabs */}
+    <div style={{display:"flex",gap:8,background:G.card2,borderRadius:14,padding:4}}>
+      <TabBtn id="casal" icon="👫" label="Casal"/>
+      <TabBtn id="divisoes" icon="÷" label="Divisoes"/>
+      <TabBtn id="conexao" icon="🔗" label="Conexao"/>
     </div>
 
-    {divisoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
-      <div style={{fontSize:40,marginBottom:12}}>÷</div>
-      <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhuma divisão ainda</div>
-      <div style={{fontSize:12}}>Crie uma divisão para rastrear quem deve o quê</div>
-    </div>}
+    {/* ── TAB CASAL ── */}
+    {tab==="casal"&&<>
+      {/* Resumo */}
+      <div style={{display:"flex",gap:12}}>
+        {[{l:"Receitas",v:tR,c:G.green},{l:"Despesas",v:tD,c:G.red},{l:"Saldo",v:tR-tD,c:tR-tD>=0?G.green:G.red}].map((k,i)=>(
+          <div key={i} style={{flex:1,background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:12,textAlign:"center"}}>
+            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>{k.l}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{fmtK(k.v)}</div>
+          </div>
+        ))}
+      </div>
 
-    {abertas.length>0&&<>
-      <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8}}>EM ABERTO</div>
-      {abertas.map(div=>{
-        const pendentes=div.partes?.filter(p=>!p.pago)||[];
-        const totalPendente=pendentes.reduce((s,p)=>s+p.valor,0);
-        return(<div key={div.id} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+      {conexao?.status==="conectado"&&<div style={{background:G.green+"15",border:"1px solid "+G.green+"44",borderRadius:12,padding:"8px 14px",fontSize:12,color:G.green,display:"flex",alignItems:"center",gap:8}}>
+        🔗 Conectado — lancamentos sincronizados com parceiro
+      </div>}
+
+      <button onClick={()=>setSheetLanc(true)} className="press"
+        style={{width:"100%",padding:"10px",borderRadius:14,border:"1px solid "+G.yellow+"55",background:G.yellow+"18",color:G.yellow,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+        + Novo lancamento do casal
+      </button>
+
+      {lancCasal.length===0&&<div style={{textAlign:"center",padding:"30px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
+        <div style={{fontSize:32,marginBottom:8}}>👫</div>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Nenhum lancamento do casal</div>
+        <div style={{fontSize:12}}>Adicione gastos e receitas compartilhados</div>
+      </div>}
+
+      {lancCasal.length>0&&<div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
+        <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:12,letterSpacing:.8}}>ESTE MES</div>
+        {lancCasal.slice(0,10).map((l,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid "+G.border+(i<lancCasal.length-1?"":"00")}}>
             <div>
-              <div style={{fontSize:14,fontWeight:700}}>{div.desc}</div>
-              <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · Total: {fmt(div.total)}</div>
+              <div style={{fontSize:13,fontWeight:600}}>{l.desc||l.cat}</div>
+              <div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}{l.autorNome?" · "+l.autorNome:""}</div>
             </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:12,color:G.yellow,fontWeight:700}}>{fmt(totalPendente)} pendente</div>
-              <button onClick={()=>deletarDivisao(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+            <div style={{fontSize:14,fontWeight:700,color:l.tipo==="Receita"?G.green:G.red}}>
+              {l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}
             </div>
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {div.partes?.map((p,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:p.pago?G.greenL:G.card2,borderRadius:10,border:`1px solid ${p.pago?G.green+"33":G.border}`}}>
-                <div style={{width:32,height:32,borderRadius:"50%",background:p.pago?G.green:G.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>
-                  {p.nome[0]?.toUpperCase()||"?"}
-                </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600,color:p.pago?G.muted:G.text,textDecoration:p.pago?"line-through":"none"}}>{p.nome}</div>
-                  <div style={{fontSize:12,color:G.muted}}>{fmt(p.valor)}</div>
-                </div>
-                <button onClick={()=>marcarPago(div.id,i)} className="press"
-                  style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${p.pago?G.green+"55":G.border2}`,background:p.pago?G.greenL:G.card,color:p.pago?G.green:G.muted,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-                  {p.pago?"✓ Pago":"Marcar pago"}
-                </button>
-              </div>
+        ))}
+      </div>}
+
+      <Sheet open={sheetLanc} onClose={()=>setSheetLanc(false)} title="Novo — Casal">
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{display:"flex",background:G.card2,borderRadius:12,padding:4}}>
+            {["Despesa","Receita"].map(t=>(
+              <button key={t} onClick={()=>setFormLanc(f=>({...f,tipo:t,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}))}
+                style={{flex:1,padding:"9px",borderRadius:9,border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:formLanc.tipo===t?700:500,
+                  background:formLanc.tipo===t?(t==="Despesa"?G.red+"22":G.green+"22"):"transparent",
+                  color:formLanc.tipo===t?(t==="Despesa"?G.red:G.green):G.muted}}>
+                {t==="Despesa"?"↓ Despesa":"↑ Receita"}
+              </button>
             ))}
           </div>
-        </div>);
-      })}
-    </>}
-
-    {concluidas.length>0&&<>
-      <div style={{fontSize:11,fontWeight:700,color:G.green,letterSpacing:.8}}>CONCLUÍDAS</div>
-      {concluidas.slice(0,3).map(div=>(
-        <div key={div.id} style={{background:G.card,border:`1px solid ${G.green}33`,borderRadius:16,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center",opacity:.7}}>
-          <div>
-            <div style={{fontSize:13,fontWeight:600}}>{div.desc}</div>
-            <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · {div.partes?.length} pessoas</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl>Valor (R$)</Lbl><input type="number" value={formLanc.valor} onChange={e=>setFormLanc(f=>({...f,valor:e.target.value}))} className="inp" placeholder="0,00"/></div>
+            <div><Lbl>Data</Lbl><input type="date" value={formLanc.data} onChange={e=>setFormLanc(f=>({...f,data:e.target.value}))} className="inp"/></div>
           </div>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:13,fontWeight:700,color:G.green}}>✓ {fmt(div.total)}</div>
-            <button onClick={()=>deletarDivisao(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+          <div><Lbl opt>Descricao</Lbl><input value={formLanc.desc} onChange={e=>setFormLanc(f=>({...f,desc:e.target.value}))} className="inp" placeholder="Ex: Mercado, Cinema..."/></div>
+          <div><Lbl>Categoria</Lbl>
+            <select value={formLanc.cat} onChange={e=>setFormLanc(f=>({...f,cat:e.target.value}))} className="inp">
+              {(formLanc.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}
+            </select>
           </div>
-        </div>
-      ))}
-    </>}
-
-    {/* Sheet nova divisão */}
-    <Sheet open={sheet} onClose={()=>setSheet(false)} title="Nova Divisão">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Descrição</Lbl><input value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="Ex: Churrasco, Viagem, Jantar..." className="inp"/></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Valor total (R$)</Lbl><input type="number" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl>Data</Lbl><input type="date" value={form.data} onChange={e=>setForm(f=>({...f,data:e.target.value}))} className="inp"/></div>
-        </div>
-        <div>
-          <Lbl>Participantes</Lbl>
-          {form.pessoas.map((p,i)=>(
-            <div key={i} style={{display:"flex",gap:8,marginBottom:8}}>
-              <input value={p} onChange={e=>{const ps=[...form.pessoas];ps[i]=e.target.value;setForm(f=>({...f,pessoas:ps}));}}
-                placeholder={i===0?"Você":"Nome da pessoa..."} className="inp" style={{flex:1}}/>
-              {form.pessoas.length>2&&<button onClick={()=>setForm(f=>({...f,pessoas:f.pessoas.filter((_,j)=>j!==i)}))}
-                style={{width:36,height:44,borderRadius:10,border:"none",background:G.card2,color:G.muted,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>}
-            </div>
-          ))}
-          <button onClick={()=>setForm(f=>({...f,pessoas:[...f.pessoas,""]}))} className="press"
-            style={{width:"100%",padding:"9px",borderRadius:10,border:`1px dashed ${G.border2}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            + Adicionar pessoa
+          <button onClick={salvarLanc} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.yellow,color:"#000",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            Salvar
           </button>
         </div>
-        {form.valor&&form.pessoas.filter(p=>p.trim()).length>=2&&(
-          <div style={{background:G.accentL,border:`1px solid ${G.accent}33`,borderRadius:12,padding:12,textAlign:"center"}}>
-            <div style={{fontSize:12,color:G.muted}}>Cada pessoa paga</div>
-            <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(form.valor||0)/form.pessoas.filter(p=>p.trim()).length)}</div>
-          </div>
-        )}
-        <button onClick={salvar} className="press"
-          style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-          ÷ Criar Divisão
+      </Sheet>
+    </>}
+
+    {/* ── TAB DIVISOES ── */}
+    {tab==="divisoes"&&<>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>DIVISAO DE CONTAS</div>
+        <button onClick={()=>setSheetDiv(true)} className="press"
+          style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          + Nova
         </button>
       </div>
-    </Sheet>
+
+      {conexao?.status==="conectado"&&<div style={{background:G.green+"15",border:"1px solid "+G.green+"44",borderRadius:12,padding:"8px 14px",fontSize:12,color:G.green}}>
+        🔗 Divisoes sincronizadas com parceiro
+      </div>}
+
+      {divisoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
+        <div style={{fontSize:40,marginBottom:12}}>÷</div>
+        <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhuma divisao ainda</div>
+        <div style={{fontSize:12}}>Crie uma divisao para rastrear quem deve o que</div>
+      </div>}
+
+      {abertas.length>0&&<>
+        <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8}}>EM ABERTO</div>
+        {abertas.map(div=>{
+          const pendentes=div.partes?.filter(p=>!p.pago)||[];
+          const totalPendente=pendentes.reduce((s,p)=>s+p.valor,0);
+          return(<div key={div.id} style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700}}>{div.desc}</div>
+                <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · Total: {fmt(div.total)}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:12,color:G.yellow,fontWeight:700}}>{fmt(totalPendente)} pendente</div>
+                <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {div.partes?.map((p,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:p.pago?G.green+"15":G.card2,borderRadius:10}}>
+                  <div style={{width:32,height:32,borderRadius:"50%",background:p.pago?G.green:G.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>
+                    {p.nome[0]?.toUpperCase()||"?"}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600,color:p.pago?G.muted:G.text,textDecoration:p.pago?"line-through":"none"}}>{p.nome}</div>
+                    <div style={{fontSize:12,color:G.muted}}>{fmt(p.valor)}</div>
+                  </div>
+                  <button onClick={()=>marcarPago(div.id,i)} className="press"
+                    style={{padding:"5px 10px",borderRadius:8,border:"1px solid "+(p.pago?G.green+"55":G.border2),background:p.pago?G.green+"22":G.card,color:p.pago?G.green:G.text,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                    {p.pago?"✓ Pago":"Marcar pago"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>);
+        })}
+      </>}
+
+      {concluidas.length>0&&<>
+        <div style={{fontSize:11,fontWeight:700,color:G.green,letterSpacing:.8}}>CONCLUIDAS</div>
+        {concluidas.slice(0,3).map(div=>(
+          <div key={div.id} style={{background:G.card,border:"1px solid "+G.green+"33",borderRadius:16,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:600}}>{div.desc}</div>
+              <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · {div.partes?.length} pessoas</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:13,fontWeight:700,color:G.green}}>✓ {fmt(div.total)}</div>
+              <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+            </div>
+          </div>
+        ))}
+      </>}
+
+      <Sheet open={sheetDiv} onClose={()=>setSheetDiv(false)} title="Nova Divisao">
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div><Lbl>Descricao</Lbl><input value={formDiv.desc} onChange={e=>setFormDiv(f=>({...f,desc:e.target.value}))} placeholder="Ex: Jantar, Airbnb..." className="inp"/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl>Valor total (R$)</Lbl><input type="number" value={formDiv.valor} onChange={e=>setFormDiv(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
+            <div><Lbl>Data</Lbl><input type="date" value={formDiv.data} onChange={e=>setFormDiv(f=>({...f,data:e.target.value}))} className="inp"/></div>
+          </div>
+          <div>
+            <Lbl>Participantes</Lbl>
+            {formDiv.pessoas.map((p,i)=>(
+              <div key={i} style={{display:"flex",gap:8,marginBottom:8}}>
+                <input value={p} onChange={e=>{const ps=[...formDiv.pessoas];ps[i]=e.target.value;setFormDiv(f=>({...f,pessoas:ps}));}}
+                  placeholder={i===0?"Voce":"Nome da pessoa..."} className="inp" style={{flex:1}}/>
+                {formDiv.pessoas.length>2&&<button onClick={()=>setFormDiv(f=>({...f,pessoas:f.pessoas.filter((_,j)=>j!==i)}))}
+                  style={{width:36,height:44,borderRadius:10,border:"none",background:G.card2,color:G.muted,cursor:"pointer",flexShrink:0,fontSize:18}}>×</button>}
+              </div>
+            ))}
+            <button onClick={()=>setFormDiv(f=>({...f,pessoas:[...f.pessoas,""]}))} className="press"
+              style={{width:"100%",padding:"9px",borderRadius:10,border:"1px dashed "+G.border2,background:"none",color:G.muted,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
+              + Adicionar pessoa
+            </button>
+          </div>
+          {formDiv.valor&&formDiv.pessoas.filter(p=>p.trim()).length>=2&&(
+            <div style={{background:G.accentL,border:"1px solid "+G.accent+"33",borderRadius:12,padding:12,textAlign:"center"}}>
+              <div style={{fontSize:12,color:G.muted}}>Cada pessoa paga</div>
+              <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/formDiv.pessoas.filter(p=>p.trim()).length)}</div>
+            </div>
+          )}
+          <button onClick={salvarDiv} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            Criar Divisao
+          </button>
+        </div>
+      </Sheet>
+    </>}
+
+    {/* ── TAB CONEXAO ── */}
+    {tab==="conexao"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {!conexao&&<>
+        <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:20,textAlign:"center"}}>
+          <div style={{fontSize:36,marginBottom:12}}>🔗</div>
+          <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>Conectar com parceiro</div>
+          <div style={{fontSize:12,color:G.muted,lineHeight:1.6,marginBottom:20}}>
+            Gere um codigo e compartilhe com seu parceiro, ou insira o codigo dele para sincronizar Casal e Divisoes.
+          </div>
+          <button onClick={gerarCodigo} disabled={gerandoCod} className="press"
+            style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:12,opacity:gerandoCod?.6:1}}>
+            {gerandoCod?"Gerando...":"Gerar meu codigo"}
+          </button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <input value={codInput} onChange={e=>setCodInput(e.target.value.toUpperCase())} placeholder="Codigo do parceiro" className="inp" style={{flex:1,letterSpacing:3,fontSize:16,textAlign:"center"}} maxLength={6}/>
+            <button onClick={entrarComCodigo} className="press"
+              style={{padding:"12px 16px",borderRadius:12,border:"none",background:G.green,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              Entrar
+            </button>
+          </div>
+          {erroConexao&&<div style={{fontSize:12,color:G.red,marginTop:8,textAlign:"center"}}>{erroConexao}</div>}
+        </div>
+      </>}
+
+      {conexao&&conexao.status==="aguardando"&&<>
+        <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:20,textAlign:"center"}}>
+          <div style={{fontSize:36,marginBottom:12}}>⏳</div>
+          <div style={{fontSize:15,fontWeight:700,marginBottom:8}}>Aguardando parceiro</div>
+          <div style={{fontSize:12,color:G.muted,marginBottom:16}}>Compartilhe este codigo com seu parceiro:</div>
+          <div style={{fontSize:36,fontWeight:900,letterSpacing:8,color:G.accent,background:G.accentL,borderRadius:14,padding:"16px 20px",marginBottom:16,fontFamily:"monospace"}}>
+            {conexao.codigo}
+          </div>
+          <div style={{fontSize:12,color:G.muted,marginBottom:16}}>O parceiro deve ir em Conexao e digitar este codigo</div>
+          <button onClick={desconectar} className="press"
+            style={{padding:"10px 20px",borderRadius:12,border:"1px solid "+G.border2,background:G.card2,color:G.muted,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            Cancelar
+          </button>
+        </div>
+      </>}
+
+      {conexao&&conexao.status==="conectado"&&<>
+        <div style={{background:G.green+"15",border:"1px solid "+G.green+"44",borderRadius:16,padding:20,textAlign:"center"}}>
+          <div style={{fontSize:36,marginBottom:8}}>✅</div>
+          <div style={{fontSize:15,fontWeight:700,color:G.green,marginBottom:6}}>Conectado!</div>
+          <div style={{fontSize:12,color:G.muted,lineHeight:1.6,marginBottom:16}}>
+            Casal e Divisoes estao sincronizados. Qualquer lancamento aparece para os dois.
+          </div>
+          <button onClick={desconectar} className="press"
+            style={{padding:"10px 20px",borderRadius:12,border:"1px solid "+G.red+"55",background:G.red+"15",color:G.red,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            Desconectar
+          </button>
+        </div>
+      </>}
+
+      {/* Tambem pode entrar com codigo mesmo se tem conexao aguardando */}
+      {conexao&&conexao.status==="aguardando"&&<>
+        <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:16}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Ou insira o codigo do parceiro:</div>
+          <div style={{display:"flex",gap:8}}>
+            <input value={codInput} onChange={e=>setCodInput(e.target.value.toUpperCase())} placeholder="Codigo" className="inp" style={{flex:1,letterSpacing:3,fontSize:16,textAlign:"center"}} maxLength={6}/>
+            <button onClick={entrarComCodigo} className="press"
+              style={{padding:"12px 16px",borderRadius:12,border:"none",background:G.green,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              Entrar
+            </button>
+          </div>
+          {erroConexao&&<div style={{fontSize:12,color:G.red,marginTop:8}}>{erroConexao}</div>}
+        </div>
+      </>}
+    </div>}
   </div>);
 }
+
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App(){
@@ -2436,8 +2605,8 @@ export default function App(){
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="carreira"&&<CarreiraView uid={user.uid} user={user}/>}
           {view==="cartoes"&&<CartoesView uid={user.uid} lancs={lancs}/>}
-          {view==="familia"&&<FamiliaView uid={user.uid} lancs={lancs}/>}
-          {view==="divisao"&&<DivisaoView uid={user.uid}/>}
+          {view==="familia"&&<FamiliaView uid={user.uid} lancs={lancs} user={user}/>}
+          
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
           {view.startsWith("financas")&&<ErrorBoundary><FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/></ErrorBoundary>}
         </main>
