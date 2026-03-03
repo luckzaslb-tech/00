@@ -452,7 +452,7 @@ function TxRow({l,onDelete,full}){
 }
 
 // ─── LANC FORM ────────────────────────────────────────────────────────────────
-function LancForm({tipo,setTipo,form,setForm,onSave}){
+function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
   const sw=t=>{setTipo(t);setForm(f=>({...f,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}));};
   const ac=tipo==="Receita"?G.green:G.red;
   const isRec=form.recorrente;
@@ -475,6 +475,24 @@ function LancForm({tipo,setTipo,form,setForm,onSave}){
           {(tipo==="Receita"?FORMAS_REC:FORMAS_DEP).map(f=><div key={f} onClick={()=>setForm(fm=>({...fm,forma:f}))} className="press" style={{padding:"8px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:form.forma===f?ac+"22":G.card2,border:`1px solid ${form.forma===f?ac+"88":G.border}`,color:form.forma===f?ac:G.muted}}>{f}</div>)}
         </div>
       </div>
+      {tipo==="Despesa"&&form.forma==="Cartão Crédito"&&cartoes.length>0&&<div style={{marginBottom:16}}>
+        <Lbl>Qual cartão?</Lbl>
+        <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
+          <div onClick={()=>setForm(f=>({...f,cartaoId:""}))} className="press"
+            style={{padding:"8px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,
+              background:!form.cartaoId?G.accent+"22":G.card2,border:"1px solid "+(!form.cartaoId?G.accent+"88":G.border),color:!form.cartaoId?G.accent:G.muted}}>
+            Sem vínculo
+          </div>
+          {cartoes.map(c=>(
+            <div key={c.id} onClick={()=>setForm(f=>({...f,cartaoId:c.id}))} className="press"
+              style={{padding:"8px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:6,
+                background:form.cartaoId===c.id?c.cor+"33":G.card2,border:"1px solid "+(form.cartaoId===c.id?c.cor:G.border),color:form.cartaoId===c.id?c.cor:G.muted}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:c.cor,flexShrink:0}}/>
+              {c.nome}
+            </div>
+          ))}
+        </div>
+      </div>}
       {/* ── Modo: Normal / Recorrente / Agendado ── */}
       <div style={{marginBottom:16}}>
         <div style={{display:"flex",gap:8,marginBottom:form.modo&&form.modo!=="normal"?10:0}}>
@@ -1966,8 +1984,7 @@ function CartoesView({uid,lancs}){
 
     {cartoes.map(c=>{
       // gastos do mês neste cartão (forma = nome do cartão ou "Cartão Crédito")
-      const gastosMes=lancs.filter(l=>l.data?.startsWith(mes)&&l.tipo==="Despesa"&&
-        (l.cartaoId===c.id||(l.forma==="Cartão Crédito"&&!l.cartaoId)));
+      const gastosMes=lancs.filter(l=>l.data?.startsWith(mes)&&l.tipo==="Despesa"&&l.cartaoId===c.id);
       const totalGasto=gastosMes.reduce((s,l)=>s+l.valor,0);
       const pctUsado=c.limite>0?(totalGasto/c.limite)*100:0;
       const disponivel=Math.max(0,c.limite-totalGasto);
@@ -2361,7 +2378,8 @@ export default function App(){
     const uid=user.uid;
     const unsubL=onSnapshot(collection(db,"users",uid,"lancamentos"),snap=>{setLancs(snap.docs.map(d=>({id:d.id,...d.data()})));setDataLoading(false);});
     const unsubR=onSnapshot(collection(db,"users",uid,"recorrentes"),snap=>{setRecorrentes(snap.docs.map(d=>({id:d.id,...d.data()})));});
-    return()=>{unsubL();unsubR();};
+    const unsubC=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{setCartoes(snap.docs.map(d=>({id:d.id,...d.data()})));});
+    return()=>{unsubL();unsubR();unsubC();};
   },[user]);
 
   useEffect(()=>{
@@ -2372,14 +2390,14 @@ export default function App(){
 
   const showT=useCallback((msg,type="success")=>{setToast({msg,type});clearTimeout(tRef.current);tRef.current=setTimeout(()=>setToast(null),2400);},[]);
 
-  function openModal(t){setTipo(t);setForm({data:today(),desc:"",cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0],valor:"",modo:"normal",freq:"mensal",dia:1});setModal(true);}
+  function openModal(t){setTipo(t);setForm({data:today(),desc:"",cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0],valor:"",modo:"normal",freq:"mensal",dia:1,cartaoId:""});setModal(true);}
 
   async function salvar(){
     const v=parseFloat(form.valor);
     if(!form.data||!v||v<=0){showT("Informe o valor e a data.","error");return;}
     const modo=form.modo||"normal";
     // Agendado: salva com flag agendado=true — não entra no saldo até a data
-    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado"});
+    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado",...(form.cartaoId?{cartaoId:form.cartaoId}:{})});
     if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,ativo:true});
     const label=modo==="recorrente"?" ↻":modo==="agendado"?" 🕐":"";
     showT(`${tipo} adicionada!${label}`);setModal(false);
@@ -2446,7 +2464,7 @@ export default function App(){
       <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
     </div>
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">
-      <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar}/>
+      <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoes}/>
     </Sheet>
     {toast&&<div style={{position:"fixed",bottom:NH+12,left:"50%",transform:"translateX(-50%)",background:G.card2,border:`1px solid ${toast.type==="success"?G.green:G.red}55`,borderRadius:20,padding:"10px 18px",fontSize:13,fontWeight:600,zIndex:9999,display:"flex",alignItems:"center",gap:8,animation:"fadeUp .28s ease",boxShadow:"0 6px 24px rgba(0,0,0,.5)",whiteSpace:"nowrap",color:toast.type==="success"?G.green:G.red}}>{toast.type==="success"?"✓":"✕"} {toast.msg}</div>}
   </>);
