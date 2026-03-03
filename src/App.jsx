@@ -43,6 +43,12 @@ const getMes = d => d?d.slice(0,7):"";
 const fmtD   = d => { try{const[y,m,dd]=d.split("-");return`${dd}/${m}/${y}`;}catch{return d;} };
 const today  = () => new Date().toISOString().slice(0,10);
 const curMes = () => { const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; };
+// Só contabiliza lançamentos cuja data já chegou (ou é passada)
+// Lançamento conta no saldo se: data já chegou E não está marcado como agendado futuro
+const isRealizado = (d, agendado) => {
+  if(agendado && d > today()) return false; // agendado ainda não chegou
+  return true; // normal ou recorrente sempre conta (data já foi definida corretamente)
+};
 const mesLblFull = ma => { try{const[y,m]=ma.split("-");return`${MESES[+m-1]}/${y}`;}catch{return ma;} };
 const mesLbl     = mesLblFull;
 const pct = (v,t) => t>0?Math.min(100,(v/t)*100):0;
@@ -178,7 +184,7 @@ function localAI(msg,lancs){
 async function callAI(msg,lancs){
   const r=localAI(msg,lancs);
   if(r.isSummary){
-    const mes=curMes(),dm=lancs.filter(l=>l.data?.startsWith(mes));
+    const mes=curMes(),dm=lancs.filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
     const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
     const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
     const sal=tR-tD;
@@ -421,22 +427,24 @@ function Head({view,onRec,onDep,user,onDrawer}){
 // ─── TX ROW ───────────────────────────────────────────────────────────────────
 function TxRow({l,onDelete,full}){
   const isR=l.tipo==="Receita",c=isR?G.green:G.red;
+  const isPendente=l.agendado&&l.data>today();
   return(
-    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:`1px solid ${G.border}`}}>
-      <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:isR?G.greenL:G.redL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:c,position:"relative"}}>
-        {isR?"↑":"↓"}
+    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:`1px solid ${G.border}`,opacity:isPendente?.55:1}}>
+      <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:isPendente?G.card2:isR?G.greenL:G.redL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:isPendente?G.muted:c,position:"relative",border:isPendente?`1.5px dashed ${G.border2}`:"none"}}>
+        {isPendente?"🕐":isR?"↑":"↓"}
         {l.auto&&<div style={{position:"absolute",bottom:-2,right:-2,width:13,height:13,borderRadius:"50%",background:G.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#fff"}}>↻</div>}
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:14,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.desc||l.cat}</div>
+        <div style={{fontSize:14,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:isPendente?G.muted:G.text}}>{l.desc||l.cat}</div>
         <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3,flexWrap:"wrap"}}>
           <span style={{fontSize:11,color:G.muted}}>{fmtD(l.data)}</span>
           <Tag color={CAT_COLORS[l.cat]||G.muted}>{l.cat}</Tag>
           {full&&<span style={{fontSize:11,color:G.muted}}>{l.forma}</span>}
           {l.auto&&<Tag color={G.accent}>↻ auto</Tag>}
+          {isPendente&&<Tag color={G.yellow}>🕐 agendado</Tag>}
         </div>
       </div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:c,flexShrink:0}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:isPendente?G.muted:c,flexShrink:0,textDecoration:isPendente?"line-through":"none"}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
       <button onClick={()=>onDelete(l.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 4px",lineHeight:1}}
         onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
     </div>
@@ -467,17 +475,29 @@ function LancForm({tipo,setTipo,form,setForm,onSave}){
           {(tipo==="Receita"?FORMAS_REC:FORMAS_DEP).map(f=><div key={f} onClick={()=>setForm(fm=>({...fm,forma:f}))} className="press" style={{padding:"8px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:form.forma===f?ac+"22":G.card2,border:`1px solid ${form.forma===f?ac+"88":G.border}`,color:form.forma===f?ac:G.muted}}>{f}</div>)}
         </div>
       </div>
-      <div onClick={()=>setForm(f=>({...f,recorrente:!f.recorrente}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,border:`1px solid ${isRec?ac+"66":G.border}`,background:isRec?ac+"11":G.card2,cursor:"pointer",marginBottom:isRec?14:24,transition:"all .2s"}}>
-        <div><div style={{fontSize:14,fontWeight:600,color:isRec?ac:G.text}}>↻ Lançamento recorrente</div><div style={{fontSize:12,color:G.muted,marginTop:2}}>Repete automaticamente todo mês</div></div>
-        <div style={{width:44,height:24,borderRadius:12,background:isRec?ac:G.border2,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:isRec?22:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/></div>
-      </div>
-      {isRec&&<div style={{background:G.card2,borderRadius:14,padding:14,marginBottom:24,animation:"fadeUp .15s ease"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-          <div><Lbl>Frequência</Lbl><select value={form.freq||"mensal"} onChange={e=>setForm(f=>({...f,freq:e.target.value}))} className="inp">{FREQ_OPTS.map(f=><option key={f.id} value={f.id}>{f.icon} {f.label}</option>)}</select></div>
-          <div><Lbl>Dia do mês</Lbl><input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="1–31" value={form.dia===0||form.dia===undefined?"":form.dia} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,dia:v===""?0:Math.min(31,Math.max(1,parseInt(v)||1))}));}} onBlur={e=>{if(!form.dia||form.dia<1)setForm(f=>({...f,dia:1}));}} className="inp"/></div>
+      {/* ── Modo: Normal / Recorrente / Agendado ── */}
+      <div style={{marginBottom:16}}>
+        <div style={{display:"flex",gap:8,marginBottom:form.modo&&form.modo!=="normal"?10:0}}>
+          {[{id:"normal",icon:"✓",l:"Normal"},{id:"recorrente",icon:"↻",l:"Recorrente"},{id:"agendado",icon:"🕐",l:"Agendado"}].map(opt=>{
+            const sel=(form.modo||"normal")===opt.id;
+            return(<button key={opt.id} onClick={()=>setForm(f=>({...f,modo:opt.id}))} className="press"
+              style={{flex:1,padding:"10px 6px",borderRadius:12,border:`1px solid ${sel?ac+"88":G.border}`,background:sel?ac+"18":G.card2,color:sel?ac:G.muted,fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+              <span style={{fontSize:16}}>{opt.icon}</span><span>{opt.l}</span>
+            </button>);
+          })}
         </div>
-        <div style={{fontSize:12,color:G.muted,textAlign:"center"}}>💡 Gerado automaticamente todo mês no dia {form.dia||1}</div>
-      </div>}
+        {(form.modo||"normal")==="recorrente"&&<div style={{background:G.card2,borderRadius:12,padding:12,animation:"fadeUp .15s ease"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
+            <div><Lbl>Frequência</Lbl><select value={form.freq||"mensal"} onChange={e=>setForm(f=>({...f,freq:e.target.value}))} className="inp">{FREQ_OPTS.map(f=><option key={f.id} value={f.id}>{f.icon} {f.label}</option>)}</select></div>
+            <div><Lbl>Dia do mês</Lbl><input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="1–31" value={form.dia===0||form.dia===undefined?"":form.dia} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,dia:v===""?0:Math.min(31,Math.max(1,parseInt(v)||1))}));}} onBlur={()=>{if(!form.dia||form.dia<1)setForm(f=>({...f,dia:1}));}} className="inp"/></div>
+          </div>
+          <div style={{fontSize:11,color:G.muted,textAlign:"center"}}>↻ Entra automaticamente todo mês na data definida</div>
+        </div>}
+        {(form.modo||"normal")==="agendado"&&<div style={{background:G.yellow+"12",border:`1px solid ${G.yellow}44`,borderRadius:12,padding:12,animation:"fadeUp .15s ease"}}>
+          <div style={{fontSize:12,color:G.yellow,fontWeight:600,marginBottom:4}}>🕐 Agendado</div>
+          <div style={{fontSize:12,color:G.muted,lineHeight:1.5}}>Vai entrar no saldo só na data escolhida acima. Aparece na lista com visual diferente até lá.</div>
+        </div>}
+      </div>
       <button onClick={onSave} className="press" style={{width:"100%",padding:"16px",borderRadius:14,border:"none",cursor:"pointer",fontWeight:700,fontSize:16,fontFamily:"inherit",background:ac,color:"#fff"}}>Salvar {tipo}</button>
     </div>
   );
@@ -488,7 +508,7 @@ function Dashboard({lancs,onDelete}){
   const [mes,setMes]=useState(curMes());
   const md=[...new Set(lancs.map(l=>getMes(l.data)))].sort().reverse().slice(0,8);
   if(!md.includes(curMes()))md.unshift(curMes());
-  const dm=lancs.filter(l=>getMes(l.data)===mes);
+  const dm=lancs.filter(l=>getMes(l.data)===mes&&isRealizado(l.data,l.agendado));
   const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
   const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
   const sal=tR-tD,po=tR>0?sal/tR:0;
@@ -523,6 +543,15 @@ function Dashboard({lancs,onDelete}){
     <div style={{display:"flex",gap:8,overflowX:"auto",marginBottom:16,paddingBottom:2}}>
       {md.map(m=><div key={m} onClick={()=>setMes(m)} className="press" style={{padding:"7px 16px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:m===mes?G.accentL:G.card2,border:`1px solid ${m===mes?G.accent:G.border}`,color:m===mes?G.accent:G.muted}}>{mesLblFull(m)}</div>)}
     </div>
+    {(()=>{const ag=lancs.filter(l=>l.agendado&&l.data>today()).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,3);return ag.length>0&&(
+      <div style={{background:G.yellow+"12",border:`1px solid ${G.yellow}33`,borderRadius:16,padding:16,marginBottom:16}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.yellow,marginBottom:10}}>🕐 Agendados</div>
+        {ag.map(l=>{const isR=l.tipo==="Receita";return(<div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${G.yellow}22`}}>
+          <div><div style={{fontSize:13,fontWeight:500,color:G.muted}}>{l.desc||l.cat}</div><div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}</div></div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:G.muted}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
+        </div>);})}
+      </div>
+    )})()}
     <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:16}}>
       <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Últimos Lançamentos</div>
       {lancs.length===0?<div style={{textAlign:"center",color:G.muted,padding:"24px 0",fontSize:13}}>Sem lançamentos ainda</div>
@@ -576,7 +605,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
   if(mf)data=data.filter(l=>getMes(l.data)===mf);
   if(cf)data=data.filter(l=>l.cat===cf);
   data=[...data].sort((a,b)=>b.data.localeCompare(a.data));
-  const mt=todos.filter(l=>getMes(l.data)===curMes()).reduce((s,l)=>s+l.valor,0);
+  const mt=todos.filter(l=>getMes(l.data)===curMes()&&isRealizado(l.data,l.agendado)).reduce((s,l)=>s+l.valor,0);
   const at=todos.filter(l=>l.data.startsWith(new Date().getFullYear())).reduce((s,l)=>s+l.valor,0);
   const listaRec=recorrentes.filter(r=>r.tipo===tipo);
   return(<div style={{paddingBottom:8}}>
@@ -1261,7 +1290,7 @@ function FinancasView({uid,lancs,secao}){
     load();
   },[uid]);
 
-  const dm=lancs.filter(l=>getMes(l.data)===mes);
+  const dm=lancs.filter(l=>getMes(l.data)===mes&&isRealizado(l.data,l.agendado));
   const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
   const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
   const sal=tR-tD;
@@ -1274,8 +1303,9 @@ function FinancasView({uid,lancs,secao}){
   const trend=Array.from({length:6},(_,i)=>{
     const d=new Date(now.getFullYear(),now.getMonth()-5+i,1);
     const ma=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-    const r=lancs.filter(l=>l.tipo==="Receita"&&getMes(l.data)===ma).reduce((s,l)=>s+l.valor,0);
-    const dd=lancs.filter(l=>l.tipo==="Despesa"&&getMes(l.data)===ma).reduce((s,l)=>s+l.valor,0);
+    const isCur=ma===curMes();
+    const r=lancs.filter(l=>l.tipo==="Receita"&&getMes(l.data)===ma&&isRealizado(l.data,l.agendado)).reduce((s,l)=>s+l.valor,0);
+    const dd=lancs.filter(l=>l.tipo==="Despesa"&&getMes(l.data)===ma&&isRealizado(l.data,l.agendado)).reduce((s,l)=>s+l.valor,0);
     return{name:MESES[d.getMonth()],poupanca:Math.max(0,r-dd),gasto:dd,rec:r};
   });
 
@@ -2342,14 +2372,17 @@ export default function App(){
 
   const showT=useCallback((msg,type="success")=>{setToast({msg,type});clearTimeout(tRef.current);tRef.current=setTimeout(()=>setToast(null),2400);},[]);
 
-  function openModal(t){setTipo(t);setForm({data:today(),desc:"",cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0],valor:"",recorrente:false,freq:"mensal",dia:1});setModal(true);}
+  function openModal(t){setTipo(t);setForm({data:today(),desc:"",cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0],valor:"",modo:"normal",freq:"mensal",dia:1});setModal(true);}
 
   async function salvar(){
     const v=parseFloat(form.valor);
     if(!form.data||!v||v<=0){showT("Informe o valor e a data.","error");return;}
-    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,data:form.data});
-    if(form.recorrente)await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,ativo:true});
-    showT(`${tipo} adicionada!${form.recorrente?" ↻":""}`);setModal(false);
+    const modo=form.modo||"normal";
+    // Agendado: salva com flag agendado=true — não entra no saldo até a data
+    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado"});
+    if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,ativo:true});
+    const label=modo==="recorrente"?" ↻":modo==="agendado"?" 🕐":"";
+    showT(`${tipo} adicionada!${label}`);setModal(false);
   }
   async function deletar(id){await deleteDoc(doc(db,"users",user.uid,"lancamentos",id));showT("Removido.","error");}
   async function toggleRec(id){const r=recorrentes.find(r=>r.id===id);if(r)await updateDoc(doc(db,"users",user.uid,"recorrentes",id),{ativo:!r.ativo});}
