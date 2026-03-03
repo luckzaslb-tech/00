@@ -1938,7 +1938,7 @@ function CartoesView({uid,lancs}){
   const [cartoes,setCartoes]=useState([]);
   const [sheet,setSheet]=useState(false);
   const [form,setForm]=useState({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
-  const [confirmDel,setConfirmDel]=useState(null);
+  const [confirmDel,setConfirmDel]=useState(null); // unused, kept for compat
 
   useEffect(()=>{
     if(!uid)return;
@@ -2000,13 +2000,7 @@ function CartoesView({uid,lancs}){
               <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{c.nome}</div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{c.bandeira}</div>
             </div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {confirmDel===c.id
-                ?<><button onClick={()=>{deletarCartao(c.id);setConfirmDel(null);}} style={{background:"#ff4444",border:"none",color:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>Confirmar</button>
-                   <button onClick={()=>setConfirmDel(null)} style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12}}>Não</button></>
-                :<button onClick={()=>setConfirmDel(c.id)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"rgba(255,255,255,.8)",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-              }
-            </div>
+            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(255,0,0,.4)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div>
