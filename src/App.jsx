@@ -9,7 +9,7 @@ import { collection, doc, addDoc, deleteDoc, updateDoc, getDocs, onSnapshot, set
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const CATS_REC = ["Salário","Freelance","Investimentos","Aluguel Recebido","Bônus","Reembolso","Pensão Recebida","Venda de Produtos","Comissão","Renda Extra","Dividendos","Aposentadoria","Outros"];
-const CATS_DEP = ["Moradia","Alimentação","Transporte","Saúde","Educação","Lazer","Vestuário","Assinaturas","Pets","Beleza e Cuidados","Eletrônicos","Presentes","Impostos","Dívidas","Seguros","Academia","Farmácia","Outros"];
+const CATS_DEP = ["Cartão de Crédito","Moradia","Alimentação","Transporte","Saúde","Educação","Lazer","Vestuário","Assinaturas","Pets","Beleza e Cuidados","Eletrônicos","Presentes","Impostos","Dívidas","Seguros","Academia","Farmácia","Outros"];
 const FORMAS_REC = ["PIX","Transferência","Depósito","TED","Dinheiro","Automático"];
 const FORMAS_DEP = ["Cartão Crédito","Cartão Débito","PIX","Dinheiro","Débito Auto","Boleto","App"];
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -468,7 +468,7 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
       <div style={{marginBottom:14}}><Lbl opt>Descrição</Lbl><input type="text" placeholder="Ex: Salário, Mercado, Uber..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} className="inp"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
         <div><Lbl>Data</Lbl><input type="date" value={form.data} onChange={e=>setForm(f=>({...f,data:e.target.value}))} className="inp"/></div>
-        <div><Lbl>Categoria</Lbl><select value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))} className="inp">{(tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}</select></div>
+        <div><Lbl>Categoria</Lbl>{tipo==="Despesa"&&form.forma==="Cartão Crédito"?(<div className="inp" style={{color:G.muted,fontSize:14}}>💳 Cartão de Crédito</div>):(<select value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))} className="inp">{(tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}</select>)}</div>
       </div>
       <div style={{marginBottom:16}}><Lbl>Forma de Pagamento</Lbl>
         <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
@@ -1938,6 +1938,7 @@ function CartoesView({uid,lancs}){
   const [cartoes,setCartoes]=useState([]);
   const [sheet,setSheet]=useState(false);
   const [form,setForm]=useState({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
+  const [confirmDel,setConfirmDel]=useState(null);
 
   useEffect(()=>{
     if(!uid)return;
@@ -1958,7 +1959,6 @@ function CartoesView({uid,lancs}){
   }
 
   async function deletarCartao(id){
-    if(!window.confirm("Remover cartão?"))return;
     await deleteDoc(doc(db,"users",uid,"cartoes",id));
   }
 
@@ -2000,7 +2000,13 @@ function CartoesView({uid,lancs}){
               <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{c.nome}</div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{c.bandeira}</div>
             </div>
-            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"rgba(255,255,255,.8)",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {confirmDel===c.id
+                ?<><button onClick={()=>{deletarCartao(c.id);setConfirmDel(null);}} style={{background:"#ff4444",border:"none",color:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>Confirmar</button>
+                   <button onClick={()=>setConfirmDel(null)} style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12}}>Não</button></>
+                :<button onClick={()=>setConfirmDel(c.id)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"rgba(255,255,255,.8)",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              }
+            </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div>
@@ -2398,7 +2404,7 @@ export default function App(){
     if(!form.data||!v||v<=0){showT("Informe o valor e a data.","error");return;}
     const modo=form.modo||"normal";
     // Agendado: salva com flag agendado=true — não entra no saldo até a data
-    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado",...(form.cartaoId?{cartaoId:form.cartaoId}:{})});
+    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado",...(form.cartaoId?{cartaoId:form.cartaoId}:{})});
     if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,ativo:true});
     const label=modo==="recorrente"?" ↻":modo==="agendado"?" 🕐":"";
     showT(`${tipo} adicionada!${label}`);setModal(false);
