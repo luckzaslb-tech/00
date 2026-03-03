@@ -2359,6 +2359,7 @@ export default function App(){
   const [dataLoading,setDataLoading]=useState(false);
   const [view,setView]=useState("dashboard");
   const [drawerOpen,setDrawerOpen]=useState(false);
+  const [cartoesList,setCartoesList]=useState([]);
   const [modal,setModal]=useState(false);
   const [tipo,setTipo]=useState("Despesa");
   const [form,setForm]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",recorrente:false,freq:"mensal",dia:1});
@@ -2378,7 +2379,7 @@ export default function App(){
     const uid=user.uid;
     const unsubL=onSnapshot(collection(db,"users",uid,"lancamentos"),snap=>{setLancs(snap.docs.map(d=>({id:d.id,...d.data()})));setDataLoading(false);});
     const unsubR=onSnapshot(collection(db,"users",uid,"recorrentes"),snap=>{setRecorrentes(snap.docs.map(d=>({id:d.id,...d.data()})));});
-    const unsubC=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{setCartoes(snap.docs.map(d=>({id:d.id,...d.data()})));});
+    const unsubC=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{setCartoesList(snap.docs.map(d=>({id:d.id,...d.data()})));});
     return()=>{unsubL();unsubR();unsubC();};
   },[user]);
 
@@ -2464,7 +2465,7 @@ export default function App(){
       <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
     </div>
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">
-      <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoes}/>
+      <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoesList}/>
     </Sheet>
     {toast&&<div style={{position:"fixed",bottom:NH+12,left:"50%",transform:"translateX(-50%)",background:G.card2,border:`1px solid ${toast.type==="success"?G.green:G.red}55`,borderRadius:20,padding:"10px 18px",fontSize:13,fontWeight:600,zIndex:9999,display:"flex",alignItems:"center",gap:8,animation:"fadeUp .28s ease",boxShadow:"0 6px 24px rgba(0,0,0,.5)",whiteSpace:"nowrap",color:toast.type==="success"?G.green:G.red}}>{toast.type==="success"?"✓":"✕"} {toast.msg}</div>}
   </>);
