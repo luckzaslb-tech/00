@@ -1938,7 +1938,6 @@ function CartoesView({uid,lancs}){
   const [cartoes,setCartoes]=useState([]);
   const [sheet,setSheet]=useState(false);
   const [form,setForm]=useState({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
-  const [confirmDel,setConfirmDel]=useState(null); // unused, kept for compat
 
   useEffect(()=>{
     if(!uid)return;
@@ -1967,32 +1966,28 @@ function CartoesView({uid,lancs}){
   const CORES=["#7C6AF7","#FB923C","#34D399","#60A5FA","#F472B6","#FBBF24","#F87171","#2DD4BF"];
 
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
-    {/* Header */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>SEUS CARTÕES</div>
+      <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>SEUS CARTOES</div>
       <button onClick={()=>setSheet(true)} className="press"
-        style={{padding:"7px 14px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+        style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
         + Adicionar
       </button>
     </div>
 
     {cartoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
-      <div style={{fontSize:40,marginBottom:12}}>💳</div>
-      <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhum cartão cadastrado</div>
-      <div style={{fontSize:12}}>Adicione seus cartões para controlar faturas e limites</div>
+      <div style={{fontSize:40,marginBottom:12}}>{"\U0001F4B3"}</div>
+      <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhum cartao cadastrado</div>
+      <div style={{fontSize:12}}>Adicione seus cartoes para controlar faturas e limites</div>
     </div>}
 
     {cartoes.map(c=>{
-      // gastos do mês neste cartão (forma = nome do cartão ou "Cartão Crédito")
       const gastosMes=lancs.filter(l=>l.data?.startsWith(mes)&&l.tipo==="Despesa"&&l.cartaoId===c.id);
       const totalGasto=gastosMes.reduce((s,l)=>s+l.valor,0);
       const pctUsado=c.limite>0?(totalGasto/c.limite)*100:0;
       const disponivel=Math.max(0,c.limite-totalGasto);
       const corBarra=pctUsado>90?G.red:pctUsado>70?G.yellow:G.green;
-
-      return(<div key={c.id} style={{borderRadius:20,overflow:"hidden",position:"relative"}}>
-        {/* Card visual */}
-        <div style={{background:`linear-gradient(135deg,${c.cor}dd,${c.cor}88)`,padding:"20px 20px 16px",position:"relative",overflow:"hidden"}}>
+      return(<div key={c.id} style={{borderRadius:20,overflow:"hidden"}}>
+        <div style={{background:"linear-gradient(135deg,"+c.cor+"dd,"+c.cor+"88)",padding:"20px 20px 16px",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
           <div style={{position:"absolute",bottom:-30,right:20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
@@ -2000,7 +1995,7 @@ function CartoesView({uid,lancs}){
               <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{c.nome}</div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{c.bandeira}</div>
             </div>
-            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(255,0,0,.4)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
+            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(200,0,0,.7)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:20,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,position:"relative",zIndex:10}}>x</button>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div>
@@ -2013,65 +2008,51 @@ function CartoesView({uid,lancs}){
             </div>
           </div>
         </div>
-        {/* Barra de uso */}
-        <div style={{background:G.card,border:`1px solid ${G.border}`,borderTop:"none",borderRadius:"0 0 20px 20px",padding:16}}>
+        <div style={{background:G.card,border:"1px solid "+G.border,borderTop:"none",borderRadius:"0 0 20px 20px",padding:16}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-            <div style={{fontSize:12,color:G.muted}}>Gasto este mês</div>
+            <div style={{fontSize:12,color:G.muted}}>Gasto este mes</div>
             <div style={{fontSize:12,fontWeight:700,color:corBarra}}>{pctUsado.toFixed(0)}% usado</div>
           </div>
           <div style={{height:6,background:G.card2,borderRadius:3,overflow:"hidden",marginBottom:8}}>
-            <div style={{height:"100%",width:`${Math.min(100,pctUsado)}%`,background:corBarra,borderRadius:3,transition:"width .5s ease"}}/>
+            <div style={{height:"100%",width:Math.min(100,pctUsado)+"%",background:corBarra,borderRadius:3,transition:"width .5s ease"}}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div style={{fontSize:13,fontWeight:700,color:G.red}}>- {fmt(totalGasto)}</div>
-            <div style={{fontSize:13,fontWeight:700,color:G.green}}>Disponível: {fmt(disponivel)}</div>
+            <div style={{fontSize:13,fontWeight:700,color:G.green}}>Disponivel: {fmt(disponivel)}</div>
           </div>
-          {/* Últimos gastos */}
-          {gastosMes.length>0&&<div style={{marginTop:12,borderTop:`1px solid ${G.border}`,paddingTop:12}}>
-            <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:8,letterSpacing:.8}}>ÚLTIMOS GASTOS</div>
+          {gastosMes.length>0&&<div style={{marginTop:12,borderTop:"1px solid "+G.border,paddingTop:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:8,letterSpacing:.8}}>ULTIMOS GASTOS</div>
             {gastosMes.slice(0,3).map((l,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${G.border}33`}}>
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid "+G.border+"33"}}>
                 <div style={{fontSize:12,color:G.text}}>{l.desc||l.cat}</div>
                 <div style={{fontSize:12,fontWeight:700,color:G.red}}>-{fmt(l.valor)}</div>
               </div>
             ))}
-            {gastosMes.length>3&&<div style={{fontSize:11,color:G.muted,textAlign:"center",marginTop:6}}>+{gastosMes.length-3} mais este mês</div>}
           </div>}
         </div>
       </div>);
     })}
 
-    {/* Sheet novo cartão */}
-    <Sheet open={sheet} onClose={()=>setSheet(false)} title="Novo Cartão">
+    <Sheet open={sheet} onClose={()=>setSheet(false)} title="Novo Cartao">
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Nome do cartão</Lbl><input value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))} placeholder="Ex: Nubank, Itaú Platinum..." className="inp"/></div>
-        <div><Lbl>Bandeira</Lbl>
-          <select value={form.bandeira} onChange={e=>setForm(f=>({...f,bandeira:e.target.value}))} className="inp">
-            {BANDEIRAS.map(b=><option key={b}>{b}</option>)}
-          </select>
-        </div>
+        <div><Lbl>Nome do cartao</Lbl><input value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))} placeholder="Ex: Nubank, Itau..." className="inp"/></div>
+        <div><Lbl>Bandeira</Lbl><select value={form.bandeira} onChange={e=>setForm(f=>({...f,bandeira:e.target.value}))} className="inp">{BANDEIRAS.map(b=><option key={b}>{b}</option>)}</select></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div><Lbl>Limite (R$)</Lbl><input type="number" value={form.limite} onChange={e=>setForm(f=>({...f,limite:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl>Vencimento (dia)</Lbl><input type="text" inputMode="numeric" pattern="[0-9]*" value={form.vencimento} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,vencimento:v}));}} onBlur={e=>{const v=parseInt(form.vencimento)||10;setForm(f=>({...f,vencimento:String(Math.min(31,Math.max(1,v)))}));}} placeholder="10" className="inp"/></div>
+          <div><Lbl>Vencimento (dia)</Lbl><input type="text" inputMode="numeric" value={form.vencimento} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,vencimento:v}));}} onBlur={()=>{const v=parseInt(form.vencimento)||10;setForm(f=>({...f,vencimento:String(Math.min(31,Math.max(1,v)))}));}} placeholder="10" className="inp"/></div>
         </div>
-        <div><Lbl>Cor do cartão</Lbl>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:4}}>
-            {CORES.map(c=>(
-              <button key={c} onClick={()=>setForm(f=>({...f,cor:c}))}
-                style={{width:32,height:32,borderRadius:"50%",background:c,border:form.cor===c?`3px solid ${G.text}`:`2px solid transparent`,cursor:"pointer"}}/>
-            ))}
-          </div>
-        </div>
-        <button onClick={salvarCartao} className="press"
-          style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
-          💳 Salvar Cartão
+        <div><Lbl>Cor</Lbl><div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:4}}>
+          {CORES.map(cor=>(<button key={cor} onClick={()=>setForm(f=>({...f,cor}))} style={{width:32,height:32,borderRadius:"50%",background:cor,border:form.cor===cor?"3px solid "+G.text:"2px solid transparent",cursor:"pointer"}}/>))}
+        </div></div>
+        <button onClick={salvarCartao} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
+          Salvar Cartao
         </button>
       </div>
     </Sheet>
   </div>);
 }
 
-// ─── FAMÍLIA / CASAL VIEW ──────────────────────────────────────────────────────
+
 function FamiliaView({uid,lancs}){
   const [perfil,setPerfil]=useState({tipo:"individual",parceiro:"",codPartilha:""});
   const [lancPessoais,setLancPessoais]=useState([]);
