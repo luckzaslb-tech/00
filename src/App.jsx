@@ -2111,7 +2111,19 @@ function ContatosView({uid,user}){
     const unsub=onSnapshot(collection(db,"users",uid,"contatos"),snap=>{
       setContatos(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
-    return()=>unsub();
+    // Ouve inbox de contatos novos (pessoas que digitaram meu codigo)
+    const unsubInbox=onSnapshot(collection(db,"inbox",uid,"contatos"),snap=>{
+      snap.docs.forEach(async d=>{
+        const data=d.data();
+        // Move para minha lista de contatos permanente
+        await setDoc(doc(db,"users",uid,"contatos",data.uid),{
+          nome:data.nome,uid:data.uid,vinculado:true,categoria:data.categoria||"Amigos",criadoEm:data.criadoEm
+        });
+        // Remove do inbox
+        await deleteDoc(doc(db,"inbox",uid,"contatos",d.id));
+      });
+    });
+    return()=>{unsub();unsubInbox();};
   },[uid]);
 
   async function adicionarPorCodigo(){
@@ -2120,29 +2132,37 @@ function ContatosView({uid,user}){
     if(cod.length<6){setErro("Código inválido");setBuscando(false);return;}
     try{
       const convSnap=await getDoc(doc(db,"convites",cod));
-      if(!convSnap.exists()){setErro("Código não encontrado. Verifique as regras do Firestore.");setBuscando(false);return;}
+      if(!convSnap.exists()){setErro("Código não encontrado — verifique as regras do Firestore.");setBuscando(false);return;}
       const conv=convSnap.data();
       if(conv.criadoPor===uid){setErro("Este é o seu próprio código");setBuscando(false);return;}
       if(conv.usado&&conv.usado!==uid){setErro("Código já utilizado por outra pessoa");setBuscando(false);return;}
-      // Pega nome do perfil da outra pessoa
+
+      // Pega meu nome do perfil
+      let meuNome=user?.displayName||"Contato";
+      try{const p=await getDoc(doc(db,"users",uid,"carreira","perfil"));if(p.exists()&&p.data().nome)meuNome=p.data().nome;}catch(_){}
+
+      // Pega nome do dono do código
       let nomeParc="Contato";
       try{const p=await getDoc(doc(db,"users",conv.criadoPor,"carreira","perfil"));if(p.exists()&&p.data().nome)nomeParc=p.data().nome;}catch(_){}
-      // Salva contato para mim
+
+      // 1. Salva a outra pessoa na MINHA lista
       await setDoc(doc(db,"users",uid,"contatos",conv.criadoPor),{
         nome:nomeParc,uid:conv.criadoPor,vinculado:true,categoria:"Amigos",criadoEm:today()
       });
-      // Salva eu como contato da outra pessoa
-      let meuNome=user?.displayName||"Contato";
-      try{const p=await getDoc(doc(db,"users",uid,"carreira","perfil"));if(p.exists()&&p.data().nome)meuNome=p.data().nome;}catch(_){}
-      await setDoc(doc(db,"users",conv.criadoPor,"contatos",uid),{
-        nome:meuNome,uid,vinculado:true,categoria:"Amigos",criadoEm:today()
+
+      // 2. Escreve na caixa de entrada PÚBLICA da outra pessoa (inbox)
+      // A regra do Firestore precisa permitir: match /inbox/{userId}/{doc} { allow write: if request.auth != null; }
+      await setDoc(doc(db,"inbox",conv.criadoPor,"contatos",uid),{
+        nome:meuNome,uid,vinculado:true,categoria:"Amigos",criadoEm:today(),tipo:"contato_novo"
       });
-      // Marca codigo como usado
-      await updateDoc(doc(db,"convites",cod),{usado:uid});
+
+      // 3. Marca código como usado
+      await updateDoc(doc(db,"convites",cod),{usado:uid,usadoPor:uid,usadoEm:today()});
+
       setCodInput("");
       setSheetAdd(false);
     }catch(e){
-      if(e.code==="permission-denied")setErro("Erro de permissão — verifique as regras do Firestore");
+      if(e.code==="permission-denied")setErro("Erro de permissão — adicione a regra 'inbox' no Firestore (ver instruções)");
       else setErro("Erro: "+e.message);
     }
     setBuscando(false);
@@ -2392,8 +2412,8 @@ function DivisoesView({uid}){
     const unsub=onSnapshot(collection(db,"users",uid,"divisoes"),snap=>{
       setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
-    // Divisoes pendentes (outros me enviaram)
-    const unsubP=onSnapshot(collection(db,"users",uid,"divisoes_pendentes"),snap=>{
+    // Divisoes pendentes via inbox público
+    const unsubP=onSnapshot(collection(db,"inbox",uid,"divisoes_pendentes"),snap=>{
       setPendentes(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
     // Contatos para seleção
@@ -2417,16 +2437,18 @@ function DivisoesView({uid}){
     const valorPorPessoa=v/pessoas.length;
     const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
     // Salva minha divisão
-    await addDoc(collection(db,"users",uid,"divisoes"),{
+    const divRef=await addDoc(collection(db,"users",uid,"divisoes"),{
       desc:formDiv.desc,total:v,data:formDiv.data,partes,criadoEm:today(),criadoPor:uid
     });
-    // Notifica contatos vinculados que estão na divisão
+    // Notifica contatos vinculados via inbox público
     const contatosVinculados=contatos.filter(c=>c.vinculado&&c.uid&&formDiv.selecionados.includes(c.nome));
     for(const ct of contatosVinculados){
-      await addDoc(collection(db,"users",ct.uid,"divisoes_pendentes"),{
-        desc:formDiv.desc,total:v,data:formDiv.data,partes,
-        criadoPor:uid,criadoEm:today(),status:"pendente"
-      });
+      try{
+        await addDoc(collection(db,"inbox",ct.uid,"divisoes_pendentes"),{
+          desc:formDiv.desc,total:v,data:formDiv.data,partes,
+          criadoPor:uid,criadoEm:today(),status:"pendente",divOrigemId:divRef.id
+        });
+      }catch(e){console.warn("Erro ao notificar",ct.nome,e.message);}
     }
     setSheetDiv(false);
     setFormDiv({desc:"",valor:"",selecionados:[],data:today()});
@@ -2434,11 +2456,11 @@ function DivisoesView({uid}){
 
   async function aceitarDiv(id,dados){
     await addDoc(collection(db,"users",uid,"divisoes"),{...dados,status:"aceito"});
-    await deleteDoc(doc(db,"users",uid,"divisoes_pendentes",id));
+    await deleteDoc(doc(db,"inbox",uid,"divisoes_pendentes",id));
   }
 
   async function recusarDiv(id){
-    await deleteDoc(doc(db,"users",uid,"divisoes_pendentes",id));
+    await deleteDoc(doc(db,"inbox",uid,"divisoes_pendentes",id));
   }
 
   async function marcarPago(divId,parteIdx){
