@@ -253,7 +253,8 @@ const getCSS=(theme)=>`
   @supports(padding:max(0px)){
     .safe-bottom{padding-bottom:max(8px,env(safe-area-inset-bottom))}
   .nav-bar{position:fixed;bottom:0;left:0;right:0;z-index:200;background:${theme==="light"?LIGHT.card:DARK.card};border-top:1px solid ${theme==="light"?LIGHT.border:DARK.border};display:flex;min-height:${NH}px;padding-bottom:max(8px,env(safe-area-inset-bottom));box-sizing:border-box}
-    .safe-top{padding-top:max(0px,env(safe-area-inset-top))}
+  .safe-top{padding-top:max(0px,env(safe-area-inset-top))}
+  :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--hh:calc(${HH}px + var(--sat));--nh:calc(${NH}px + var(--sab))}
   }
   .inp{width:100%;padding:12px 14px;background:${theme==="light"?LIGHT.card2:DARK.card2};border:1px solid ${theme==="light"?LIGHT.border2:DARK.border2};border-radius:12px;color:${theme==="light"?LIGHT.text:DARK.text};font-size:15px;outline:none;transition:background .2s,border .2s,color .2s}
   .inp:focus{border-color:#7C6AF7}
@@ -311,27 +312,34 @@ function Nav({view,setView}){
 // ─── DRAWER ───────────────────────────────────────────────────────────────────
 function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
   const [finOpen,setFinOpen]=useState(true);
+  const [compOpen,setCompOpen]=useState(false);
   const G2=G;
   const navTo=(v)=>{setView(v);onClose();};
-  const drawerViews=["financas-visao","financas-orcamentos","financas-relatorio","financas-alertas"];
-  const finActive=drawerViews.includes(view);
+  const finActive=["financas-visao","financas-orcamentos","financas-relatorio","financas-alertas"].includes(view);
+  const compActive=["compartilhados-casal","compartilhados-divisoes"].includes(view);
 
   const items=[
     {id:"carreira",icon:"👤",l:"Perfil"},
     {id:"dashboard",icon:"⬡",l:"Dashboard"},
     {id:"cartoes",icon:"💳",l:"Cartões de Crédito"},
-    {id:"familia",icon:"👫",l:"Família / Casal"},
+    {id:"contatos",icon:"👥",l:"Contatos"},
     {id:"importar",icon:"📁",l:"Importar Extrato"},
   ];
-
   const finSubs=[
     {id:"financas-visao",icon:"👁",l:"Visão Geral"},
     {id:"financas-orcamentos",icon:"🎯",l:"Orçamentos"},
     {id:"financas-relatorio",icon:"📈",l:"Relatório"},
     {id:"financas-alertas",icon:"🔔",l:"Alertas"},
   ];
+  const compSubs=[
+    {id:"compartilhados-casal",icon:"👫",l:"Casal"},
+    {id:"compartilhados-divisoes",icon:"÷",l:"Divisões"},
+  ];
 
   if(!open)return null;
+  const btnStyle=(active)=>({width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",borderRadius:12,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:active?700:500,background:active?G2.accentL:"transparent",color:active?G2.accent:G2.text,textAlign:"left",transition:"background .15s"});
+  const subStyle=(active)=>({width:"100%",display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:10,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:active?600:400,background:active?G2.accentL:"transparent",color:active?G2.accent:G2.muted,textAlign:"left"});
+
   return(
     <>
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:9000,background:"rgba(0,0,0,.6)",backdropFilter:"blur(4px)"}}/>
@@ -340,12 +348,12 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
         <div style={{padding:"20px 20px 16px",borderBottom:`1px solid ${G2.border}`}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>fin<span style={{color:G2.accent}}>ance</span></div>
-            <button onClick={onClose} style={{width:30,height:30,borderRadius:8,border:"none",background:G2.card2,color:G2.muted,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <button onClick={onClose} style={{width:30,height:30,borderRadius:8,border:"none",background:G2.card2,color:G2.muted,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
           </div>
           {user&&<div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:38,height:38,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`2px solid ${G2.border2}`}}>
               {user.photoURL?<img src={user.photoURL} style={{width:"100%",height:"100%",objectFit:"cover"}} referrerPolicy="no-referrer"/>
-                :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,color:G2.accent,background:G2.accentL}}>{(user.displayName||user.email||"U")[0].toUpperCase()}</div>}
+                :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:G2.accent,background:G2.accentL}}>{(user.displayName||user.email||"U")[0].toUpperCase()}</div>}
             </div>
             <div>
               <div style={{fontSize:13,fontWeight:600,color:G2.text}}>{user.displayName||"Usuário"}</div>
@@ -357,23 +365,34 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
         {/* Nav items */}
         <div style={{flex:1,overflowY:"auto",padding:"10px 10px"}}>
           {items.map(it=>(
-            <button key={it.id} onClick={()=>navTo(it.id)} className="press"
-              style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",borderRadius:12,border:"none",background:view===it.id?G2.accentL:"none",color:view===it.id?G2.accent:G2.text,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:view===it.id?700:500,marginBottom:2,textAlign:"left"}}>
+            <button key={it.id} onClick={()=>navTo(it.id)} className="press" style={btnStyle(view===it.id)}>
               <span style={{fontSize:18,width:24,textAlign:"center"}}>{it.icon}</span>{it.l}
             </button>
           ))}
 
+          {/* Compartilhados expandível */}
+          <button onClick={()=>setCompOpen(v=>!v)} className="press" style={btnStyle(compActive)}>
+            <span style={{fontSize:18,width:24,textAlign:"center"}}>🤝</span>
+            <span style={{flex:1}}>Compartilhados</span>
+            <span style={{fontSize:12,color:G2.muted,transform:compOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
+          </button>
+          {compOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
+            {compSubs.map(s=>(
+              <button key={s.id} onClick={()=>navTo(s.id)} className="press" style={subStyle(view===s.id)}>
+                <span style={{fontSize:15}}>{s.icon}</span>{s.l}
+              </button>
+            ))}
+          </div>}
+
           {/* Finanças expandível */}
-          <button onClick={()=>setFinOpen(v=>!v)} className="press"
-            style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",borderRadius:12,border:"none",background:finActive?G2.accentL:"none",color:finActive?G2.accent:G2.text,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:500,marginBottom:2,textAlign:"left"}}>
+          <button onClick={()=>setFinOpen(v=>!v)} className="press" style={btnStyle(finActive)}>
             <span style={{fontSize:18,width:24,textAlign:"center"}}>💰</span>
             <span style={{flex:1}}>Finanças</span>
             <span style={{fontSize:12,color:G2.muted,transform:finOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
           </button>
           {finOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
             {finSubs.map(s=>(
-              <button key={s.id} onClick={()=>navTo(s.id)} className="press"
-                style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:10,border:"none",background:view===s.id?G2.accentL:"none",color:view===s.id?G2.accent:G2.muted,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:view===s.id?700:500,marginBottom:1,textAlign:"left"}}>
+              <button key={s.id} onClick={()=>navTo(s.id)} className="press" style={subStyle(view===s.id)}>
                 <span style={{fontSize:15}}>{s.icon}</span>{s.l}
               </button>
             ))}
@@ -382,12 +401,10 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
 
         {/* Footer */}
         <div style={{padding:"10px 10px 24px",borderTop:`1px solid ${G2.border}`}}>
-          <button onClick={()=>{onToggleTheme();}} className="press"
-            style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",borderRadius:12,border:"none",background:"none",color:G2.text,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:500,marginBottom:2,textAlign:"left"}}>
-            <span style={{fontSize:18,width:24,textAlign:"center"}}>{theme==="dark"?"☀️":"🌙"}</span>{theme==="dark"?"Modo claro":"Modo escuro"}
+          <button onClick={()=>{onToggleTheme();}} className="press" style={btnStyle(false)}>
+            <span style={{fontSize:18,width:24,textAlign:"center"}}>{theme==="dark"?"☀️":"🌙"}</span>{theme==="dark"?"Modo Claro":"Modo Escuro"}
           </button>
-          <button onClick={()=>{onLogout();onClose();}} className="press"
-            style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",borderRadius:12,border:"none",background:"none",color:G2.red,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:500,textAlign:"left"}}>
+          <button onClick={()=>{onLogout();onClose();}} className="press" style={btnStyle(false)}>
             <span style={{fontSize:18,width:24,textAlign:"center"}}>🚪</span>Sair da conta
           </button>
         </div>
@@ -396,13 +413,14 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
   );
 }
 
+
 function Head({view,onRec,onDep,user,onDrawer}){
   const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",carreira:"Meu Perfil",chat:"IA",
     cartoes:"Cartões",familia:"Família / Casal",divisao:"Divisão de Contas",importar:"Importar Extrato",
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
   const showAdd=["dashboard","receitas","despesas"].includes(view);
   return(
-    <div className="safe-top" style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",height:"auto",minHeight:HH}}>
+    <div className="safe-top" style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:"0 16px",paddingBottom:10,minHeight:"var(--hh)"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <button onClick={onDrawer} className="press" style={{width:34,height:34,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:0,flexShrink:0}}>
           {[0,1,2].map(i=><div key={i} style={{width:16,height:2,borderRadius:1,background:G.text}}/>)}
@@ -2078,34 +2096,16 @@ function CartoesView({uid,lancs}){
 }
 
 // ─── FAMÍLIA / CASAL VIEW ──────────────────────────────────────────────────────
-function FamiliaView({uid,lancs,user}){
-  const [tab,setTab]=useState("casal");
-  const [conexao,setConexao]=useState(null); // {parceirUid, status}
-  const [codInput,setCodInput]=useState("");
-  const [gerandoCod,setGerandoCod]=useState(false);
-  const [erroConexao,setErroConexao]=useState("");
-  const [lancsCompartilhados,setLancsCompartilhados]=useState([]);
-  const [divisoes,setDivisoes]=useState([]);
-  const [divisoesComp,setDivisoesComp]=useState([]);
+// ─── CONTATOS VIEW ────────────────────────────────────────────────────────────
+function ContatosView({uid,user}){
   const [contatos,setContatos]=useState([]);
-  const [sheetLanc,setSheetLanc]=useState(false);
-  const [sheetDiv,setSheetDiv]=useState(false);
-  const [sheetContato,setSheetContato]=useState(false);
-  const [formContato,setFormContato]=useState({nome:""});
-  const [formLanc,setFormLanc]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",tipo:"Despesa",escopo:"pessoal"});
-  const [formDiv,setFormDiv]=useState({desc:"",valor:"",selecionados:[],data:today()});
+  const [codInput,setCodInput]=useState("");
+  const [buscando,setBuscando]=useState(false);
+  const [erro,setErro]=useState("");
+  const [sheetAdd,setSheetAdd]=useState(false);
+  const [formAdd,setFormAdd]=useState({nome:"",categoria:"Amigos"});
+  const CATS=["Família","Amigos","Trabalho","Casal","Outros"];
 
-  // Ouvir conexao do usuario
-  useEffect(()=>{
-    if(!uid)return;
-    const unsub=onSnapshot(doc(db,"users",uid,"config","conexao"),snap=>{
-      if(snap.exists())setConexao(snap.data());
-      else setConexao(null);
-    });
-    return()=>unsub();
-  },[uid]);
-
-  // Ouvir contatos
   useEffect(()=>{
     if(!uid)return;
     const unsub=onSnapshot(collection(db,"users",uid,"contatos"),snap=>{
@@ -2114,503 +2114,481 @@ function FamiliaView({uid,lancs,user}){
     return()=>unsub();
   },[uid]);
 
-  // Ouvir lancamentos compartilhados (se conectado)
-  useEffect(()=>{
-    if(!conexao?.casalId)return;
-    const unsub=onSnapshot(collection(db,"casais",conexao.casalId,"lancamentos"),snap=>{
-      setLancsCompartilhados(snap.docs.map(d=>({id:d.id,...d.data()})));
-    });
-    return()=>unsub();
-  },[conexao?.casalId]);
-
-  // Ouvir divisoes compartilhadas (se conectado) ou proprias
-  useEffect(()=>{
-    if(!uid)return;
-    if(conexao?.casalId){
-      const unsub=onSnapshot(collection(db,"casais",conexao.casalId,"divisoes"),snap=>{
-        setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
-      });
-      return()=>unsub();
-    } else {
-      const unsub=onSnapshot(collection(db,"users",uid,"divisoes"),snap=>{
-        setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
-      });
-      return()=>unsub();
-    }
-  },[uid,conexao?.casalId]);
-
-  // Gerar codigo de convite
-  async function gerarCodigo(){
-    setGerandoCod(true);setErroConexao("");
-    const cod=Math.random().toString(36).substring(2,8).toUpperCase();
-    const casalId=uid+"_"+Date.now();
-    // Salva convite
-    await setDoc(doc(db,"convites",cod),{
-      criadoPor:uid,casalId,criadoEm:new Date().toISOString(),status:"aguardando"
-    });
-    // Salva conexao do usuario
-    await setDoc(doc(db,"users",uid,"config","conexao"),{
-      casalId,codigo:cod,status:"aguardando",meuUid:uid
-    });
-    setGerandoCod(false);
-  }
-
-  // Entrar com codigo
-  async function entrarComCodigo(){
-    setErroConexao("");
+  async function adicionarPorCodigo(){
+    setErro("");setBuscando(true);
     const cod=codInput.trim().toUpperCase();
-    if(!cod||cod.length<6){setErroConexao("Codigo invalido");return;}
+    if(cod.length<6){setErro("Código inválido");setBuscando(false);return;}
     try{
       const convSnap=await getDoc(doc(db,"convites",cod));
-      if(!convSnap.exists()){setErroConexao("Codigo nao encontrado. Verifique as regras do Firestore.");return;}
+      if(!convSnap.exists()){setErro("Código não encontrado. Verifique as regras do Firestore.");setBuscando(false);return;}
       const conv=convSnap.data();
-      if(conv.criadoPor===uid){setErroConexao("Este e o seu proprio codigo");return;}
-      if(conv.status!=="aguardando"){setErroConexao("Codigo ja utilizado");return;}
-      const casalId=conv.casalId;
-      await updateDoc(doc(db,"convites",cod),{status:"conectado",parceiroUid:uid});
-      await setDoc(doc(db,"users",uid,"config","conexao"),{
-        casalId,status:"conectado",meuUid:uid,parceiroUid:conv.criadoPor
+      if(conv.criadoPor===uid){setErro("Este é o seu próprio código");setBuscando(false);return;}
+      if(conv.usado&&conv.usado!==uid){setErro("Código já utilizado por outra pessoa");setBuscando(false);return;}
+      // Pega nome do perfil da outra pessoa
+      let nomeParc="Contato";
+      try{const p=await getDoc(doc(db,"users",conv.criadoPor,"carreira","perfil"));if(p.exists()&&p.data().nome)nomeParc=p.data().nome;}catch(_){}
+      // Salva contato para mim
+      await setDoc(doc(db,"users",uid,"contatos",conv.criadoPor),{
+        nome:nomeParc,uid:conv.criadoPor,vinculado:true,categoria:"Amigos",criadoEm:today()
       });
-      await updateDoc(doc(db,"users",conv.criadoPor,"config","conexao"),{
-        status:"conectado",parceiroUid:uid
+      // Salva eu como contato da outra pessoa
+      let meuNome=user?.displayName||"Contato";
+      try{const p=await getDoc(doc(db,"users",uid,"carreira","perfil"));if(p.exists()&&p.data().nome)meuNome=p.data().nome;}catch(_){}
+      await setDoc(doc(db,"users",conv.criadoPor,"contatos",uid),{
+        nome:meuNome,uid,vinculado:true,categoria:"Amigos",criadoEm:today()
       });
-      // Salva parceiro como contato automaticamente
-      try{
-        const parceiroSnap=await getDoc(doc(db,"users",conv.criadoPor,"config","conexao"));
-        // Tenta pegar nome do parceiro de seu perfil
-        const perfilSnap=await getDoc(doc(db,"users",conv.criadoPor,"carreira","perfil"));
-        const nomeParc=perfilSnap.exists()?perfilSnap.data().nome||"Parceiro":"Parceiro";
-        await setDoc(doc(db,"users",uid,"contatos",conv.criadoPor),{
-          nome:nomeParc,uid:conv.criadoPor,vinculado:true,criadoEm:today()
-        });
-        // Salva voce como contato do parceiro
-        const meuPerfil=await getDoc(doc(db,"users",uid,"carreira","perfil"));
-        const meuNome=meuPerfil.exists()?meuPerfil.data().nome||"Parceiro":"Parceiro";
-        await setDoc(doc(db,"users",conv.criadoPor,"contatos",uid),{
-          nome:meuNome,uid,vinculado:true,criadoEm:today()
-        });
-      }catch(_){}
+      // Marca codigo como usado
+      await updateDoc(doc(db,"convites",cod),{usado:uid});
       setCodInput("");
+      setSheetAdd(false);
     }catch(e){
-      if(e.code==="permission-denied")setErroConexao("Erro de permissao — adicione as regras no Firestore Console (aba Rules)");
-      else setErroConexao("Erro: "+e.message);
+      if(e.code==="permission-denied")setErro("Erro de permissão — verifique as regras do Firestore");
+      else setErro("Erro: "+e.message);
     }
+    setBuscando(false);
   }
 
-  async function desconectar(){
-    await deleteDoc(doc(db,"users",uid,"config","conexao"));
-    setConexao(null);
-  }
-
-  async function salvarContato(){
-    if(!formContato.nome.trim())return;
+  async function adicionarManual(){
+    if(!formAdd.nome.trim())return;
     await addDoc(collection(db,"users",uid,"contatos"),{
-      nome:formContato.nome.trim(),vinculado:false,criadoEm:today()
+      nome:formAdd.nome.trim(),vinculado:false,categoria:formAdd.categoria,criadoEm:today()
     });
-    setSheetContato(false);
-    setFormContato({nome:""});
+    setSheetAdd(false);setFormAdd({nome:"",categoria:"Amigos"});
+  }
+
+  async function gerarMeuCodigo(){
+    const cod=Math.random().toString(36).substring(2,8).toUpperCase();
+    await setDoc(doc(db,"convites",cod),{criadoPor:uid,criadoEm:new Date().toISOString()});
+    // Salva codigo no perfil para exibir
+    await setDoc(doc(db,"users",uid,"config","meucod"),{codigo:cod,criadoEm:today()},{merge:true});
+    return cod;
+  }
+
+  const [meuCod,setMeuCod]=useState("");
+  const [gerando,setGerando]=useState(false);
+  useEffect(()=>{
+    if(!uid)return;
+    getDoc(doc(db,"users",uid,"config","meucod")).then(s=>{if(s.exists())setMeuCod(s.data().codigo||"");}).catch(()=>{});
+  },[uid]);
+
+  async function handleGerarCodigo(){
+    setGerando(true);
+    const cod=await gerarMeuCodigo();
+    setMeuCod(cod);setGerando(false);
   }
 
   async function deletarContato(id){
     await deleteDoc(doc(db,"users",uid,"contatos",id));
   }
 
-  function toggleSelecionado(nome){
-    setFormDiv(f=>{
-      const sel=f.selecionados.includes(nome)
-        ?f.selecionados.filter(n=>n!==nome)
-        :[...f.selecionados,nome];
-      return {...f,selecionados:sel};
-    });
-  }
-
-  // Salvar lancamento casal
-  async function salvarLanc(){
-    const v=parseFloat(formLanc.valor);
-    if(!formLanc.data||!v||v<=0)return;
-    const col=conexao?.casalId
-      ?collection(db,"casais",conexao.casalId,"lancamentos")
-      :collection(db,"users",uid,"lancamentos");
-    await addDoc(col,{
-      tipo:formLanc.tipo,desc:formLanc.desc,cat:formLanc.cat,
-      forma:formLanc.forma,valor:v,data:formLanc.data,
-      escopo:"casal",autorUid:uid,
-      autorNome:user?.displayName||user?.email||"Voce"
-    });
-    setSheetLanc(false);
-  }
-
-  // Salvar divisao
-  async function salvarDiv(){
-    const v=parseFloat(formDiv.valor);
-    const pessoas=formDiv.selecionados.length>=2?formDiv.selecionados:[];
-    if(!formDiv.desc||!v||pessoas.length<2)return;
-    const valorPorPessoa=v/pessoas.length;
-    const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
-    const col=conexao?.casalId
-      ?collection(db,"casais",conexao.casalId,"divisoes")
-      :collection(db,"users",uid,"divisoes");
-    await addDoc(col,{desc:formDiv.desc,total:v,data:formDiv.data,partes,criadoEm:today()});
-    setSheetDiv(false);
-    setFormDiv({desc:"",valor:"",selecionados:[],data:today()});
-  }
-
-  async function marcarPago(divId,parteIdx){
-    const div=divisoes.find(d=>d.id===divId);
-    if(!div)return;
-    const partes=[...div.partes];
-    partes[parteIdx]={...partes[parteIdx],pago:!partes[parteIdx].pago};
-    const ref=conexao?.casalId
-      ?doc(db,"casais",conexao.casalId,"divisoes",divId)
-      :doc(db,"users",uid,"divisoes",divId);
-    await updateDoc(ref,{partes});
-  }
-
-  async function deletarDiv(id){
-    const ref=conexao?.casalId
-      ?doc(db,"casais",conexao.casalId,"divisoes",id)
-      :doc(db,"users",uid,"divisoes",id);
-    await deleteDoc(ref);
-  }
-
-  const mes=curMes();
-  // Lancamentos para aba casal: se conectado usa compartilhados, senao usa proprios com escopo=casal
-  const lancCasal=conexao?.casalId
-    ?lancsCompartilhados.filter(l=>l.data?.startsWith(mes))
-    :lancs.filter(l=>l.data?.startsWith(mes)&&l.escopo==="casal");
-  const tR=lancCasal.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-  const tD=lancCasal.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-  const abertas=divisoes.filter(d=>d.partes?.some(p=>!p.pago));
-  const concluidas=divisoes.filter(d=>d.partes?.every(p=>p.pago));
-
-  const TabBtn=({id,icon,label})=>(
-    <button onClick={()=>setTab(id)} className="press" style={{flex:1,padding:"9px 4px",borderRadius:10,border:"none",
-      cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:tab===id?700:500,
-      background:tab===id?G.accent+"22":G.card2,color:tab===id?G.accent:G.muted,
-      display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-      <span style={{fontSize:15}}>{icon}</span>{label}
-    </button>
-  );
+  const catColors={"Família":G.green,"Amigos":G.accent,"Trabalho":G.yellow,"Casal":"#F472B6","Outros":G.muted};
+  const grupos=["Família","Casal","Amigos","Trabalho","Outros"];
 
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
-    {/* Tabs */}
-    <div style={{display:"flex",gap:8,background:G.card2,borderRadius:14,padding:4}}>
-      <TabBtn id="casal" icon="👫" label="Casal"/>
-      <TabBtn id="divisoes" icon="÷" label="Divisoes"/>
-      <TabBtn id="conexao" icon="👥" label="Contatos"/>
+    {/* Meu código */}
+    <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
+      <div style={{fontSize:11,fontWeight:700,color:G.muted,letterSpacing:1,marginBottom:10}}>MEU CÓDIGO DE CONVITE</div>
+      {meuCod?<>
+        <div style={{fontSize:30,fontWeight:900,letterSpacing:8,color:G.accent,textAlign:"center",fontFamily:"monospace",background:G.accentL,borderRadius:12,padding:"12px 0",marginBottom:8}}>
+          {meuCod}
+        </div>
+        <div style={{fontSize:11,color:G.muted,textAlign:"center",marginBottom:8}}>Compartilhe com quem quer adicionar como contato</div>
+        <button onClick={()=>navigator.clipboard?.writeText(meuCod)} className="press"
+          style={{width:"100%",padding:"9px",borderRadius:10,border:"1px solid "+G.accent+"44",background:G.accentL,color:G.accent,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+          📋 Copiar código
+        </button>
+      </>:<button onClick={handleGerarCodigo} disabled={gerando} className="press"
+        style={{width:"100%",padding:12,borderRadius:12,border:"none",background:G.accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:gerando?.6:1}}>
+        {gerando?"Gerando...":"Gerar meu código"}
+      </button>}
     </div>
 
-    {/* ── TAB CASAL ── */}
-    {tab==="casal"&&<>
-      {/* Resumo */}
-      <div style={{display:"flex",gap:12}}>
-        {[{l:"Receitas",v:tR,c:G.green},{l:"Despesas",v:tD,c:G.red},{l:"Saldo",v:tR-tD,c:tR-tD>=0?G.green:G.red}].map((k,i)=>(
-          <div key={i} style={{flex:1,background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:12,textAlign:"center"}}>
-            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{fmtK(k.v)}</div>
-          </div>
-        ))}
-      </div>
-
-      {conexao?.status==="conectado"&&<div style={{background:G.green+"15",border:"1px solid "+G.green+"44",borderRadius:12,padding:"8px 14px",fontSize:12,color:G.green,display:"flex",alignItems:"center",gap:8}}>
-        🔗 Conectado — lancamentos sincronizados com parceiro
-      </div>}
-
-      <button onClick={()=>setSheetLanc(true)} className="press"
-        style={{width:"100%",padding:"10px",borderRadius:14,border:"1px solid "+G.yellow+"55",background:G.yellow+"18",color:G.yellow,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-        + Novo lancamento do casal
+    {/* Adicionar por código ou manual */}
+    <div style={{display:"flex",gap:10}}>
+      <button onClick={()=>setSheetAdd("codigo")} className="press"
+        style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid "+G.accent+"44",background:G.accentL,color:G.accent,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+        🔗 Código
       </button>
+      <button onClick={()=>setSheetAdd("manual")} className="press"
+        style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid "+G.border,background:G.card2,color:G.text,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+        ✏️ Manual
+      </button>
+    </div>
 
-      {lancCasal.length===0&&<div style={{textAlign:"center",padding:"30px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
-        <div style={{fontSize:32,marginBottom:8}}>👫</div>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Nenhum lancamento do casal</div>
-        <div style={{fontSize:12}}>Adicione gastos e receitas compartilhados</div>
-      </div>}
+    {/* Lista por grupo */}
+    {contatos.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
+      <div style={{fontSize:36,marginBottom:8}}>👥</div>
+      <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>Nenhum contato ainda</div>
+      <div style={{fontSize:12}}>Gere seu código e compartilhe, ou adicione manualmente</div>
+    </div>}
 
-      {lancCasal.length>0&&<div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
-        <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:12,letterSpacing:.8}}>ESTE MES</div>
-        {lancCasal.slice(0,10).map((l,i)=>(
-          <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid "+G.border+(i<lancCasal.length-1?"":"00")}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:600}}>{l.desc||l.cat}</div>
-              <div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}{l.autorNome?" · "+l.autorNome:""}</div>
-            </div>
-            <div style={{fontSize:14,fontWeight:700,color:l.tipo==="Receita"?G.green:G.red}}>
-              {l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}
-            </div>
-          </div>
-        ))}
-      </div>}
-
-      <Sheet open={sheetLanc} onClose={()=>setSheetLanc(false)} title="Novo — Casal">
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div style={{display:"flex",background:G.card2,borderRadius:12,padding:4}}>
-            {["Despesa","Receita"].map(t=>(
-              <button key={t} onClick={()=>setFormLanc(f=>({...f,tipo:t,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}))}
-                style={{flex:1,padding:"9px",borderRadius:9,border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:formLanc.tipo===t?700:500,
-                  background:formLanc.tipo===t?(t==="Despesa"?G.red+"22":G.green+"22"):"transparent",
-                  color:formLanc.tipo===t?(t==="Despesa"?G.red:G.green):G.muted}}>
-                {t==="Despesa"?"↓ Despesa":"↑ Receita"}
-              </button>
-            ))}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div><Lbl>Valor (R$)</Lbl><input type="number" value={formLanc.valor} onChange={e=>setFormLanc(f=>({...f,valor:e.target.value}))} className="inp" placeholder="0,00"/></div>
-            <div><Lbl>Data</Lbl><input type="date" value={formLanc.data} onChange={e=>setFormLanc(f=>({...f,data:e.target.value}))} className="inp"/></div>
-          </div>
-          <div><Lbl opt>Descricao</Lbl><input value={formLanc.desc} onChange={e=>setFormLanc(f=>({...f,desc:e.target.value}))} className="inp" placeholder="Ex: Mercado, Cinema..."/></div>
-          <div><Lbl>Categoria</Lbl>
-            <select value={formLanc.cat} onChange={e=>setFormLanc(f=>({...f,cat:e.target.value}))} className="inp">
-              {(formLanc.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <button onClick={salvarLanc} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.yellow,color:"#000",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            Salvar
-          </button>
+    {grupos.filter(g=>contatos.some(c=>c.categoria===g||(!c.categoria&&g==="Outros"))).map(grupo=>{
+      const lista=contatos.filter(c=>(c.categoria||"Outros")===grupo);
+      if(!lista.length)return null;
+      return(<div key={grupo}>
+        <div style={{fontSize:11,fontWeight:700,color:catColors[grupo]||G.muted,letterSpacing:.8,marginBottom:8}}>
+          {grupo.toUpperCase()}
         </div>
-      </Sheet>
-    </>}
-
-    {/* ── TAB DIVISOES ── */}
-    {tab==="divisoes"&&<>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>DIVISAO DE CONTAS</div>
-        <button onClick={()=>setSheetDiv(true)} className="press"
-          style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-          + Nova
-        </button>
-      </div>
-
-      {conexao?.status==="conectado"&&<div style={{background:G.green+"15",border:"1px solid "+G.green+"44",borderRadius:12,padding:"8px 14px",fontSize:12,color:G.green}}>
-        🔗 Divisoes sincronizadas com parceiro
-      </div>}
-
-      {divisoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
-        <div style={{fontSize:40,marginBottom:12}}>÷</div>
-        <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhuma divisao ainda</div>
-        <div style={{fontSize:12}}>Crie uma divisao para rastrear quem deve o que</div>
-      </div>}
-
-      {abertas.length>0&&<>
-        <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8}}>EM ABERTO</div>
-        {abertas.map(div=>{
-          const pendentes=div.partes?.filter(p=>!p.pago)||[];
-          const totalPendente=pendentes.reduce((s,p)=>s+p.valor,0);
-          return(<div key={div.id} style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-              <div>
-                <div style={{fontSize:14,fontWeight:700}}>{div.desc}</div>
-                <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · Total: {fmt(div.total)}</div>
-              </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:12,color:G.yellow,fontWeight:700}}>{fmt(totalPendente)} pendente</div>
-                <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
-              </div>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {div.partes?.map((p,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:p.pago?G.green+"15":G.card2,borderRadius:10}}>
-                  <div style={{width:32,height:32,borderRadius:"50%",background:p.pago?G.green:G.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>
-                    {p.nome[0]?.toUpperCase()||"?"}
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:p.pago?G.muted:G.text,textDecoration:p.pago?"line-through":"none"}}>{p.nome}</div>
-                    <div style={{fontSize:12,color:G.muted}}>{fmt(p.valor)}</div>
-                  </div>
-                  <button onClick={()=>marcarPago(div.id,i)} className="press"
-                    style={{padding:"5px 10px",borderRadius:8,border:"1px solid "+(p.pago?G.green+"55":G.border2),background:p.pago?G.green+"22":G.card,color:p.pago?G.green:G.text,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                    {p.pago?"✓ Pago":"Marcar pago"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>);
-        })}
-      </>}
-
-      {concluidas.length>0&&<>
-        <div style={{fontSize:11,fontWeight:700,color:G.green,letterSpacing:.8}}>CONCLUIDAS</div>
-        {concluidas.slice(0,3).map(div=>(
-          <div key={div.id} style={{background:G.card,border:"1px solid "+G.green+"33",borderRadius:16,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:600}}>{div.desc}</div>
-              <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · {div.partes?.length} pessoas</div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:13,fontWeight:700,color:G.green}}>✓ {fmt(div.total)}</div>
-              <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
-            </div>
-          </div>
-        ))}
-      </>}
-
-      <Sheet open={sheetDiv} onClose={()=>setSheetDiv(false)} title="Nova Divisao">
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div><Lbl>Descricao</Lbl><input value={formDiv.desc} onChange={e=>setFormDiv(f=>({...f,desc:e.target.value}))} placeholder="Ex: Jantar, Airbnb..." className="inp"/></div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div><Lbl>Valor total (R$)</Lbl><input type="number" value={formDiv.valor} onChange={e=>setFormDiv(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
-            <div><Lbl>Data</Lbl><input type="date" value={formDiv.data} onChange={e=>setFormDiv(f=>({...f,data:e.target.value}))} className="inp"/></div>
-          </div>
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <Lbl>Participantes</Lbl>
-              <span style={{fontSize:11,color:G.muted}}>{formDiv.selecionados.length} selecionados</span>
-            </div>
-            {contatos.length===0&&<div style={{fontSize:12,color:G.muted,padding:"10px 0",textAlign:"center"}}>
-              Nenhum contato ainda. Adicione na aba Contatos.
-            </div>}
-            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
-              {contatos.map(c=>{
-                const sel=formDiv.selecionados.includes(c.nome);
-                return(<button key={c.id} onClick={()=>toggleSelecionado(c.nome)} className="press"
-                  style={{padding:"8px 14px",borderRadius:20,border:"1px solid "+(sel?G.accent+"88":G.border),
-                    background:sel?G.accent+"22":G.card2,color:sel?G.accent:G.muted,fontSize:13,fontWeight:sel?700:500,
-                    cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{width:22,height:22,borderRadius:"50%",background:sel?G.accent:G.border2,color:"#fff",
-                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
-                    {c.nome[0]?.toUpperCase()}
-                  </div>
-                  {c.nome}
-                  {sel&&<span style={{fontSize:11}}>✓</span>}
-                </button>);
-              })}
-            </div>
-            {formDiv.selecionados.length<2&&<div style={{fontSize:11,color:G.yellow,marginTop:4}}>
-              Selecione pelo menos 2 pessoas
-            </div>}
-          </div>
-          {formDiv.valor&&formDiv.selecionados.length>=2&&(
-            <div style={{background:G.accentL,border:"1px solid "+G.accent+"33",borderRadius:12,padding:12,textAlign:"center"}}>
-              <div style={{fontSize:12,color:G.muted}}>Cada pessoa paga</div>
-              <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/formDiv.selecionados.length)}</div>
-            </div>
-          )}
-          <button onClick={salvarDiv} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            Criar Divisao
-          </button>
-        </div>
-      </Sheet>
-    </>}
-
-    {/* ── TAB CONEXAO ── */}
-    {tab==="conexao"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
-      {/* Lista de contatos */}
-      <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-          <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>SEUS CONTATOS</div>
-          <button onClick={()=>setSheetContato(true)} className="press"
-            style={{padding:"5px 12px",borderRadius:16,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-            + Adicionar
-          </button>
-        </div>
-        {contatos.length===0&&<div style={{textAlign:"center",padding:"16px 0",color:G.muted,fontSize:13}}>
-          Nenhum contato ainda
-        </div>}
-        {contatos.map(c=>(
-          <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid "+G.border}}>
-            <div style={{width:36,height:36,borderRadius:"50%",background:c.vinculado?G.accent:G.border2,
-              color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0}}>
-              {c.nome[0]?.toUpperCase()}
+        {lista.map(ct=>(
+          <div key={ct.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:G.card,border:"1px solid "+G.border,borderRadius:12,marginBottom:8}}>
+            <div style={{width:38,height:38,borderRadius:"50%",background:(catColors[ct.categoria]||G.muted)+"33",
+              color:catColors[ct.categoria]||G.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0}}>
+              {ct.nome[0]?.toUpperCase()}
             </div>
             <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:600}}>{c.nome}</div>
-              <div style={{fontSize:11,color:G.muted}}>{c.vinculado?"🔗 Vinculado pelo app":"Contato manual"}</div>
+              <div style={{fontSize:14,fontWeight:600}}>{ct.nome}</div>
+              <div style={{fontSize:11,color:G.muted}}>{ct.vinculado?"🔗 Vinculado":"Manual"} · {ct.categoria||"Outros"}</div>
             </div>
-            <button onClick={()=>deletarContato(c.id)}
-              style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px 6px"}}
+            <button onClick={()=>deletarContato(ct.id)}
+              style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 8px",lineHeight:1}}
               onMouseEnter={e=>e.currentTarget.style.color=G.red}
               onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
           </div>
         ))}
+      </div>);
+    })}
+
+    {/* Sheet adicionar por código */}
+    <Sheet open={sheetAdd==="codigo"} onClose={()=>{setSheetAdd(false);setErro("");}} title="Adicionar por Código">
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{fontSize:13,color:G.muted,lineHeight:1.6}}>
+          Digite o código da pessoa que quer adicionar. Vocês dois aparecem na lista um do outro automaticamente.
+        </div>
+        <div><Lbl>Código de convite</Lbl>
+          <input value={codInput} onChange={e=>setCodInput(e.target.value.toUpperCase())}
+            placeholder="Ex: X4K9BZ" className="inp" style={{letterSpacing:4,fontSize:20,textAlign:"center",fontWeight:700}} maxLength={6}/>
+        </div>
+        {erro&&<div style={{fontSize:12,color:G.red,padding:"8px 12px",background:G.red+"15",borderRadius:8}}>{erro}</div>}
+        <button onClick={adicionarPorCodigo} disabled={buscando} className="press"
+          style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:buscando?.6:1}}>
+          {buscando?"Buscando...":"Adicionar contato"}
+        </button>
       </div>
+    </Sheet>
 
-      {/* Divisor */}
-      <div style={{fontSize:11,fontWeight:700,color:G.muted,letterSpacing:1,textTransform:"uppercase",textAlign:"center",padding:"4px 0"}}>
-        — Conexao com parceiro —
+    {/* Sheet adicionar manual */}
+    <Sheet open={sheetAdd==="manual"} onClose={()=>setSheetAdd(false)} title="Adicionar Contato">
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div><Lbl>Nome</Lbl><input value={formAdd.nome} onChange={e=>setFormAdd(f=>({...f,nome:e.target.value}))} placeholder="Ex: Maria, João..." className="inp"/></div>
+        <div><Lbl>Categoria</Lbl>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:4}}>
+            {["Família","Amigos","Trabalho","Casal","Outros"].map(cat=>{
+              const sel=formAdd.categoria===cat;
+              return(<button key={cat} onClick={()=>setFormAdd(f=>({...f,categoria:cat}))} className="press"
+                style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+(sel?catColors[cat]+"88":G.border),
+                  background:sel?(catColors[cat]||G.accent)+"22":G.card2,color:sel?catColors[cat]||G.accent:G.muted,
+                  fontSize:13,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit"}}>
+                {cat}
+              </button>);
+            })}
+          </div>
+        </div>
+        <button onClick={adicionarManual} className="press"
+          style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          Salvar contato
+        </button>
       </div>
+    </Sheet>
+  </div>);
+}
 
-      {!conexao&&<>
-        <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:20,textAlign:"center"}}>
-          <div style={{fontSize:36,marginBottom:12}}>🔗</div>
-          <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>Conectar com parceiro</div>
-          <div style={{fontSize:12,color:G.muted,lineHeight:1.6,marginBottom:20}}>
-            Gere um codigo e compartilhe com seu parceiro, ou insira o codigo dele para sincronizar Casal e Divisoes.
-          </div>
-          <button onClick={gerarCodigo} disabled={gerandoCod} className="press"
-            style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:12,opacity:gerandoCod?.6:1}}>
-            {gerandoCod?"Gerando...":"Gerar meu codigo"}
-          </button>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <input value={codInput} onChange={e=>setCodInput(e.target.value.toUpperCase())} placeholder="Codigo do parceiro" className="inp" style={{flex:1,letterSpacing:3,fontSize:16,textAlign:"center"}} maxLength={6}/>
-            <button onClick={entrarComCodigo} className="press"
-              style={{padding:"12px 16px",borderRadius:12,border:"none",background:G.green,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-              Entrar
-            </button>
-          </div>
-          {erroConexao&&<div style={{fontSize:12,color:G.red,marginTop:8,textAlign:"center"}}>{erroConexao}</div>}
-        </div>
-      </>}
+// ─── CASAL VIEW ────────────────────────────────────────────────────────────────
+function CasalView({uid,lancs,user}){
+  const [sheetLanc,setSheetLanc]=useState(false);
+  const [formLanc,setFormLanc]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",tipo:"Despesa"});
 
-      {conexao&&conexao.status==="aguardando"&&<>
-        <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:20,textAlign:"center"}}>
-          <div style={{fontSize:36,marginBottom:12}}>⏳</div>
-          <div style={{fontSize:15,fontWeight:700,marginBottom:8}}>Aguardando parceiro</div>
-          <div style={{fontSize:12,color:G.muted,marginBottom:16}}>Compartilhe este codigo com seu parceiro:</div>
-          <div style={{fontSize:36,fontWeight:900,letterSpacing:8,color:G.accent,background:G.accentL,borderRadius:14,padding:"16px 20px",marginBottom:16,fontFamily:"monospace"}}>
-            {conexao.codigo}
-          </div>
-          <div style={{fontSize:12,color:G.muted,marginBottom:16}}>O parceiro deve ir em Conexao e digitar este codigo</div>
-          <button onClick={desconectar} className="press"
-            style={{padding:"10px 20px",borderRadius:12,border:"1px solid "+G.border2,background:G.card2,color:G.muted,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            Cancelar
-          </button>
-        </div>
-      </>}
+  async function salvarLanc(){
+    const v=parseFloat(formLanc.valor);
+    if(!formLanc.data||!v||v<=0)return;
+    await addDoc(collection(db,"users",uid,"lancamentos"),{
+      tipo:formLanc.tipo,desc:formLanc.desc,cat:formLanc.cat,
+      forma:formLanc.forma,valor:v,data:formLanc.data,escopo:"casal",
+      autorNome:user?.displayName||"Você"
+    });
+    setSheetLanc(false);
+  }
 
-      {conexao&&conexao.status==="conectado"&&<>
-        <div style={{background:G.green+"15",border:"1px solid "+G.green+"44",borderRadius:16,padding:20,textAlign:"center"}}>
-          <div style={{fontSize:36,marginBottom:8}}>✅</div>
-          <div style={{fontSize:15,fontWeight:700,color:G.green,marginBottom:6}}>Conectado!</div>
-          <div style={{fontSize:12,color:G.muted,lineHeight:1.6,marginBottom:16}}>
-            Casal e Divisoes estao sincronizados. Qualquer lancamento aparece para os dois.
-          </div>
-          <button onClick={desconectar} className="press"
-            style={{padding:"10px 20px",borderRadius:12,border:"1px solid "+G.red+"55",background:G.red+"15",color:G.red,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            Desconectar
-          </button>
-        </div>
-      </>}
+  const mes=curMes();
+  const lancCasal=lancs.filter(l=>l.data?.startsWith(mes)&&l.escopo==="casal");
+  const tR=lancCasal.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
+  const tD=lancCasal.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
 
-      {/* Tambem pode entrar com codigo mesmo se tem conexao aguardando */}
-      {conexao&&conexao.status==="aguardando"&&<>
-        <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:16}}>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Ou insira o codigo do parceiro:</div>
-          <div style={{display:"flex",gap:8}}>
-            <input value={codInput} onChange={e=>setCodInput(e.target.value.toUpperCase())} placeholder="Codigo" className="inp" style={{flex:1,letterSpacing:3,fontSize:16,textAlign:"center"}} maxLength={6}/>
-            <button onClick={entrarComCodigo} className="press"
-              style={{padding:"12px 16px",borderRadius:12,border:"none",background:G.green,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-              Entrar
-            </button>
-          </div>
-          {erroConexao&&<div style={{fontSize:12,color:G.red,marginTop:8}}>{erroConexao}</div>}
+  return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div style={{display:"flex",gap:12}}>
+      {[{l:"Receitas",v:tR,c:G.green},{l:"Despesas",v:tD,c:G.red},{l:"Saldo",v:tR-tD,c:tR-tD>=0?G.green:G.red}].map((k,i)=>(
+        <div key={i} style={{flex:1,background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:12,textAlign:"center"}}>
+          <div style={{fontSize:10,color:G.muted,marginBottom:4}}>{k.l}</div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{fmtK(k.v)}</div>
         </div>
-      </>}
+      ))}
+    </div>
+
+    <button onClick={()=>setSheetLanc(true)} className="press"
+      style={{width:"100%",padding:"10px",borderRadius:14,border:"1px solid "+G.yellow+"55",background:G.yellow+"18",color:G.yellow,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+      + Novo lançamento do casal
+    </button>
+
+    {lancCasal.length===0&&<div style={{textAlign:"center",padding:"30px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
+      <div style={{fontSize:32,marginBottom:8}}>👫</div>
+      <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Nenhum lançamento do casal</div>
+      <div style={{fontSize:12}}>Registre gastos e receitas compartilhados</div>
     </div>}
 
-      {/* Sheet novo contato */}
-      <Sheet open={sheetContato} onClose={()=>setSheetContato(false)} title="Novo Contato">
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div style={{fontSize:13,color:G.muted,lineHeight:1.6}}>
-            Adicione pessoas que aparecem na divisao de contas. Parceiros conectados pelo app entram automaticamente.
+    {lancCasal.length>0&&<div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
+      <div style={{fontSize:11,fontWeight:700,color:G.muted,marginBottom:12,letterSpacing:.8}}>ESTE MÊS</div>
+      {lancCasal.map((l,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:i<lancCasal.length-1?"1px solid "+G.border:"none"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:600}}>{l.desc||l.cat}</div>
+            <div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}</div>
           </div>
-          <div><Lbl>Nome</Lbl><input value={formContato.nome} onChange={e=>setFormContato({nome:e.target.value})}
-            placeholder="Ex: Maria, Joao..." className="inp" autoFocus/></div>
-          <button onClick={salvarContato} className="press"
-            style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            Salvar contato
-          </button>
+          <div style={{fontSize:14,fontWeight:700,color:l.tipo==="Receita"?G.green:G.red}}>
+            {l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}
+          </div>
         </div>
-      </Sheet>
+      ))}
+    </div>}
+
+    <Sheet open={sheetLanc} onClose={()=>setSheetLanc(false)} title="Novo — Casal">
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{display:"flex",background:G.card2,borderRadius:12,padding:4}}>
+          {["Despesa","Receita"].map(t=>(
+            <button key={t} onClick={()=>setFormLanc(f=>({...f,tipo:t,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}))}
+              style={{flex:1,padding:"9px",borderRadius:9,border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:formLanc.tipo===t?700:500,
+                background:formLanc.tipo===t?(t==="Despesa"?G.red+"22":G.green+"22"):"transparent",
+                color:formLanc.tipo===t?(t==="Despesa"?G.red:G.green):G.muted}}>
+              {t==="Despesa"?"↓ Despesa":"↑ Receita"}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><Lbl>Valor (R$)</Lbl><input type="number" value={formLanc.valor} onChange={e=>setFormLanc(f=>({...f,valor:e.target.value}))} className="inp" placeholder="0,00"/></div>
+          <div><Lbl>Data</Lbl><input type="date" value={formLanc.data} onChange={e=>setFormLanc(f=>({...f,data:e.target.value}))} className="inp"/></div>
+        </div>
+        <div><Lbl opt>Descrição</Lbl><input value={formLanc.desc} onChange={e=>setFormLanc(f=>({...f,desc:e.target.value}))} className="inp" placeholder="Ex: Mercado, Cinema..."/></div>
+        <div><Lbl>Categoria</Lbl>
+          <select value={formLanc.cat} onChange={e=>setFormLanc(f=>({...f,cat:e.target.value}))} className="inp">
+            {(formLanc.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <button onClick={salvarLanc} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.yellow,color:"#000",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          Salvar
+        </button>
+      </div>
+    </Sheet>
+  </div>);
+}
+
+// ─── DIVISOES VIEW ─────────────────────────────────────────────────────────────
+function DivisoesView({uid}){
+  const [divisoes,setDivisoes]=useState([]);
+  const [pendentes,setPendentes]=useState([]); // divisoes que outros enviaram pra mim
+  const [contatos,setContatos]=useState([]);
+  const [sheetDiv,setSheetDiv]=useState(false);
+  const [formDiv,setFormDiv]=useState({desc:"",valor:"",selecionados:[],data:today()});
+
+  useEffect(()=>{
+    if(!uid)return;
+    const unsub=onSnapshot(collection(db,"users",uid,"divisoes"),snap=>{
+      setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
+    // Divisoes pendentes (outros me enviaram)
+    const unsubP=onSnapshot(collection(db,"users",uid,"divisoes_pendentes"),snap=>{
+      setPendentes(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
+    // Contatos para seleção
+    const unsubC=onSnapshot(collection(db,"users",uid,"contatos"),snap=>{
+      setContatos(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
+    return()=>{unsub();unsubP();unsubC();};
+  },[uid]);
+
+  function toggleSel(nome){
+    setFormDiv(f=>{
+      const sel=f.selecionados.includes(nome)?f.selecionados.filter(n=>n!==nome):[...f.selecionados,nome];
+      return{...f,selecionados:sel};
+    });
+  }
+
+  async function salvarDiv(){
+    const v=parseFloat(formDiv.valor);
+    const pessoas=["Você",...formDiv.selecionados];
+    if(!formDiv.desc||!v||formDiv.selecionados.length<1)return;
+    const valorPorPessoa=v/pessoas.length;
+    const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
+    // Salva minha divisão
+    await addDoc(collection(db,"users",uid,"divisoes"),{
+      desc:formDiv.desc,total:v,data:formDiv.data,partes,criadoEm:today(),criadoPor:uid
+    });
+    // Notifica contatos vinculados que estão na divisão
+    const contatosVinculados=contatos.filter(c=>c.vinculado&&c.uid&&formDiv.selecionados.includes(c.nome));
+    for(const ct of contatosVinculados){
+      await addDoc(collection(db,"users",ct.uid,"divisoes_pendentes"),{
+        desc:formDiv.desc,total:v,data:formDiv.data,partes,
+        criadoPor:uid,criadoEm:today(),status:"pendente"
+      });
+    }
+    setSheetDiv(false);
+    setFormDiv({desc:"",valor:"",selecionados:[],data:today()});
+  }
+
+  async function aceitarDiv(id,dados){
+    await addDoc(collection(db,"users",uid,"divisoes"),{...dados,status:"aceito"});
+    await deleteDoc(doc(db,"users",uid,"divisoes_pendentes",id));
+  }
+
+  async function recusarDiv(id){
+    await deleteDoc(doc(db,"users",uid,"divisoes_pendentes",id));
+  }
+
+  async function marcarPago(divId,parteIdx){
+    const div=divisoes.find(d=>d.id===divId);if(!div)return;
+    const partes=[...div.partes];
+    partes[parteIdx]={...partes[parteIdx],pago:!partes[parteIdx].pago};
+    await updateDoc(doc(db,"users",uid,"divisoes",divId),{partes});
+  }
+
+  async function deletarDiv(id){
+    await deleteDoc(doc(db,"users",uid,"divisoes",id));
+  }
+
+  const abertas=divisoes.filter(d=>d.partes?.some(p=>!p.pago));
+  const concluidas=divisoes.filter(d=>d.partes?.every(p=>p.pago));
+
+  return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    {/* Pendentes (notificações) */}
+    {pendentes.length>0&&<div style={{background:G.yellow+"15",border:"1px solid "+G.yellow+"44",borderRadius:16,padding:16}}>
+      <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8,marginBottom:12}}>
+        🔔 DIVISÕES RECEBIDAS ({pendentes.length})
+      </div>
+      {pendentes.map(p=>(
+        <div key={p.id} style={{marginBottom:12,paddingBottom:12,borderBottom:"1px solid "+G.yellow+"22"}}>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:2}}>{p.desc}</div>
+          <div style={{fontSize:12,color:G.muted,marginBottom:8}}>
+            {fmtD(p.data)} · Total: {fmt(p.total)} · {p.partes?.length} pessoas · Sua parte: {fmt(p.partes?.find(pt=>pt.nome!=="Você")?.valor||0)}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>aceitarDiv(p.id,p)} className="press"
+              style={{flex:1,padding:"8px",borderRadius:10,border:"none",background:G.green,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              ✓ Aceitar
+            </button>
+            <button onClick={()=>recusarDiv(p.id)} className="press"
+              style={{flex:1,padding:"8px",borderRadius:10,border:"1px solid "+G.red+"44",background:G.red+"15",color:G.red,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              ✕ Recusar
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>}
+
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{fontSize:13,fontWeight:700,color:G.muted,letterSpacing:.5}}>MINHAS DIVISÕES</div>
+      <button onClick={()=>setSheetDiv(true)} className="press"
+        style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+G.accent+"55",background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+        + Nova
+      </button>
+    </div>
+
+    {divisoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
+      <div style={{fontSize:40,marginBottom:12}}>÷</div>
+      <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhuma divisão ainda</div>
+      <div style={{fontSize:12}}>Crie e envie para seus contatos aprovarem</div>
+    </div>}
+
+    {abertas.length>0&&<>
+      <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8}}>EM ABERTO</div>
+      {abertas.map(div=>{
+        const pendente=div.partes?.filter(p=>!p.pago)||[];
+        return(<div key={div.id} style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div>
+              <div style={{fontSize:14,fontWeight:700}}>{div.desc}</div>
+              <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · Total: {fmt(div.total)}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:12,color:G.yellow,fontWeight:700}}>{fmt(pendente.reduce((s,p)=>s+p.valor,0))} pendente</div>
+              <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {div.partes?.map((p,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:p.pago?G.green+"15":G.card2,borderRadius:10}}>
+                <div style={{width:32,height:32,borderRadius:"50%",background:p.pago?G.green:G.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>
+                  {p.nome[0]?.toUpperCase()||"?"}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:p.pago?G.muted:G.text,textDecoration:p.pago?"line-through":"none"}}>{p.nome}</div>
+                  <div style={{fontSize:12,color:G.muted}}>{fmt(p.valor)}</div>
+                </div>
+                <button onClick={()=>marcarPago(div.id,i)} className="press"
+                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid "+(p.pago?G.green+"55":G.border2),background:p.pago?G.green+"22":G.card,color:p.pago?G.green:G.text,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                  {p.pago?"✓ Pago":"Marcar pago"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>);
+      })}
+    </>}
+
+    {concluidas.length>0&&<>
+      <div style={{fontSize:11,fontWeight:700,color:G.green,letterSpacing:.8}}>CONCLUÍDAS</div>
+      {concluidas.slice(0,3).map(div=>(
+        <div key={div.id} style={{background:G.card,border:"1px solid "+G.green+"33",borderRadius:16,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:600}}>{div.desc}</div>
+            <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · {div.partes?.length} pessoas</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:13,fontWeight:700,color:G.green}}>✓ {fmt(div.total)}</div>
+            <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+          </div>
+        </div>
+      ))}
+    </>}
+
+    <Sheet open={sheetDiv} onClose={()=>setSheetDiv(false)} title="Nova Divisão">
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div><Lbl>Descrição</Lbl><input value={formDiv.desc} onChange={e=>setFormDiv(f=>({...f,desc:e.target.value}))} placeholder="Ex: Jantar, Airbnb..." className="inp"/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><Lbl>Valor total (R$)</Lbl><input type="number" value={formDiv.valor} onChange={e=>setFormDiv(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
+          <div><Lbl>Data</Lbl><input type="date" value={formDiv.data} onChange={e=>setFormDiv(f=>({...f,data:e.target.value}))} className="inp"/></div>
+        </div>
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <Lbl>Participantes (além de você)</Lbl>
+            <span style={{fontSize:11,color:G.muted}}>{formDiv.selecionados.length} sel.</span>
+          </div>
+          {contatos.length===0?<div style={{fontSize:12,color:G.muted,padding:"10px 0",textAlign:"center"}}>
+            Adicione contatos primeiro na aba Contatos
+          </div>:<div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {contatos.map(ct=>{
+              const sel=formDiv.selecionados.includes(ct.nome);
+              return(<button key={ct.id} onClick={()=>toggleSel(ct.nome)} className="press"
+                style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+(sel?G.accent+"88":G.border),
+                  background:sel?G.accent+"22":G.card2,color:sel?G.accent:G.muted,
+                  fontSize:13,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:20,height:20,borderRadius:"50%",background:sel?G.accent:G.border2,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700}}>
+                  {ct.nome[0]?.toUpperCase()}
+                </div>
+                {ct.nome}{sel?" ✓":""}
+              </button>);
+            })}
+          </div>}
+          {formDiv.selecionados.length<1&&<div style={{fontSize:11,color:G.yellow,marginTop:6}}>Selecione pelo menos 1 pessoa</div>}
+        </div>
+        {formDiv.valor&&formDiv.selecionados.length>=1&&(
+          <div style={{background:G.accentL,border:"1px solid "+G.accent+"33",borderRadius:12,padding:12,textAlign:"center"}}>
+            <div style={{fontSize:12,color:G.muted}}>Cada pessoa paga</div>
+            <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/(formDiv.selecionados.length+1))}</div>
+            <div style={{fontSize:11,color:G.muted,marginTop:2}}>({formDiv.selecionados.length+1} pessoas incluindo você)</div>
+          </div>
+        )}
+        <button onClick={salvarDiv} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          ÷ Criar e enviar
+        </button>
+      </div>
+    </Sheet>
   </div>);
 }
 
@@ -2716,14 +2694,15 @@ export default function App(){
           <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
-        <main key={view} style={{position:"fixed",top:`calc(${HH}px + env(safe-area-inset-top, 0px))`,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
+        <main key={view} style={{position:"fixed",top:"var(--hh)",left:0,right:0,bottom:"var(--nh)",overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="carreira"&&<CarreiraView uid={user.uid} user={user}/>}
           {view==="cartoes"&&<CartoesView uid={user.uid} lancs={lancs}/>}
-          {view==="familia"&&<FamiliaView uid={user.uid} lancs={lancs} user={user}/>}
-          
+          {view==="contatos"&&<ContatosView uid={user.uid} user={user}/>}
+          {view==="compartilhados-casal"&&<CasalView uid={user.uid} lancs={lancs} user={user}/>}
+          {view==="compartilhados-divisoes"&&<DivisoesView uid={user.uid}/>}
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
           {view.startsWith("financas")&&<ErrorBoundary><FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/></ErrorBoundary>}
         </main>
