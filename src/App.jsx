@@ -2131,38 +2131,57 @@ function ContatosView({uid,user}){
     const cod=codInput.trim().toUpperCase();
     if(cod.length<6){setErro("Código inválido");setBuscando(false);return;}
     try{
-      const convSnap=await getDoc(doc(db,"convites",cod));
-      if(!convSnap.exists()){setErro("Código não encontrado — verifique as regras do Firestore.");setBuscando(false);return;}
+      // Lê convite
+      let convSnap;
+      try{
+        convSnap=await getDoc(doc(db,"convites",cod));
+      }catch(e){
+        if(e.code==="permission-denied"){setErro("Permissão negada — adicione a regra 'convites' no Firestore Console");setBuscando(false);return;}
+        throw e;
+      }
+      if(!convSnap.exists()){
+        setErro("Código não encontrado. Gere um novo código no app e tente de novo.");
+        setBuscando(false);return;
+      }
       const conv=convSnap.data();
       if(conv.criadoPor===uid){setErro("Este é o seu próprio código");setBuscando(false);return;}
-      if(conv.usado&&conv.usado!==uid){setErro("Código já utilizado por outra pessoa");setBuscando(false);return;}
+      if(conv.usado&&conv.usado!==uid){setErro("Código já utilizado");setBuscando(false);return;}
 
-      // Pega meu nome do perfil
-      let meuNome=user?.displayName||"Contato";
+      // Pega meu nome: tenta perfil > displayName > email
+      let meuNome=user?.displayName||user?.email?.split("@")[0]||"Contato";
       try{const p=await getDoc(doc(db,"users",uid,"carreira","perfil"));if(p.exists()&&p.data().nome)meuNome=p.data().nome;}catch(_){}
 
-      // Pega nome do dono do código
+      // Pega nome do dono do código: tenta perfil > fallback "Contato"
       let nomeParc="Contato";
-      try{const p=await getDoc(doc(db,"users",conv.criadoPor,"carreira","perfil"));if(p.exists()&&p.data().nome)nomeParc=p.data().nome;}catch(_){}
+      try{
+        const p=await getDoc(doc(db,"users",conv.criadoPor,"carreira","perfil"));
+        if(p.exists()&&p.data().nome)nomeParc=p.data().nome;
+      }catch(_){}
+      // Se não tem perfil, usa o nome guardado no próprio convite (se existir)
+      if(nomeParc==="Contato"&&conv.nomeAutor)nomeParc=conv.nomeAutor;
 
-      // 1. Salva a outra pessoa na MINHA lista
+      // 1. Salva o dono do código na MINHA lista de contatos
       await setDoc(doc(db,"users",uid,"contatos",conv.criadoPor),{
         nome:nomeParc,uid:conv.criadoPor,vinculado:true,categoria:"Amigos",criadoEm:today()
       });
 
-      // 2. Escreve na caixa de entrada PÚBLICA da outra pessoa (inbox)
-      // A regra do Firestore precisa permitir: match /inbox/{userId}/{doc} { allow write: if request.auth != null; }
-      await setDoc(doc(db,"inbox",conv.criadoPor,"contatos",uid),{
-        nome:meuNome,uid,vinculado:true,categoria:"Amigos",criadoEm:today(),tipo:"contato_novo"
-      });
+      // 2. Notifica a outra pessoa via inbox público (ela vira meu contato também)
+      try{
+        await setDoc(doc(db,"inbox",conv.criadoPor,"contatos",uid),{
+          nome:meuNome,uid,vinculado:true,categoria:"Amigos",criadoEm:today()
+        });
+      }catch(e){
+        // inbox pode não ter regra ainda — não bloqueia o fluxo
+        console.warn("inbox não acessível:",e.message);
+      }
 
-      // 3. Marca código como usado
-      await updateDoc(doc(db,"convites",cod),{usado:uid,usadoPor:uid,usadoEm:today()});
+      // 3. Salva meu nome no convite para que outros saibam quem usou
+      await updateDoc(doc(db,"convites",cod),{usado:uid,usadoPor:uid,usadoEm:today(),nomeUsou:meuNome});
 
       setCodInput("");
       setSheetAdd(false);
     }catch(e){
-      if(e.code==="permission-denied")setErro("Erro de permissão — adicione a regra 'inbox' no Firestore (ver instruções)");
+      if(e.code==="permission-denied")setErro("Permissão negada — verifique as regras do Firestore");
       else setErro("Erro: "+e.message);
     }
     setBuscando(false);
@@ -2178,8 +2197,9 @@ function ContatosView({uid,user}){
 
   async function gerarMeuCodigo(){
     const cod=Math.random().toString(36).substring(2,8).toUpperCase();
-    await setDoc(doc(db,"convites",cod),{criadoPor:uid,criadoEm:new Date().toISOString()});
-    // Salva codigo no perfil para exibir
+    let meuNome=user?.displayName||user?.email?.split("@")[0]||"Contato";
+    try{const p=await getDoc(doc(db,"users",uid,"carreira","perfil"));if(p.exists()&&p.data().nome)meuNome=p.data().nome;}catch(_){}
+    await setDoc(doc(db,"convites",cod),{criadoPor:uid,criadoEm:new Date().toISOString(),nomeAutor:meuNome});
     await setDoc(doc(db,"users",uid,"config","meucod"),{codigo:cod,criadoEm:today()},{merge:true});
     return cod;
   }
