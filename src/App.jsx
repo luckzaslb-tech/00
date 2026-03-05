@@ -261,6 +261,49 @@ const getCSS=(theme)=>`
 `;
 const CSS=getCSS("dark");
 
+// ─── ICONS ────────────────────────────────────────────────────────────────────
+const Ic=({d,size=16,stroke=1.5,color="currentColor",fill="none"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+const ICON={
+  menu:"M3 12h18M3 6h18M3 18h18",
+  home:"M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z",
+  card:"M1 4h22v16H1zM1 9h22",
+  wallet:"M3 6h18a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2zM16 12h.01",
+  chart:"M3 3v18h18M7 16l4-4 4 4 4-8",
+  bell:"M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0",
+  user:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+  users:"M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75",
+  link:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
+  plus:"M12 5v14M5 12h14",
+  minus:"M5 12h14",
+  check:"M20 6L9 17l-5-5",
+  x:"M18 6L6 18M6 6l12 12",
+  edit:"M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
+  trash:"M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
+  import:"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3",
+  star:"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  camera:"M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2zM12 17a4 4 0 100-8 4 4 0 000 8z",
+  share:"M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13",
+  calendar:"M3 4h18v18H3zM16 2v4M8 2v4M3 10h18",
+  clock:"M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2",
+  arrow_up:"M12 19V5M5 12l7-7 7 7",
+  arrow_down:"M12 5v14M19 12l-7 7-7-7",
+  repeat:"M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3",
+  warning:"M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01",
+  divide:"M8 6h8M12 3v18M8 18h8",
+  handshake:"M20.42 4.58a5.4 5.4 0 00-7.65 0l-.77.78-.77-.78a5.4 5.4 0 00-7.65 7.65l.77.77L12 21.23l7.65-7.65.77-.77a5.4 5.4 0 000-7.23z",
+  logout:"M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9",
+  sun:"M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M12 5a7 7 0 100 14A7 7 0 0012 5z",
+  moon:"M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z",
+  eye:"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 100 6 3 3 0 000-6z",
+  target:"M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z",
+  briefcase:"M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2",
+  ai:"M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 010 2h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 010-2h1a7 7 0 017-7h1V5.73A2 2 0 0110 4a2 2 0 012-2zM9 11a1 1 0 000 2 1 1 0 000-2zm6 0a1 1 0 000 2 1 1 0 000-2z",
+};
+
 const Tag=({children,color=G.muted})=>(
   <span style={{display:"inline-flex",alignItems:"center",padding:"1px 8px",borderRadius:20,fontSize:10,fontWeight:600,whiteSpace:"nowrap",background:color+"22",color,border:`1px solid ${color}33`}}>{children}</span>
 );
@@ -291,17 +334,17 @@ function Sheet({open,onClose,title,children}){
 
 function Nav({view,setView}){
   const items=[
-    {id:"dashboard",icon:"⬡",l:"Início"},
-    {id:"receitas",icon:"↑",l:"Receitas"},
-    {id:"despesas",icon:"↓",l:"Despesas"},
-    {id:"chat",icon:"✦",l:"IA"},
+    {id:"dashboard",icon:<Ic d={ICON.home} size={20}/>,l:"Início"},
+    {id:"receitas",icon:<Ic d={ICON.arrow_up} size={20}/>,l:"Receitas"},
+    {id:"despesas",icon:<Ic d={ICON.arrow_down} size={20}/>,l:"Despesas"},
+    {id:"chat",icon:<Ic d={ICON.ai} size={20}/>,l:"IA"},
   ];
   return(
     <div className="nav-bar">
       {items.map(it=>(
         <button key={it.id} onClick={()=>setView(it.id)} className="press" style={{flex:1,padding:"8px 0",background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:view===it.id?G.accent:G.muted,position:"relative"}}>
           {view===it.id&&<div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:2,borderRadius:"0 0 2px 2px",background:G.accent}}/>}
-          <span style={{fontSize:20,lineHeight:1}}>{it.icon}</span>
+          <span style={{display:"flex",alignItems:"center",justifyContent:"center",height:20}}>{it.icon}</span>
           <span style={{fontSize:9,fontWeight:600}}>{it.l}</span>
         </button>
       ))}
@@ -319,21 +362,21 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
   const compActive=["compartilhados-casal","compartilhados-divisoes"].includes(view);
 
   const items=[
-    {id:"carreira",icon:"👤",l:"Perfil"},
-    {id:"dashboard",icon:"⬡",l:"Dashboard"},
-    {id:"cartoes",icon:"💳",l:"Cartões de Crédito"},
-    {id:"contatos",icon:"👥",l:"Contatos"},
-    {id:"importar",icon:"📁",l:"Importar Extrato"},
+    {id:"carreira",icon:<Ic d={ICON.user} size={18}/>,l:"Perfil"},
+    {id:"dashboard",icon:<Ic d={ICON.home} size={18}/>,l:"Dashboard"},
+    {id:"cartoes",icon:<Ic d={ICON.card} size={18}/>,l:"Cartões de Crédito"},
+    {id:"contatos",icon:<Ic d={ICON.users} size={18}/>,l:"Contatos"},
+    {id:"importar",icon:<Ic d={ICON.import} size={18}/>,l:"Importar Extrato"},
   ];
   const finSubs=[
-    {id:"financas-visao",icon:"👁",l:"Visão Geral"},
-    {id:"financas-orcamentos",icon:"🎯",l:"Orçamentos"},
-    {id:"financas-relatorio",icon:"📈",l:"Relatório"},
-    {id:"financas-alertas",icon:"🔔",l:"Alertas"},
+    {id:"financas-visao",icon:<Ic d={ICON.eye} size={15}/>,l:"Visão Geral"},
+    {id:"financas-orcamentos",icon:<Ic d={ICON.target} size={15}/>,l:"Orçamentos"},
+    {id:"financas-relatorio",icon:<Ic d={ICON.chart} size={15}/>,l:"Relatório"},
+    {id:"financas-alertas",icon:<Ic d={ICON.bell} size={15}/>,l:"Alertas"},
   ];
   const compSubs=[
-    {id:"compartilhados-casal",icon:"👫",l:"Casal"},
-    {id:"compartilhados-divisoes",icon:"÷",l:"Divisões",badge:divPendCount},
+    {id:"compartilhados-casal",icon:<Ic d={ICON.handshake} size={15}/>,l:"Casal"},
+    {id:"compartilhados-divisoes",icon:<Ic d={ICON.divide} size={15}/>,l:"Divisões",badge:divPendCount},
   ];
 
   if(!open)return null;
@@ -366,20 +409,20 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
         <div style={{flex:1,overflowY:"auto",padding:"10px 10px"}}>
           {items.map(it=>(
             <button key={it.id} onClick={()=>navTo(it.id)} className="press" style={btnStyle(view===it.id)}>
-              <span style={{fontSize:18,width:24,textAlign:"center"}}>{it.icon}</span>{it.l}
+              <span style={{width:24,display:"flex",justifyContent:"center",alignItems:"center"}}>{it.icon}</span>{it.l}
             </button>
           ))}
 
           {/* Compartilhados expandível */}
           <button onClick={()=>setCompOpen(v=>!v)} className="press" style={btnStyle(compActive)}>
-            <span style={{fontSize:18,width:24,textAlign:"center"}}>🤝</span>
+            <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.handshake} size={18}/></span>
             <span style={{flex:1}}>Compartilhados</span>
             <span style={{fontSize:12,color:G2.muted,transform:compOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
           </button>
           {compOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
             {compSubs.map(s=>(
               <button key={s.id} onClick={()=>navTo(s.id)} className="press" style={{...subStyle(view===s.id),justifyContent:"space-between"}}>
-                <span style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15}}>{s.icon}</span>{s.l}</span>
+                <span style={{display:"flex",alignItems:"center",gap:8}}><span style={{display:"flex",alignItems:"center"}}>{s.icon}</span>{s.l}</span>
                 {s.badge>0&&<span style={{background:G2.red,color:"#fff",borderRadius:10,fontSize:10,fontWeight:700,padding:"1px 7px",minWidth:16,textAlign:"center"}}>{s.badge}</span>}
               </button>
             ))}
@@ -387,14 +430,14 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
 
           {/* Finanças expandível */}
           <button onClick={()=>setFinOpen(v=>!v)} className="press" style={btnStyle(finActive)}>
-            <span style={{fontSize:18,width:24,textAlign:"center"}}>💰</span>
+            <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.wallet} size={18}/></span>
             <span style={{flex:1}}>Finanças</span>
             <span style={{fontSize:12,color:G2.muted,transform:finOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
           </button>
           {finOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
             {finSubs.map(s=>(
               <button key={s.id} onClick={()=>navTo(s.id)} className="press" style={subStyle(view===s.id)}>
-                <span style={{fontSize:15}}>{s.icon}</span>{s.l}
+                <span style={{display:"flex",alignItems:"center"}}>{s.icon}</span>{s.l}
               </button>
             ))}
           </div>}
@@ -403,10 +446,10 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
         {/* Footer */}
         <div style={{padding:"10px 10px 24px",borderTop:`1px solid ${G2.border}`}}>
           <button onClick={()=>{onToggleTheme();}} className="press" style={btnStyle(false)}>
-            <span style={{fontSize:18,width:24,textAlign:"center"}}>{theme==="dark"?"☀️":"🌙"}</span>{theme==="dark"?"Modo Claro":"Modo Escuro"}
+            <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={theme==="dark"?ICON.sun:ICON.moon} size={18}/></span>{theme==="dark"?"Modo Claro":"Modo Escuro"}
           </button>
           <button onClick={()=>{onLogout();onClose();}} className="press" style={btnStyle(false)}>
-            <span style={{fontSize:18,width:24,textAlign:"center"}}>🚪</span>Sair da conta
+            <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.logout} size={18}/></span>Sair da conta
           </button>
         </div>
       </div>
@@ -415,7 +458,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
 }
 
 
-function Head({view,onRec,onDep,user,onDrawer}){
+function Head({view,onRec,onDep,user,onDrawer,divPendCount=0}){
   const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",carreira:"Meu Perfil",chat:"IA",
     cartoes:"Cartões",familia:"Família / Casal",divisao:"Divisão de Contas",importar:"Importar Extrato",
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
@@ -423,9 +466,12 @@ function Head({view,onRec,onDep,user,onDrawer}){
   return(
     <div className="safe-top" style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:"0 16px",paddingBottom:10,minHeight:"var(--hh)"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{position:"relative",flexShrink:0}}>
         <button onClick={onDrawer} className="press" style={{width:34,height:34,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:0,flexShrink:0}}>
           {[0,1,2].map(i=><div key={i} style={{width:16,height:2,borderRadius:1,background:G.text}}/>)}
         </button>
+        {divPendCount>0&&<span style={{position:"absolute",top:-3,right:-3,width:8,height:8,borderRadius:"50%",background:G.red,border:"2px solid "+G.card}}/>}
+        </div>
         <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,letterSpacing:-.5}}>fin<span style={{color:G.accent}}>ance</span>
           <span style={{fontFamily:"'Figtree',sans-serif",fontSize:12,fontWeight:400,color:G.muted,marginLeft:8}}>{TITLES[view]||""}</span>
         </div>
@@ -1995,7 +2041,7 @@ function CartoesView({uid,lancs}){
     </div>
 
     {cartoes.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}>
-      <div style={{fontSize:40,marginBottom:12}}>💳</div>
+      <div style={{fontSize:40,marginBottom:12}}>◼</div>
       <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>Nenhum cartão cadastrado</div>
       <div style={{fontSize:12}}>Adicione seus cartões para controlar faturas e limites</div>
     </div>}
@@ -2008,7 +2054,7 @@ function CartoesView({uid,lancs}){
       const disponivel=Math.max(0,c.limite-totalGasto);
       const corBarra=pctUsado>90?G.red:pctUsado>70?G.yellow:G.green;
 
-      return(<div key={c.id} style={{borderRadius:20,overflow:"hidden",position:"relative"}}>
+      return(<div key={c.id} style={{borderRadius:20,position:"relative"}}>
         {/* Card visual */}
         <div style={{background:`linear-gradient(135deg,${c.cor}dd,${c.cor}88)`,padding:"20px 20px 16px",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
@@ -2082,7 +2128,7 @@ function CartoesView({uid,lancs}){
         </div>
         <button onClick={salvarCartao} className="press"
           style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
-          💳 Salvar Cartão
+          Salvar Cartão
         </button>
       </div>
     </Sheet>
@@ -2239,7 +2285,7 @@ function ContatosView({uid,user}){
         <div style={{fontSize:11,color:G.muted,textAlign:"center",marginBottom:8}}>Compartilhe com quem quer adicionar como contato</div>
         <button onClick={()=>navigator.clipboard?.writeText(meuCod)} className="press"
           style={{width:"100%",padding:"9px",borderRadius:10,border:"1px solid "+G.accent+"44",background:G.accentL,color:G.accent,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-          📋 Copiar código
+          Copiar código
         </button>
       </>:<button onClick={handleGerarCodigo} disabled={gerando} className="press"
         style={{width:"100%",padding:12,borderRadius:12,border:"none",background:G.accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:gerando?.6:1}}>
@@ -2250,7 +2296,7 @@ function ContatosView({uid,user}){
     {/* Adicionar por código */}
     <button onClick={()=>setSheetAdd("codigo")} className="press"
       style={{width:"100%",padding:"12px",borderRadius:12,border:"1px solid "+G.accent+"44",background:G.accentL,color:G.accent,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-      🔗 Adicionar amigo por código
+      Adicionar amigo por código
     </button>
 
     {/* Lista por grupo */}
@@ -2493,8 +2539,7 @@ function DivisoesView({uid}){
 
   async function marcarPago(divId,parteIdx){
     const div=divisoes.find(d=>d.id===divId);if(!div)return;
-    const partes=[...div.partes];
-    partes[parteIdx]={...partes[parteIdx],pago:!partes[parteIdx].pago};
+    const partes=div.partes.map((p,i)=>i===parteIdx?{...p,pago:!p.pago}:p);
     await updateDoc(doc(db,"users",uid,"divisoes",divId),{partes});
   }
 
@@ -2509,7 +2554,7 @@ function DivisoesView({uid}){
     {/* Pendentes (notificações) */}
     {pendentes.length>0&&<div style={{background:G.yellow+"15",border:"1px solid "+G.yellow+"44",borderRadius:16,padding:16}}>
       <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8,marginBottom:12}}>
-        🔔 DIVISÕES RECEBIDAS ({pendentes.length})
+        DIVISÕES RECEBIDAS ({pendentes.length})
       </div>
       {pendentes.map(p=>(
         <div key={p.id} style={{marginBottom:12,paddingBottom:12,borderBottom:"1px solid "+G.yellow+"22"}}>
@@ -2520,11 +2565,11 @@ function DivisoesView({uid}){
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>aceitarDiv(p.id,p)} className="press"
               style={{flex:1,padding:"8px",borderRadius:10,border:"none",background:G.green,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-              ✓ Aceitar
+              Aceitar
             </button>
             <button onClick={()=>recusarDiv(p.id)} className="press"
               style={{flex:1,padding:"8px",borderRadius:10,border:"1px solid "+G.red+"44",background:G.red+"15",color:G.red,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-              ✕ Recusar
+              Recusar
             </button>
           </div>
         </div>
@@ -2635,7 +2680,7 @@ function DivisoesView({uid}){
           </div>
         )}
         <button onClick={salvarDiv} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-          ÷ Criar e enviar
+          Criar e enviar
         </button>
       </div>
     </Sheet>
@@ -2738,7 +2783,7 @@ export default function App(){
   return(<>
     <style>{CSS}</style>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:G.bg}}>
-      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} onDrawer={()=>setDrawerOpen(true)}/>
+      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
