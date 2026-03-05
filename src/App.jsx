@@ -13,7 +13,7 @@ const CATS_DEP = ["Cartão de Crédito","Moradia","Alimentação","Transporte","
 const FORMAS_REC = ["PIX","Transferência","Depósito","TED","Dinheiro","Automático"];
 const FORMAS_DEP = ["Cartão Crédito","Cartão Débito","PIX","Dinheiro","Débito Auto","Boleto","App"];
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const FREQ_OPTS = [{id:"mensal",label:"Todo mês",icon:"📅"},{id:"quinzenal",label:"Quinzenal",icon:"🗓"},{id:"semanal",label:"Toda semana",icon:"📆"},{id:"anual",label:"Todo ano",icon:"📌"}];
+const FREQ_OPTS = [{id:"mensal",label:"Todo mês",icon:<Ic d={ICON.repeat} size={14}/>},{id:"quinzenal",label:"Quinzenal",icon:<Ic d={ICON.calendar} size={14}/>},{id:"semanal",label:"Toda semana",icon:<Ic d={ICON.calendar} size={14}/>},{id:"anual",label:"Todo ano",icon:<Ic d={ICON.star} size={14}/>}];
 const AREAS = ["Tecnologia","Saúde","Educação","Finanças","Direito","Marketing","Engenharia","Administração","Comércio","Indústria","Construção","Logística","Arte e Design","Comunicação","RH","Consultoria","Outro"];
 const NIVEIS = [
   "Estagiário","Aprendiz","Trainee","Auxiliar","Assistente",
@@ -172,7 +172,7 @@ function localAI(msg,lancs){
   desc=desc.charAt(0).toUpperCase()+desc.slice(1);
 
   const tipo=isRec?"Receita":"Despesa";
-  const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Farmácia":"💊","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Salário":"💼","Freelance":"🖥️","Investimentos":"📈","Bônus":"⭐","Renda Extra":"💡"};
+  const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Farmácia":"💊","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Salário":"","Freelance":"🖥️","Investimentos":<Ic d={ICON.chart} size={15}/>,"Bônus":"⭐","Renda Extra":"💡"};
   const emoji=icons[cat]||"💰";
   const confirmacao=tipo==="Receita"
     ?`${emoji} Receita de R$${valor.toFixed(2)} em ${cat}! Confirma?`
@@ -395,7 +395,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
           </div>
           {user&&<div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:38,height:38,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`2px solid ${G2.border2}`}}>
-              {user.photoURL?<img src={user.photoURL} style={{width:"100%",height:"100%",objectFit:"cover"}} referrerPolicy="no-referrer"/>
+              {(profilePhoto||user.photoURL)?<img src={profilePhoto||user.photoURL} style={{width:"100%",height:"100%",objectFit:"cover"}} referrerPolicy="no-referrer"/>
                 :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:G2.accent,background:G2.accentL}}>{(user.displayName||user.email||"U")[0].toUpperCase()}</div>}
             </div>
             <div>
@@ -458,7 +458,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
 }
 
 
-function Head({view,onRec,onDep,user,onDrawer,divPendCount=0}){
+function Head({view,onRec,onDep,user,profilePhoto="",onDrawer,divPendCount=0}){
   const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",carreira:"Meu Perfil",chat:"IA",
     cartoes:"Cartões",familia:"Família / Casal",divisao:"Divisão de Contas",importar:"Importar Extrato",
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
@@ -496,7 +496,7 @@ function TxRow({l,onDelete,full}){
   return(
     <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:`1px solid ${G.border}`,opacity:isPendente?.55:1}}>
       <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:isPendente?G.card2:isR?G.greenL:G.redL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:isPendente?G.muted:c,position:"relative",border:isPendente?`1.5px dashed ${G.border2}`:"none"}}>
-        {isPendente?"🕐":isR?"↑":"↓"}
+        {isPendente?"":isR?"↑":"↓"}
         {l.auto&&<div style={{position:"absolute",bottom:-2,right:-2,width:13,height:13,borderRadius:"50%",background:G.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#fff"}}>↻</div>}
       </div>
       <div style={{flex:1,minWidth:0}}>
@@ -506,7 +506,7 @@ function TxRow({l,onDelete,full}){
           <Tag color={CAT_COLORS[l.cat]||G.muted}>{l.cat}</Tag>
           {full&&<span style={{fontSize:11,color:G.muted}}>{l.forma}</span>}
           {l.auto&&<Tag color={G.accent}>↻ auto</Tag>}
-          {isPendente&&<Tag color={G.yellow}>🕐 agendado</Tag>}
+          {isPendente&&<Tag color={G.yellow}> agendado</Tag>}
         </div>
       </div>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:isPendente?G.muted:c,flexShrink:0,textDecoration:isPendente?"line-through":"none"}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
@@ -561,7 +561,7 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
       {/* ── Modo: Normal / Recorrente / Agendado ── */}
       <div style={{marginBottom:16}}>
         <div style={{display:"flex",gap:8,marginBottom:form.modo&&form.modo!=="normal"?10:0}}>
-          {[{id:"normal",icon:"✓",l:"Normal"},{id:"recorrente",icon:"↻",l:"Recorrente"},{id:"agendado",icon:"🕐",l:"Agendado"}].map(opt=>{
+          {[{id:"normal",icon:"✓",l:"Normal"},{id:"recorrente",icon:"↻",l:"Recorrente"},{id:"agendado",icon:"",l:"Agendado"}].map(opt=>{
             const sel=(form.modo||"normal")===opt.id;
             return(<button key={opt.id} onClick={()=>setForm(f=>({...f,modo:opt.id}))} className="press"
               style={{flex:1,padding:"10px 6px",borderRadius:12,border:`1px solid ${sel?ac+"88":G.border}`,background:sel?ac+"18":G.card2,color:sel?ac:G.muted,fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
@@ -577,7 +577,7 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
           <div style={{fontSize:11,color:G.muted,textAlign:"center"}}>↻ Entra automaticamente todo mês na data definida</div>
         </div>}
         {(form.modo||"normal")==="agendado"&&<div style={{background:G.yellow+"12",border:`1px solid ${G.yellow}44`,borderRadius:12,padding:12,animation:"fadeUp .15s ease"}}>
-          <div style={{fontSize:12,color:G.yellow,fontWeight:600,marginBottom:4}}>🕐 Agendado</div>
+          <div style={{fontSize:12,color:G.yellow,fontWeight:600,marginBottom:4}}> Agendado</div>
           <div style={{fontSize:12,color:G.muted,lineHeight:1.5}}>Vai entrar no saldo só na data escolhida acima. Aparece na lista com visual diferente até lá.</div>
         </div>}
       </div>
@@ -628,7 +628,7 @@ function Dashboard({lancs,onDelete}){
     </div>
     {(()=>{const ag=lancs.filter(l=>l.agendado&&l.data>today()).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,3);return ag.length>0&&(
       <div style={{background:G.yellow+"12",border:`1px solid ${G.yellow}33`,borderRadius:16,padding:16,marginBottom:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.yellow,marginBottom:10}}>🕐 Agendados</div>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.yellow,marginBottom:10}}> Agendados</div>
         {ag.map(l=>{const isR=l.tipo==="Receita";return(<div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${G.yellow}22`}}>
           <div><div style={{fontSize:13,fontWeight:500,color:G.muted}}>{l.desc||l.cat}</div><div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}</div></div>
           <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:G.muted}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
@@ -737,7 +737,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
         <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>{data.length} registro{data.length!==1?"s":""}</span>
         <span style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:ac}}>{isR?"+":"-"}{fmtK(data.reduce((s,l)=>s+l.valor,0))}</span>
       </div>
-      {data.length===0?<div style={{textAlign:"center",padding:"48px 20px",color:G.muted}}><div style={{fontSize:40,marginBottom:10}}>{isR?"💰":"💸"}</div><div style={{fontSize:14}}>Nenhum lançamento</div></div>
+      {data.length===0?<div style={{textAlign:"center",padding:"48px 20px",color:G.muted}}><div style={{fontSize:40,marginBottom:10}}>{isR?"💰":""}</div><div style={{fontSize:14}}>Nenhum lançamento</div></div>
         :<div style={{padding:"0 16px"}}>{data.map(l=><TxRow key={l.id} l={l} onDelete={onDelete} full/>)}</div>}
     </div>
   </div>);
@@ -822,7 +822,7 @@ function CarreiraView({uid,user}){
     const v={...fp,fotoUrl:fotoFinal,salarioAtual:parseFloat(fp.salarioAtual)||0,updatedAt:today()};
     try{
       await setDoc(doc(db,"users",uid,"carreira","perfil"),v);
-      setPerfil(v);setSheet(null);
+      setPerfil(v);setSheet(null);if(v.fotoUrl)setProfilePhoto(v.fotoUrl);
     }catch(e){
       console.error(e);
       if(e.message?.includes("1048487"))alert("Foto muito grande. Tire uma foto menor ou use uma URL.");
@@ -886,10 +886,10 @@ function CarreiraView({uid,user}){
   const nomeExibido=perfil?.nome||(user?.displayName)||"";
 
   const SECOES=[
-    {id:"sobre",icon:"👤",label:"Sobre"},
-    {id:"historico",icon:"📈",label:"Histórico"},
-    {id:"metas",icon:"🎯",label:"Metas"},
-    {id:"gastos",icon:"🎓",label:"Gastos"},
+    {id:"sobre",icon:<Ic d={ICON.user} size={15}/>,label:"Sobre"},
+    {id:"historico",icon:<Ic d={ICON.chart} size={15}/>,label:"Histórico"},
+    {id:"metas",icon:<Ic d={ICON.target} size={15}/>,label:"Metas"},
+    {id:"gastos",icon:<Ic d={ICON.briefcase} size={15}/>,label:"Gastos"},
   ];
 
   // ── CARD VISUAL ──────────────────────────────────────────────────────────────
@@ -897,7 +897,7 @@ function CarreiraView({uid,user}){
     <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,.85)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{width:"100%",maxWidth:360}}>
         {/* The Card */}
-        <div id="profile-card" style={{background:"linear-gradient(145deg,#1a1040,#111128)",border:`1px solid ${G.border2}`,borderRadius:24,padding:"28px 24px",position:"relative",overflow:"hidden"}}>
+        <div id="profile-card" style={{background:G.card,border:`1px solid ${G.border2}`,borderRadius:24,padding:"28px 24px",position:"relative",overflow:"hidden"}}>
           {/* BG decoration */}
           <div style={{position:"absolute",top:-60,right:-60,width:200,height:200,borderRadius:"50%",background:`radial-gradient(circle,${G.orange}20,transparent 65%)`,pointerEvents:"none"}}/>
           <div style={{position:"absolute",bottom:-40,left:-40,width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}15,transparent 65%)`,pointerEvents:"none"}}/>
@@ -910,7 +910,7 @@ function CarreiraView({uid,user}){
                 :<span style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:G.orange}}>{nomeExibido?nomeExibido[0].toUpperCase():"?"}</span>}
             </div>
             <div style={{flex:1}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,lineHeight:1.2,marginBottom:4}}>{nomeExibido||"Seu Nome"}</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,lineHeight:1.2,marginBottom:4,color:G.text}}>{nomeExibido||"Seu Nome"}</div>
               <div style={{fontSize:13,fontWeight:600,color:G.orange}}>{perfil?.cargo||"Cargo"}</div>
               <div style={{fontSize:12,color:G.muted,marginTop:2}}>{perfil?.empresa||""}{perfil?.empresa&&perfil?.area?" · ":""}{perfil?.area||""}</div>
             </div>
@@ -923,7 +923,7 @@ function CarreiraView({uid,user}){
           </div>
 
           {/* Bio */}
-          {perfil?.bio&&<div style={{fontSize:12,color:"#B0AAC8",lineHeight:1.6,marginBottom:16,padding:"12px 14px",background:"rgba(255,255,255,.04)",borderRadius:12,position:"relative"}}>{perfil.bio}</div>}
+          {perfil?.bio&&<div style={{fontSize:12,color:G.muted,lineHeight:1.6,marginBottom:16,padding:"12px 14px",background:"rgba(255,255,255,.04)",borderRadius:12,position:"relative"}}>{perfil.bio}</div>}
 
           {/* Skills */}
           {perfil?.skills?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
@@ -936,7 +936,7 @@ function CarreiraView({uid,user}){
           {/* Formação */}
           {perfil?.formacao?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Formação</div>
-            {perfil.formacao.slice(0,2).map((f,i)=><div key={i} style={{fontSize:12,color:G.text,marginBottom:4}}>🎓 {f.curso}{f.inst?" — "+f.inst:""}{f.ano?" ("+f.ano+")":""}</div>)}
+            {perfil.formacao.slice(0,2).map((f,i)=><div key={i} style={{fontSize:12,color:G.text,marginBottom:4}}>{f.curso}{f.inst?" — "+f.inst:""}{f.ano?" ("+f.ano+")":""}</div>)}
           </div>}
 
           {/* Idiomas */}
@@ -949,8 +949,8 @@ function CarreiraView({uid,user}){
 
           {/* Redes */}
           <div style={{display:"flex",gap:10,flexWrap:"wrap",position:"relative"}}>
-            {perfil?.linkedin&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#60A5FA"}}>💼 {perfil.linkedin}</div>}
-            {perfil?.instagram&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#E879F9"}}>📷 {perfil.instagram}</div>}
+            {perfil?.linkedin&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#60A5FA"}}> {perfil.linkedin}</div>}
+            {perfil?.instagram&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#E879F9"}}> {perfil.instagram}</div>}
             {perfil?.site&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:G.green}}>🔗 {perfil.site}</div>}
           </div>
 
@@ -967,7 +967,7 @@ function CarreiraView({uid,user}){
             if(navigator.share){navigator.share({title:`${nomeExibido} — Perfil Profissional`,text:`${perfil?.cargo||""} ${perfil?.empresa?`@ ${perfil.empresa}`:""}`,url:window.location.href});}
             else{navigator.clipboard?.writeText(window.location.href);alert("Link copiado!");}
           }} className="press" style={{flex:1,padding:"14px",borderRadius:14,border:"none",background:G.orange,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-            Compartilhar 🔗
+            Compartilhar
           </button>
           <button onClick={()=>setShowCard(false)} className="press" style={{padding:"14px 20px",borderRadius:14,border:`1px solid ${G.border2}`,background:"none",color:G.muted,fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
             Fechar
@@ -999,7 +999,7 @@ function CarreiraView({uid,user}){
             </div>
             <div style={{display:"flex",gap:6}}>
               <button onClick={()=>setShowCard(true)} className="press" title="Ver cartão" style={{width:34,height:34,borderRadius:10,border:`1px solid ${G.orange}55`,background:G.orange+"18",color:G.orange,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>◻</button>
-              <button onClick={()=>setSheet("perfil")} style={{width:34,height:34,borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✎</button>
+              <button onClick={()=>setSheet("perfil")} style={{width:34,height:34,borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}></button>
             </div>
           </div>
           {/* KPIs */}
@@ -1071,7 +1071,7 @@ function CarreiraView({uid,user}){
           </div>
           {perfil.formacao?.length>0
             ?perfil.formacao.map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<perfil.formacao.length-1?`1px solid ${G.border}`:"none"}}>
-                <div style={{width:34,height:34,borderRadius:10,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>🎓</div>
+                <div style={{width:34,height:34,borderRadius:10,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}></div>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{f.curso}</div><div style={{fontSize:11,color:G.muted}}>{f.tipo}{f.inst?" · "+f.inst:""}{f.ano?" · "+f.ano:""}</div></div>
               </div>)
             :<div style={{fontSize:13,color:G.muted}}>Nenhuma formação adicionada</div>}
@@ -1095,9 +1095,9 @@ function CarreiraView({uid,user}){
             <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {perfil.linkedin?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}>💼</span><span style={{color:"#60A5FA"}}>{perfil.linkedin}</span></div>:<div style={{fontSize:13,color:G.border2}}>💼 LinkedIn não adicionado</div>}
-            {perfil.instagram?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}>📷</span><span style={{color:"#E879F9"}}>{perfil.instagram}</span></div>:<div style={{fontSize:13,color:G.border2}}>📷 Instagram não adicionado</div>}
-            {perfil.site?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}>🔗</span><span style={{color:G.green}}>{perfil.site}</span></div>:<div style={{fontSize:13,color:G.border2}}>🔗 Site não adicionado</div>}
+            {perfil.linkedin?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}></span><span style={{color:"#60A5FA"}}>{perfil.linkedin}</span></div>:<div style={{fontSize:13,color:G.border2}}> LinkedIn não adicionado</div>}
+            {perfil.instagram?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}><Ic d={ICON.camera} size={16}/></span><span style={{color:"#E879F9"}}>{perfil.instagram}</span></div>:<div style={{fontSize:13,color:G.border2}}> Instagram não adicionado</div>}
+            {perfil.site?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}><Ic d={ICON.link} size={16}/></span><span style={{color:G.green}}>{perfil.site}</span></div>:<div style={{fontSize:13,color:G.border2}}>🔗 Site não adicionado</div>}
           </div>
         </div>
 
@@ -1126,12 +1126,12 @@ function CarreiraView({uid,user}){
         </ResponsiveContainer>
       </div>}
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,overflow:"hidden"}}>
-        {historico.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}>📈</div><div>Nenhum histórico ainda</div></div>
+        {historico.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhum histórico ainda</div></div>
           :<div style={{padding:"0 16px"}}>
           {historico.map((h,i)=>{
             const aum=i<historico.length-1?h.salario-historico[i+1].salario:0;
             return(<div key={h.id} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<historico.length-1?`1px solid ${G.border}`:"none"}}>
-              <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:G.orange+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>💼</div>
+              <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:G.orange+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}></div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.cargo}</div>
                 <div style={{fontSize:11,color:G.muted,marginTop:2}}>{h.empresa||"—"} · {h.data}</div>
@@ -1154,7 +1154,7 @@ function CarreiraView({uid,user}){
         <span style={{fontSize:13,fontWeight:600,color:G.muted}}>{metas.length} meta{metas.length!==1?"s":""}</span>
         <button onClick={()=>setSheet("meta")} className="press" style={{padding:"8px 16px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Nova Meta</button>
       </div>
-      {metas.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}>🎯</div><div>Nenhuma meta cadastrada</div></div>
+      {metas.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhuma meta cadastrada</div></div>
         :<div style={{display:"flex",flexDirection:"column",gap:12}}>
         {metas.map(m=>{
           const p=m.valorAlvo>0?Math.min(100,((m.valorAtual||0)/m.valorAlvo)*100):0;
@@ -1197,11 +1197,11 @@ function CarreiraView({uid,user}){
         </div>);
       })()}
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,overflow:"hidden"}}>
-        {gastos.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}>🎓</div><div>Nenhum gasto registrado</div></div>
+        {gastos.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhum gasto registrado</div></div>
           :<div style={{padding:"0 16px"}}>
           {gastos.map((g,i)=>(
             <div key={g.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<gastos.length-1?`1px solid ${G.border}`:"none"}}>
-              <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🎓</div>
+              <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}></div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:14,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.desc||g.cat}</div>
                 <div style={{display:"flex",gap:6,marginTop:2,flexWrap:"wrap"}}>
@@ -1228,11 +1228,11 @@ function CarreiraView({uid,user}){
             <div style={{width:64,height:64,borderRadius:16,overflow:"hidden",flexShrink:0,border:`1px solid ${G.border2}`,background:G.card2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,color:G.muted}}>
               {fp.fotoUrl
                 ?<img src={fp.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                :"📷"}
+                :""}
             </div>
             <div style={{flex:1}}>
               <label style={{display:"block",padding:"11px 14px",borderRadius:12,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:13,fontWeight:700,cursor:"pointer",textAlign:"center"}}>
-                📷 Escolher foto
+                Escolher foto
                 <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
                   const file=e.target.files?.[0];
                   if(!file)return;
@@ -1264,9 +1264,9 @@ function CarreiraView({uid,user}){
         <div style={{borderTop:`1px solid ${G.border}`,paddingTop:14}}>
           <div style={{fontSize:12,fontWeight:700,color:G.muted,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>Redes & Contato</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}>💼</span><input value={fp.linkedin} onChange={e=>setFp(f=>({...f,linkedin:e.target.value}))} placeholder="linkedin.com/in/..." className="inp" style={{flex:1}}/></div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}>📷</span><input value={fp.instagram} onChange={e=>setFp(f=>({...f,instagram:e.target.value}))} placeholder="@usuario" className="inp" style={{flex:1}}/></div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}>🔗</span><input value={fp.site} onChange={e=>setFp(f=>({...f,site:e.target.value}))} placeholder="seusite.com" className="inp" style={{flex:1}}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}></span><input value={fp.linkedin} onChange={e=>setFp(f=>({...f,linkedin:e.target.value}))} placeholder="linkedin.com/in/..." className="inp" style={{flex:1}}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}><Ic d={ICON.camera} size={16}/></span><input value={fp.instagram} onChange={e=>setFp(f=>({...f,instagram:e.target.value}))} placeholder="@usuario" className="inp" style={{flex:1}}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}><Ic d={ICON.link} size={16}/></span><input value={fp.site} onChange={e=>setFp(f=>({...f,site:e.target.value}))} placeholder="seusite.com" className="inp" style={{flex:1}}/></div>
           </div>
         </div>
 
@@ -1375,7 +1375,7 @@ function CarreiraView({uid,user}){
 }
 
 // ─── FINANÇAS VIEW ────────────────────────────────────────────────────────────
-const CAT_ICONS={"Moradia":"🏠","Alimentação":"🍔","Transporte":"🚗","Saúde":"❤️","Educação":"📚","Lazer":"🎮","Vestuário":"👕","Assinaturas":"📱","Pets":"🐾","Beleza e Cuidados":"💅","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Seguros":"🛡️","Academia":"💪","Farmácia":"💊","Outros":"📦","Salário":"💼","Freelance":"🖥️","Investimentos":"📈","Aluguel Recebido":"🏡","Bônus":"⭐","Reembolso":"↩️","Renda Extra":"💡","Dividendos":"💰"};
+const CAT_ICONS={"Moradia":"🏠","Alimentação":"🍔","Transporte":"🚗","Saúde":"❤️","Educação":"📚","Lazer":"🎮","Vestuário":"👕","Assinaturas":"📱","Pets":"🐾","Beleza e Cuidados":"💅","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Seguros":"🛡️","Academia":"💪","Farmácia":"💊","Outros":"","Salário":"","Freelance":"🖥️","Investimentos":<Ic d={ICON.chart} size={15}/>,"Aluguel Recebido":"🏡","Bônus":"⭐","Reembolso":"↩️","Renda Extra":"💡","Dividendos":"💰"};
 const ORC_CORES=["#FB923C","#A78BFA","#F472B6","#34D399","#FBBF24","#60A5FA","#818CF8","#2DD4BF","#F97316","#E879F9"];
 
 function FinancasView({uid,lancs,secao}){
@@ -1457,7 +1457,7 @@ function FinancasView({uid,lancs,secao}){
   const autoAlertas=orcamentos.map(o=>{
     const g=gastosCat(o.cat);
     const p=o.limite>0?g/o.limite*100:0;
-    if(p>=100)return{cor:G.red,msg:`🚨 ${o.cat} estourou! Gasto: ${fmt(g)} / Limite: ${fmt(o.limite)}`};
+    if(p>=100)return{cor:G.red,msg:`⚠ ${o.cat} estourou! Gasto: ${fmt(g)} / Limite: ${fmt(o.limite)}`};
     if(p>=80)return{cor:G.yellow,msg:`⚠️ ${o.cat} atingiu ${p.toFixed(0)}% do limite (${fmt(g)} de ${fmt(o.limite)})`};
     return null;
   }).filter(Boolean);
@@ -1604,9 +1604,9 @@ function FinancasView({uid,lancs,secao}){
           <div onClick={()=>setExportMenu(false)} style={{position:"fixed",inset:0,zIndex:299}}/>
           <div style={{position:"absolute",top:36,right:0,zIndex:300,background:G.card,border:`1px solid ${G.border2}`,borderRadius:14,padding:6,minWidth:170,boxShadow:"0 8px 32px rgba(0,0,0,.4)",animation:"popIn .15s ease"}}>
             {[
-              {icon:"📊",label:"Planilha (.xls)",fn:exportXLSX},
-              {icon:"📄",label:"PDF / Imprimir",fn:exportPDF},
-              {icon:"🖼️",label:"Imagem (.png)",fn:exportPNG},
+              {icon:"XLS",label:"Planilha (.xls)",fn:exportXLSX},
+              {icon:"PDF",label:"PDF / Imprimir",fn:exportPDF},
+              {icon:"PNG",label:"Imagem (.png)",fn:exportPNG},
             ].map(o=>(
               <div key={o.label} onClick={o.fn} className="press"
                 style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,cursor:"pointer",fontSize:13,fontWeight:500}}>
@@ -1693,12 +1693,12 @@ function FinancasView({uid,lancs,secao}){
         <div style={{height:8,background:G.border,borderRadius:8,overflow:"hidden"}}><div style={{height:"100%",width:`${pTotal}%`,background:barTotal,borderRadius:8}}/></div>
         <div style={{fontSize:11,color:G.muted,marginTop:6}}>{pTotal.toFixed(0)}% do orçamento total utilizado</div>
       </div>
-      {orcamentos.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}>🎯</div><div>Nenhum orçamento. Crie um!</div></div>
+      {orcamentos.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhum orçamento. Crie um!</div></div>
         :<div style={{display:"flex",flexDirection:"column",gap:10}}>
         {orcamentos.map(o=>{const g=gastosCat(o.cat);const p=o.limite>0?Math.min(100,g/o.limite*100):0;const over=g>o.limite;const bar=p<70?G.green:p<90?G.yellow:G.red;return(
           <div key={o.id} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-              <div style={{width:42,height:42,borderRadius:12,flexShrink:0,background:o.cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{CAT_ICONS[o.cat]||"💰"}</div>
+              <div style={{width:42,height:42,borderRadius:12,flexShrink:0,background:o.cor+"22",display:"flex",alignItems:"center",justifyContent:"center"}}>{CAT_ICONS[o.cat]||"💰"}</div>
               <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{o.cat}</div><div style={{fontSize:11,color:G.muted}}>Limite: {fmt(o.limite)}/mês</div></div>
               {over&&<span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`,flexShrink:0}}>+{fmtK(g-o.limite)}</span>}
               <button onClick={()=>delOrc(o.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:2}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
@@ -1774,10 +1774,10 @@ function FinancasView({uid,lancs,secao}){
         <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>Notificações</div>
         <button onClick={()=>{setFa({msg:"",tipo:"lembrete"});setSheet("alerta");}} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ Nova</button>
       </div>
-      {alertas.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}>🔔</div><div>Nenhum alerta configurado</div></div>
+      {alertas.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}><Ic d={ICON.bell} size={16}/></div><div>Nenhum alerta configurado</div></div>
         :alertas.map(a=>(
         <div key={a.id} style={{display:"flex",alignItems:"flex-start",gap:12,padding:14,borderRadius:14,background:a.lido?G.card2:G.card,border:`1px solid ${a.lido?G.border:G.border2}`,marginBottom:8,opacity:a.lido?.6:1}}>
-          <div style={{fontSize:20,flexShrink:0}}>{a.tipo==="meta"?"🎉":a.tipo==="limite"?"⚠️":"🔔"}</div>
+          <div style={{fontSize:20,flexShrink:0}}>{a.tipo==="meta"?"✓":a.tipo==="limite"?"⚠️":"!"}</div>
           <div style={{flex:1}}><div style={{fontSize:13,fontWeight:a.lido?400:600,lineHeight:1.4}}>{a.msg}</div><div style={{fontSize:11,color:G.muted,marginTop:4}}>{fmtD(a.data)}</div></div>
           {!a.lido&&<button onClick={()=>marcarLido(a.id)} style={{background:"none",border:"none",color:G.accent,cursor:"pointer",fontSize:11,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>✓ Lido</button>}
           <button onClick={()=>delAlerta(a.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:0}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
@@ -1798,7 +1798,7 @@ function FinancasView({uid,lancs,secao}){
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div><Lbl>Mensagem</Lbl><textarea value={fa.msg} onChange={e=>setFa(f=>({...f,msg:e.target.value}))} placeholder="Ex: Pagar fatura do cartão..." rows={3} className="inp" style={{resize:"none",lineHeight:1.5}}/></div>
         <div><Lbl>Tipo</Lbl><div style={{display:"flex",gap:8}}>
-          {[{id:"lembrete",l:"🔔 Lembrete"},{id:"meta",l:"🎯 Meta"},{id:"limite",l:"⚠️ Limite"}].map(t=><div key={t.id} onClick={()=>setFa(f=>({...f,tipo:t.id}))} className="press" style={{flex:1,padding:"10px 6px",borderRadius:12,cursor:"pointer",fontSize:12,fontWeight:600,textAlign:"center",background:fa.tipo===t.id?G.accentL:G.card2,border:`1px solid ${fa.tipo===t.id?G.accent:G.border}`,color:fa.tipo===t.id?G.accent:G.muted}}>{t.l}</div>)}
+          {[{id:"lembrete",l:"Lembrete"},{id:"meta",l:"🎯 Meta"},{id:"limite",l:"⚠️ Limite"}].map(t=><div key={t.id} onClick={()=>setFa(f=>({...f,tipo:t.id}))} className="press" style={{flex:1,padding:"10px 6px",borderRadius:12,cursor:"pointer",fontSize:12,fontWeight:600,textAlign:"center",background:fa.tipo===t.id?G.accentL:G.card2,border:`1px solid ${fa.tipo===t.id?G.accent:G.border}`,color:fa.tipo===t.id?G.accent:G.muted}}>{t.l}</div>)}
         </div></div>
         <button onClick={salvarAlerta} className="press" style={{padding:"15px",borderRadius:14,border:"none",background:G.accent,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>Criar Alerta</button>
       </div>
@@ -1809,7 +1809,7 @@ function FinancasView({uid,lancs,secao}){
 // ─── CHAT VIEW ────────────────────────────────────────────────────────────────
 function ChatView({lancs,onAddLanc}){
   const SUGS=["Gastei 45 no Uber","Paguei 380 no mercado","Recebi salário de 5000","Quanto gastei esse mês?"];
-  const [msgs,setMsgs]=useState([{id:0,from:"ai",ts:new Date(),text:"Oi! 👋 Me fale qualquer gasto ou receita!\n\n• \"Gastei 45 no Uber agora\"\n• \"Recebi salário de 5 mil\"\n• \"Paguei 380 no mercado com débito\""}]);
+  const [msgs,setMsgs]=useState([{id:0,from:"ai",ts:new Date(),text:"Oi! Me fale qualquer gasto ou receita!\n\n• \"Gastei 45 no Uber agora\"\n• \"Recebi salário de 5 mil\"\n• \"Paguei 380 no mercado com débito\""}]);
   const [input,setInput]=useState("");
   const [busy,setBusy]=useState(false);
   const [pending,setPending]=useState(null);
@@ -1933,7 +1933,7 @@ function ChatView({lancs,onAddLanc}){
               return(
                 <div key={c} onClick={()=>escolherCat(c)} className="press"
                   style={{display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:14,marginBottom:6,cursor:"pointer",background:G.card2,border:`1px solid ${G.border}`}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{CAT_ICONS[c]||"📦"}</div>
+                  <div style={{width:36,height:36,borderRadius:10,background:cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{CAT_ICONS[c]||""}</div>
                   <span style={{fontSize:15,fontWeight:600,color:G.text}}>{c}</span>
                   <div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:cor,flexShrink:0}}/>
                 </div>
@@ -1955,7 +1955,7 @@ function ChatView({lancs,onAddLanc}){
       </div>):(<div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
         <button onClick={startRec} disabled={busy||isProc} className="press" style={{width:44,height:44,borderRadius:"50%",border:`1px solid ${G.border2}`,flexShrink:0,cursor:"pointer",background:isProc?G.accentL:G.card2,color:G.muted,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>{isProc?<Spinner size={18}/>:"🎤"}</button>
         <textarea ref={inpRef} value={input} onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,110)+"px";}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Digite como no WhatsApp..." rows={1} style={{flex:1,padding:"11px 14px",background:G.card2,border:`1px solid ${G.border2}`,borderRadius:22,color:G.text,fontSize:15,outline:"none",resize:"none",lineHeight:1.4,maxHeight:110}}/>
-        <button onClick={()=>send()} disabled={!input.trim()||busy} className="press" style={{width:44,height:44,borderRadius:"50%",border:"none",flexShrink:0,cursor:"pointer",background:input.trim()&&!busy?G.accent:G.border2,color:"#fff",fontSize:19,display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s"}}>➤</button>
+        <button onClick={()=>send()} disabled={!input.trim()||busy} className="press" style={{width:44,height:44,borderRadius:"50%",border:"none",flexShrink:0,cursor:"pointer",background:input.trim()&&!busy?G.accent:G.border2,color:"#fff",fontSize:19,display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s"}}>›</button>
       </div>)}
     </div>
   </div>);
@@ -2019,7 +2019,7 @@ function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
 
       {error&&!modo&&<div style={{padding:"12px 16px",borderRadius:12,background:G.redL,border:`1px solid ${G.red}44`,fontSize:13,color:G.red,textAlign:"center"}}>{error}</div>}
     </div>
-    <div style={{position:"fixed",bottom:24,fontSize:12,color:G.muted,textAlign:"center",lineHeight:1.6}}>Seus dados ficam na sua conta.<br/>Privado e seguro. 🔒</div>
+    <div style={{position:"fixed",bottom:24,fontSize:12,color:G.muted,textAlign:"center",lineHeight:1.6}}>Seus dados ficam na sua conta.<br/>Privado e seguro. </div>
   </div>);
 }
 
@@ -2330,7 +2330,7 @@ function ContatosView({uid,user}){
 
     {/* Lista por grupo */}
     {contatos.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
-      <div style={{fontSize:36,marginBottom:8}}>👥</div>
+      <div style={{fontSize:36,marginBottom:8}}></div>
       <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>Nenhum contato ainda</div>
       <div style={{fontSize:12}}>Gere seu código e compartilhe, ou adicione manualmente</div>
     </div>}
@@ -2452,7 +2452,7 @@ function CasalView({uid,lancs,user}){
     </button>
 
     {lancCasal.length===0&&<div style={{textAlign:"center",padding:"30px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
-      <div style={{fontSize:32,marginBottom:8}}>👫</div>
+      <div style={{fontSize:32,marginBottom:8}}></div>
       <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Nenhum lançamento do casal</div>
       <div style={{fontSize:12}}>Registre gastos e receitas compartilhados</div>
     </div>}
@@ -2738,6 +2738,7 @@ export default function App(){
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [cartoesList,setCartoesList]=useState([]);
   const [divPendCount,setDivPendCount]=useState(0);
+  const [profilePhoto,setProfilePhoto]=useState("");
   const [modal,setModal]=useState(false);
   const [tipo,setTipo]=useState("Despesa");
   const [form,setForm]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",recorrente:false,freq:"mensal",dia:1});
@@ -2779,7 +2780,7 @@ export default function App(){
     // Agendado: salva com flag agendado=true — não entra no saldo até a data
     await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado",...(form.cartaoId?{cartaoId:form.cartaoId}:{})});
     if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,ativo:true});
-    const label=modo==="recorrente"?" ↻":modo==="agendado"?" 🕐":"";
+    const label=modo==="recorrente"?" ↻":modo==="agendado"?" ":"";
     showT(`${tipo} adicionada!${label}`);setModal(false);
   }
   async function deletar(id){await deleteDoc(doc(db,"users",user.uid,"lancamentos",id));showT("Removido.","error");}
@@ -2820,7 +2821,7 @@ export default function App(){
   return(<>
     <style>{CSS}</style>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:G.bg}}>
-      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
+      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} profilePhoto={profilePhoto} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
