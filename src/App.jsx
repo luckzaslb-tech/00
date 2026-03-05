@@ -13,7 +13,7 @@ const CATS_DEP = ["Cartão de Crédito","Moradia","Alimentação","Transporte","
 const FORMAS_REC = ["PIX","Transferência","Depósito","TED","Dinheiro","Automático"];
 const FORMAS_DEP = ["Cartão Crédito","Cartão Débito","PIX","Dinheiro","Débito Auto","Boleto","App"];
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const FREQ_OPTS = [{id:"mensal",label:"Todo mês",icon:<Ic d={ICON.repeat} size={14}/>},{id:"quinzenal",label:"Quinzenal",icon:<Ic d={ICON.calendar} size={14}/>},{id:"semanal",label:"Toda semana",icon:<Ic d={ICON.calendar} size={14}/>},{id:"anual",label:"Todo ano",icon:<Ic d={ICON.star} size={14}/>}];
+const FREQ_OPTS = [{id:"mensal",label:"Todo mês",icon:"↻"},{id:"quinzenal",label:"Quinzenal",icon:"↻"},{id:"semanal",label:"Toda semana",icon:"↻"},{id:"anual",label:"Todo ano",icon:"↻"}];
 const AREAS = ["Tecnologia","Saúde","Educação","Finanças","Direito","Marketing","Engenharia","Administração","Comércio","Indústria","Construção","Logística","Arte e Design","Comunicação","RH","Consultoria","Outro"];
 const NIVEIS = [
   "Estagiário","Aprendiz","Trainee","Auxiliar","Assistente",
