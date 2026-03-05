@@ -781,15 +781,15 @@ function CarreiraView({uid,user}){
         }
       }catch(e){console.warn("perfil:",e);}
       try{
-        const hSnap=await getDocs(collection(db,"users",uid,"carreira","historico"));
+        const hSnap=await getDocs(collection(db,"users",uid,"carreira_historico"));
         setHistorico(hSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.data||"").localeCompare(a.data||"")));
       }catch(e){console.warn("historico:",e);}
       try{
-        const mSnap=await getDocs(collection(db,"users",uid,"carreira","metas"));
+        const mSnap=await getDocs(collection(db,"users",uid,"carreira_metas"));
         setMetas(mSnap.docs.map(d=>({id:d.id,...d.data()})));
       }catch(e){console.warn("metas:",e);}
       try{
-        const gSnap=await getDocs(collection(db,"users",uid,"carreira","gastos"));
+        const gSnap=await getDocs(collection(db,"users",uid,"carreira_gastos"));
         setGastos(gSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.data||"").localeCompare(a.data||"")));
       }catch(e){console.warn("gastos:",e);}
     }
@@ -798,18 +798,43 @@ function CarreiraView({uid,user}){
 
   async function salvarPerfil(){
     setSaving(true);
-    const v={...fp,salarioAtual:parseFloat(fp.salarioAtual)||0,updatedAt:today()};
+    // Comprime foto se for base64 grande (>200kb)
+    let fotoFinal=fp.fotoUrl||"";
+    if(fotoFinal.startsWith("data:image")&&fotoFinal.length>200000){
+      try{
+        fotoFinal=await new Promise((res,rej)=>{
+          const img=new Image();
+          img.onload=()=>{
+            const canvas=document.createElement("canvas");
+            const MAX=400;
+            let w=img.width,h=img.height;
+            if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+            else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+            canvas.width=w;canvas.height=h;
+            canvas.getContext("2d").drawImage(img,0,0,w,h);
+            res(canvas.toDataURL("image/jpeg",0.7));
+          };
+          img.onerror=rej;
+          img.src=fotoFinal;
+        });
+      }catch(_){fotoFinal="";}
+    }
+    const v={...fp,fotoUrl:fotoFinal,salarioAtual:parseFloat(fp.salarioAtual)||0,updatedAt:today()};
     try{
       await setDoc(doc(db,"users",uid,"carreira","perfil"),v);
       setPerfil(v);setSheet(null);
-    }catch(e){console.error(e);alert("Erro ao salvar. Verifique as regras do Firestore.");}
+    }catch(e){
+      console.error(e);
+      if(e.message?.includes("1048487"))alert("Foto muito grande. Tire uma foto menor ou use uma URL.");
+      else alert("Erro ao salvar. Verifique as regras do Firestore.");
+    }
     setSaving(false);
   }
   async function salvarHistorico(){
     setSaving(true);
     try{
       const v={...fh,salario:parseFloat(fh.salario)||0};
-      const ref=await addDoc(collection(db,"users",uid,"carreira","historico"),v);
+      const ref=await addDoc(collection(db,"users",uid,"carreira_historico"),v);
       setHistorico(p=>[{id:ref.id,...v},...p].sort((a,b)=>(b.data||"").localeCompare(a.data||"")));
       setFh({cargo:"",empresa:"",salario:"",data:today().slice(0,7),obs:""});setSheet(null);
     }catch(e){console.error(e);alert("Erro ao salvar.");}
@@ -819,7 +844,7 @@ function CarreiraView({uid,user}){
     setSaving(true);
     try{
       const v={...fm,valorAlvo:parseFloat(fm.valorAlvo)||0,valorAtual:0,createdAt:today()};
-      const ref=await addDoc(collection(db,"users",uid,"carreira","metas"),v);
+      const ref=await addDoc(collection(db,"users",uid,"carreira_metas"),v);
       setMetas(p=>[...p,{id:ref.id,...v}]);
       setFm({titulo:"",valorAlvo:"",prazo:"",tipo:"Renda Mensal"});setSheet(null);
     }catch(e){console.error(e);alert("Erro ao salvar.");}
@@ -829,7 +854,7 @@ function CarreiraView({uid,user}){
     setSaving(true);
     try{
       const v={...fg,valor:parseFloat(fg.valor)||0};
-      const ref=await addDoc(collection(db,"users",uid,"carreira","gastos"),v);
+      const ref=await addDoc(collection(db,"users",uid,"carreira_gastos"),v);
       setGastos(p=>[{id:ref.id,...v},...p]);
       setFg({desc:"",cat:CATS_CARREIRA[0],valor:"",data:today(),retorno:""});setSheet(null);
     }catch(e){console.error(e);alert("Erro ao salvar.");}
@@ -837,13 +862,13 @@ function CarreiraView({uid,user}){
   }
   async function deletarItem(col,id,setter){
     try{
-      await deleteDoc(doc(db,"users",uid,"carreira",col,id));
+      await deleteDoc(doc(db,"users",uid,col,id));
       setter(p=>p.filter(x=>x.id!==id));
     }catch(e){console.error(e);}
   }
   async function atualizarMeta(id,valorAtual){
     try{
-      await updateDoc(doc(db,"users",uid,"carreira","metas",id),{valorAtual});
+      await updateDoc(doc(db,"users",uid,"carreira_metas",id),{valorAtual});
       setMetas(p=>p.map(m=>m.id===id?{...m,valorAtual}:m));
     }catch(e){console.error(e);}
   }
@@ -1116,7 +1141,7 @@ function CarreiraView({uid,user}){
                 <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:G.orange}}>{fmtK(h.salario)}</div>
                 {aum!==0&&<div style={{fontSize:11,color:aum>0?G.green:G.red}}>{aum>0?"+":""}{fmtK(aum)}</div>}
               </div>
-              <button onClick={()=>deletarItem("historico",h.id,setHistorico)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
+              <button onClick={()=>deletarItem("carreira_historico",h.id,setHistorico)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
             </div>);
           })}
         </div>}
@@ -1139,7 +1164,7 @@ function CarreiraView({uid,user}){
               <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{m.titulo}</div>
                 <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}><Tag color={G.accent}>{m.tipo}</Tag>{m.prazo&&<span style={{fontSize:11,color:G.muted}}>📅 {m.prazo}</span>}</div>
               </div>
-              <button onClick={()=>deletarItem("metas",m.id,setMetas)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
+              <button onClick={()=>deletarItem("carreira_metas",m.id,setMetas)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
               <div><div style={{fontSize:10,color:G.muted,marginBottom:2}}>Atual</div><div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.green}}>{fmtK(m.valorAtual||0)}</div></div>
@@ -1186,7 +1211,7 @@ function CarreiraView({uid,user}){
                 </div>
               </div>
               <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:G.yellow,flexShrink:0}}>{fmtK(g.valor)}</div>
-              <button onClick={()=>deletarItem("gastos",g.id,setGastos)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
+              <button onClick={()=>deletarItem("carreira_gastos",g.id,setGastos)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
             </div>
           ))}
         </div>}
