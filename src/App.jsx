@@ -310,7 +310,7 @@ function Nav({view,setView}){
 }
 
 // ─── DRAWER ───────────────────────────────────────────────────────────────────
-function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
+function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,onToggleTheme}){
   const [finOpen,setFinOpen]=useState(true);
   const [compOpen,setCompOpen]=useState(false);
   const G2=G;
@@ -333,7 +333,7 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
   ];
   const compSubs=[
     {id:"compartilhados-casal",icon:"👫",l:"Casal"},
-    {id:"compartilhados-divisoes",icon:"÷",l:"Divisões"},
+    {id:"compartilhados-divisoes",icon:"÷",l:"Divisões",badge:divPendCount},
   ];
 
   if(!open)return null;
@@ -378,8 +378,9 @@ function Drawer({open,onClose,view,setView,user,onLogout,theme,onToggleTheme}){
           </button>
           {compOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
             {compSubs.map(s=>(
-              <button key={s.id} onClick={()=>navTo(s.id)} className="press" style={subStyle(view===s.id)}>
-                <span style={{fontSize:15}}>{s.icon}</span>{s.l}
+              <button key={s.id} onClick={()=>navTo(s.id)} className="press" style={{...subStyle(view===s.id),justifyContent:"space-between"}}>
+                <span style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15}}>{s.icon}</span>{s.l}</span>
+                {s.badge>0&&<span style={{background:G2.red,color:"#fff",borderRadius:10,fontSize:10,fontWeight:700,padding:"1px 7px",minWidth:16,textAlign:"center"}}>{s.badge}</span>}
               </button>
             ))}
           </div>}
@@ -1903,7 +1904,7 @@ function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
     await onEmail(email,senha,modo==="cadastro"?nome:null);
   }
 
-  return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:G.bg,padding:28,overflowY:"auto"}}>
+  return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"100dvh",background:G.bg,paddingTop:"max(40px, calc(env(safe-area-inset-top) + 28px))",paddingBottom:28,paddingLeft:28,paddingRight:28,overflowY:"auto",boxSizing:"border-box"}}>
     <style>{CSS}</style>
     <div style={{position:"fixed",top:"10%",left:"50%",transform:"translateX(-50%)",width:320,height:320,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}10,transparent 70%)`,pointerEvents:"none"}}/>
     <div style={{textAlign:"center",marginBottom:40,position:"relative"}}>
@@ -1956,7 +1957,6 @@ function CartoesView({uid,lancs}){
   const [cartoes,setCartoes]=useState([]);
   const [sheet,setSheet]=useState(false);
   const [form,setForm]=useState({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
-  const [confirmDel,setConfirmDel]=useState(null);
 
   useEffect(()=>{
     if(!uid)return;
@@ -2018,13 +2018,7 @@ function CartoesView({uid,lancs}){
               <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{c.nome}</div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{c.bandeira}</div>
             </div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {confirmDel===c.id
-                ?<><button onClick={()=>{deletarCartao(c.id);setConfirmDel(null);}} style={{background:"#ff4444",border:"none",color:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>Confirmar</button>
-                   <button onClick={()=>setConfirmDel(null)} style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12}}>Não</button></>
-                :<button onClick={()=>setConfirmDel(c.id)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"rgba(255,255,255,.8)",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-              }
-            </div>
+            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(200,0,0,.6)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:20,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div>
@@ -2104,6 +2098,8 @@ function ContatosView({uid,user}){
   const [erro,setErro]=useState("");
   const [sheetAdd,setSheetAdd]=useState(false);
   const [formAdd,setFormAdd]=useState({nome:"",categoria:"Amigos"});
+  const [editando,setEditando]=useState(null);
+  const [formEdit,setFormEdit]=useState({nome:"",categoria:"Amigos",apelido:"",notas:""});
   const CATS=["Família","Amigos","Trabalho","Casal","Outros"];
 
   useEffect(()=>{
@@ -2187,14 +2183,6 @@ function ContatosView({uid,user}){
     setBuscando(false);
   }
 
-  async function adicionarManual(){
-    if(!formAdd.nome.trim())return;
-    await addDoc(collection(db,"users",uid,"contatos"),{
-      nome:formAdd.nome.trim(),vinculado:false,categoria:formAdd.categoria,criadoEm:today()
-    });
-    setSheetAdd(false);setFormAdd({nome:"",categoria:"Amigos"});
-  }
-
   async function gerarMeuCodigo(){
     const cod=Math.random().toString(36).substring(2,8).toUpperCase();
     let meuNome=user?.displayName||user?.email?.split("@")[0]||"Contato";
@@ -2215,6 +2203,22 @@ function ContatosView({uid,user}){
     setGerando(true);
     const cod=await gerarMeuCodigo();
     setMeuCod(cod);setGerando(false);
+  }
+
+  function abrirEdicao(ct){
+    setFormEdit({nome:ct.nome||"",categoria:ct.categoria||"Amigos",apelido:ct.apelido||"",notas:ct.notas||""});
+    setEditando(ct);
+  }
+
+  async function salvarEdicao(){
+    if(!editando||!formEdit.nome.trim())return;
+    await updateDoc(doc(db,"users",uid,"contatos",editando.id),{
+      nome:formEdit.nome.trim(),
+      categoria:formEdit.categoria,
+      apelido:formEdit.apelido.trim(),
+      notas:formEdit.notas.trim(),
+    });
+    setEditando(null);
   }
 
   async function deletarContato(id){
@@ -2243,17 +2247,11 @@ function ContatosView({uid,user}){
       </button>}
     </div>
 
-    {/* Adicionar por código ou manual */}
-    <div style={{display:"flex",gap:10}}>
-      <button onClick={()=>setSheetAdd("codigo")} className="press"
-        style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid "+G.accent+"44",background:G.accentL,color:G.accent,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-        🔗 Código
-      </button>
-      <button onClick={()=>setSheetAdd("manual")} className="press"
-        style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid "+G.border,background:G.card2,color:G.text,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-        ✏️ Manual
-      </button>
-    </div>
+    {/* Adicionar por código */}
+    <button onClick={()=>setSheetAdd("codigo")} className="press"
+      style={{width:"100%",padding:"12px",borderRadius:12,border:"1px solid "+G.accent+"44",background:G.accentL,color:G.accent,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+      🔗 Adicionar amigo por código
+    </button>
 
     {/* Lista por grupo */}
     {contatos.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:G.muted,background:G.card,border:"1px solid "+G.border,borderRadius:16}}>
@@ -2273,14 +2271,18 @@ function ContatosView({uid,user}){
           <div key={ct.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:G.card,border:"1px solid "+G.border,borderRadius:12,marginBottom:8}}>
             <div style={{width:38,height:38,borderRadius:"50%",background:(catColors[ct.categoria]||G.muted)+"33",
               color:catColors[ct.categoria]||G.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0}}>
-              {ct.nome[0]?.toUpperCase()}
+              {(ct.apelido||ct.nome)[0]?.toUpperCase()}
             </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:600}}>{ct.nome}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:14,fontWeight:600}}>{ct.apelido||ct.nome}</div>
+              {ct.apelido&&<div style={{fontSize:11,color:G.muted}}>{ct.nome}</div>}
               <div style={{fontSize:11,color:G.muted}}>{ct.vinculado?"🔗 Vinculado":"Manual"} · {ct.categoria||"Outros"}</div>
+              {ct.notas&&<div style={{fontSize:11,color:G.muted,fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ct.notas}</div>}
             </div>
+            <button onClick={()=>abrirEdicao(ct)}
+              style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:16,padding:"4px 6px"}}>✏️</button>
             <button onClick={()=>deletarContato(ct.id)}
-              style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 8px",lineHeight:1}}
+              style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 6px",lineHeight:1}}
               onMouseEnter={e=>e.currentTarget.style.color=G.red}
               onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
           </div>
@@ -2306,15 +2308,16 @@ function ContatosView({uid,user}){
       </div>
     </Sheet>
 
-    {/* Sheet adicionar manual */}
-    <Sheet open={sheetAdd==="manual"} onClose={()=>setSheetAdd(false)} title="Adicionar Contato">
+    {/* Sheet editar contato */}
+    <Sheet open={!!editando} onClose={()=>setEditando(null)} title="Editar Contato">
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Nome</Lbl><input value={formAdd.nome} onChange={e=>setFormAdd(f=>({...f,nome:e.target.value}))} placeholder="Ex: Maria, João..." className="inp"/></div>
+        <div><Lbl>Nome</Lbl><input value={formEdit.nome} onChange={e=>setFormEdit(f=>({...f,nome:e.target.value}))} className="inp" placeholder="Nome completo"/></div>
+        <div><Lbl opt>Apelido</Lbl><input value={formEdit.apelido} onChange={e=>setFormEdit(f=>({...f,apelido:e.target.value}))} className="inp" placeholder="Como você chama essa pessoa"/></div>
         <div><Lbl>Categoria</Lbl>
           <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:4}}>
             {["Família","Amigos","Trabalho","Casal","Outros"].map(cat=>{
-              const sel=formAdd.categoria===cat;
-              return(<button key={cat} onClick={()=>setFormAdd(f=>({...f,categoria:cat}))} className="press"
+              const sel=formEdit.categoria===cat;
+              return(<button key={cat} onClick={()=>setFormEdit(f=>({...f,categoria:cat}))} className="press"
                 style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+(sel?catColors[cat]+"88":G.border),
                   background:sel?(catColors[cat]||G.accent)+"22":G.card2,color:sel?catColors[cat]||G.accent:G.muted,
                   fontSize:13,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit"}}>
@@ -2323,9 +2326,14 @@ function ContatosView({uid,user}){
             })}
           </div>
         </div>
-        <button onClick={adicionarManual} className="press"
+        <div><Lbl opt>Notas</Lbl><input value={formEdit.notas} onChange={e=>setFormEdit(f=>({...f,notas:e.target.value}))} className="inp" placeholder="Ex: Divide a Netflix, mora em SP..."/></div>
+        <button onClick={salvarEdicao} className="press"
           style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-          Salvar contato
+          Salvar
+        </button>
+        <button onClick={()=>{deletarContato(editando.id);setEditando(null);}} className="press"
+          style={{width:"100%",padding:12,borderRadius:14,border:"1px solid "+G.red+"44",background:G.red+"15",color:G.red,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+          Remover contato
         </button>
       </div>
     </Sheet>
@@ -2647,6 +2655,7 @@ export default function App(){
   const [view,setView]=useState("dashboard");
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [cartoesList,setCartoesList]=useState([]);
+  const [divPendCount,setDivPendCount]=useState(0);
   const [modal,setModal]=useState(false);
   const [tipo,setTipo]=useState("Despesa");
   const [form,setForm]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",recorrente:false,freq:"mensal",dia:1});
@@ -2667,7 +2676,8 @@ export default function App(){
     const unsubL=onSnapshot(collection(db,"users",uid,"lancamentos"),snap=>{setLancs(snap.docs.map(d=>({id:d.id,...d.data()})));setDataLoading(false);});
     const unsubR=onSnapshot(collection(db,"users",uid,"recorrentes"),snap=>{setRecorrentes(snap.docs.map(d=>({id:d.id,...d.data()})));});
     const unsubC=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{setCartoesList(snap.docs.map(d=>({id:d.id,...d.data()})));});
-    return()=>{unsubL();unsubR();unsubC();};
+    const unsubDP=onSnapshot(collection(db,"inbox",uid,"divisoes_pendentes"),s=>{setDivPendCount(s.size);});
+    return()=>{unsubL();unsubR();unsubC();unsubDP();};
   },[user]);
 
   useEffect(()=>{
@@ -2750,7 +2760,7 @@ export default function App(){
         </main>
       )}
       <Nav view={view} setView={setView}/>
-      <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
+      <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
     </div>
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">
       <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoesList}/>
