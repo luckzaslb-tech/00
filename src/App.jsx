@@ -234,7 +234,7 @@ const NH=62,HH=52;
 const getCSS=(theme)=>`
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Figtree:wght@400;500;600&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html{height:100%;overflow:hidden;width:100%;max-width:100vw}
+  html{height:100%;overflow:hidden;width:100%;max-width:100vw;padding-top:env(safe-area-inset-top,0px)}
   body{background:${theme==="light"?LIGHT.bg:DARK.bg};color:${theme==="light"?LIGHT.text:DARK.text};font-family:'Figtree',sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden;width:100%;max-width:100vw;overscroll-behavior:none;transition:background .2s,color .2s;margin:0;padding:0}
   #root{height:100%;height:100dvh;overflow:hidden;width:100%;max-width:100vw;display:flex;flex-direction:column}
   input,select,button,textarea{font-family:inherit;-webkit-appearance:none;appearance:none}
@@ -464,7 +464,7 @@ function Head({view,onRec,onDep,user,onDrawer,divPendCount=0}){
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
   const showAdd=["dashboard","receitas","despesas"].includes(view);
   return(
-    <div className="safe-top" style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:"0 16px",paddingBottom:10,minHeight:"var(--hh)"}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",height:HH,paddingLeft:16,paddingRight:16,paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"content-box"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{position:"relative",flexShrink:0}}>
         <button onClick={onDrawer} className="press" style={{width:34,height:34,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:0,flexShrink:0}}>
@@ -1950,9 +1950,9 @@ function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
     await onEmail(email,senha,modo==="cadastro"?nome:null);
   }
 
-  return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"100dvh",background:G.bg,paddingTop:"max(40px, calc(env(safe-area-inset-top) + 28px))",paddingBottom:28,paddingLeft:28,paddingRight:28,overflowY:"auto",boxSizing:"border-box"}}>
+  return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",minHeight:"100dvh",background:G.bg,padding:"56px 28px 40px",overflowY:"auto",boxSizing:"border-box"}}>
+    <style>{"#root{overflow:auto!important}"}</style>
     <style>{CSS}</style>
-    <div style={{position:"fixed",top:"10%",left:"50%",transform:"translateX(-50%)",width:320,height:320,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}10,transparent 70%)`,pointerEvents:"none"}}/>
     <div style={{textAlign:"center",marginBottom:40,position:"relative"}}>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:52,fontWeight:700,letterSpacing:-2,marginBottom:10}}>fin<span style={{color:G.accent}}>ance</span></div>
       <div style={{fontSize:14,color:G.muted,lineHeight:1.6}}>Controle financeiro + gestão de carreira<br/>com assistente IA</div>
@@ -2055,16 +2055,20 @@ function CartoesView({uid,lancs}){
       const corBarra=pctUsado>90?G.red:pctUsado>70?G.yellow:G.green;
 
       return(<div key={c.id} style={{borderRadius:20,position:"relative"}}>
+        {/* Botão deletar fora do overflow */}
+        <button onClick={()=>deletarCartao(c.id)}
+          style={{position:"absolute",top:8,right:8,zIndex:20,background:"rgba(0,0,0,.5)",border:"none",color:"#fff",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic d={ICON.x} size={14} color="#fff" stroke={2.5}/>
+        </button>
         {/* Card visual */}
-        <div style={{background:`linear-gradient(135deg,${c.cor}dd,${c.cor}88)`,padding:"20px 20px 16px",position:"relative",overflow:"hidden"}}>
+        <div style={{background:`linear-gradient(135deg,${c.cor}dd,${c.cor}88)`,padding:"20px 20px 16px",position:"relative",overflow:"hidden",borderRadius:20}}>
           <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
           <div style={{position:"absolute",bottom:-30,right:20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
-            <div>
+          <div style={{display:"flex",alignItems:"flex-start",marginBottom:20}}>
+            <div style={{flex:1}}>
               <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{c.nome}</div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{c.bandeira}</div>
             </div>
-            <button onClick={()=>deletarCartao(c.id)} style={{background:"rgba(200,0,0,.6)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:20,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
             <div>
@@ -2529,7 +2533,15 @@ function DivisoesView({uid}){
   }
 
   async function aceitarDiv(id,dados){
-    await addDoc(collection(db,"users",uid,"divisoes"),{...dados,status:"aceito"});
+    // Remove o id do inbox para nao conflitar com o novo doc
+    const {id:_ignore,...dadosLimpos}=dados;
+    // Salva na colecao propria do usuario receptor
+    await addDoc(collection(db,"users",uid,"divisoes"),{
+      ...dadosLimpos,
+      status:"aceito",
+      recebida:true,
+      criadoEm:dadosLimpos.criadoEm||today()
+    });
     await deleteDoc(doc(db,"inbox",uid,"divisoes_pendentes",id));
   }
 
@@ -2791,7 +2803,7 @@ export default function App(){
           <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
-        <main key={view} style={{position:"fixed",top:"var(--hh)",left:0,right:0,bottom:"var(--nh)",overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
+        <main key={view} style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
