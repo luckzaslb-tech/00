@@ -42,6 +42,9 @@ const fmtK   = v => v>=1000?`R$${(v/1000).toFixed(1).replace(".",",")}k`:`R$${Nu
 const getMes = d => d?d.slice(0,7):"";
 const fmtD   = d => { try{const[y,m,dd]=d.split("-");return`${dd}/${m}/${y}`;}catch{return d;} };
 const today  = () => new Date().toISOString().slice(0,10);
+
+// Garante que partes seja sempre um array (Firestore pode retornar como objeto)
+const toPartes = p => Array.isArray(p)?p:Object.values(p||{});
 const curMes = () => { const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; };
 // Só contabiliza lançamentos cuja data já chegou (ou é passada)
 // Lançamento conta no saldo se: data já chegou E não está marcado como agendado futuro
@@ -2532,7 +2535,7 @@ function DivisoesView({uid}){
         // Atualiza estado local imediatamente (sem async no map)
         setDivisoes(prev=>prev.map(div=>{
           if(div.id!==data.divOrigemId)return div;
-          const novasPartes=(div.partes||[]).map((p,i)=>
+          const novasPartes=toPartes(div.partes).map((p,i)=>
             i===data.parteIdx?{...p,pago:!!data.pago}:p
           );
           return{...div,partes:novasPartes};
@@ -2585,8 +2588,10 @@ function DivisoesView({uid}){
     // Remove o id do inbox para nao conflitar com o novo doc
     const {id:_ignore,...dadosLimpos}=dados;
     // Salva na colecao propria do usuario receptor
+    const partesNorm=toPartes(dadosLimpos.partes);
     await addDoc(collection(db,"users",uid,"divisoes"),{
       ...dadosLimpos,
+      partes:partesNorm,
       status:"aceito",
       recebida:true,
       criadoEm:dadosLimpos.criadoEm||today()
@@ -2600,7 +2605,7 @@ function DivisoesView({uid}){
 
   async function marcarPago(divId,parteIdx){
     const div=divisoes.find(d=>d.id===divId);if(!div)return;
-    const partes=div.partes.map((p,i)=>i===parteIdx?{...p,pago:!p.pago}:p);
+    const partes=toPartes(div.partes).map((p,i)=>i===parteIdx?{...p,pago:!p.pago}:p);
     await updateDoc(doc(db,"users",uid,"divisoes",divId),{partes});
     // Se é divisão recebida, notifica o criador que esta parte foi paga
     if(div.recebida&&div.criadoPor&&div.divOrigemId){
@@ -2618,8 +2623,8 @@ function DivisoesView({uid}){
     await deleteDoc(doc(db,"users",uid,"divisoes",id));
   }
 
-  const abertas=divisoes.filter(d=>d.partes?.some(p=>!p.pago));
-  const concluidas=divisoes.filter(d=>d.partes?.every(p=>p.pago));
+  const abertas=divisoes.filter(d=>toPartes(d.partes).some(p=>!p.pago));
+  const concluidas=divisoes.filter(d=>toPartes(d.partes).every(p=>p.pago));
 
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
     {/* Pendentes (notificações) */}
@@ -2631,7 +2636,7 @@ function DivisoesView({uid}){
         <div key={p.id} style={{marginBottom:12,paddingBottom:12,borderBottom:"1px solid "+G.yellow+"22"}}>
           <div style={{fontSize:14,fontWeight:700,marginBottom:2}}>{p.desc}</div>
           <div style={{fontSize:12,color:G.muted,marginBottom:8}}>
-            {fmtD(p.data)} · Total: {fmt(p.total)} · {p.partes?.length} pessoas · Sua parte: {fmt(p.partes?.find(pt=>pt.nome!=="Você")?.valor||0)}
+            {fmtD(p.data)} · Total: {fmt(p.total)} · {toPartes(p.partes).length} pessoas · Sua parte: {fmt(toPartes(p.partes).find(pt=>pt.nome!=="Você")?.valor||0)}
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>aceitarDiv(p.id,p)} className="press"
@@ -2664,7 +2669,7 @@ function DivisoesView({uid}){
     {abertas.length>0&&<>
       <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8}}>EM ABERTO</div>
       {abertas.map(div=>{
-        const pendente=div.partes?.filter(p=>!p.pago)||[];
+        const pendente=toPartes(div.partes).filter(p=>!p.pago);
         return(<div key={div.id} style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
             <div>
@@ -2677,7 +2682,7 @@ function DivisoesView({uid}){
             </div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {div.partes?.map((p,i)=>(
+            {toPartes(div.partes).map((p,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:p.pago?G.green+"15":G.card2,borderRadius:10}}>
                 <div style={{width:32,height:32,borderRadius:"50%",background:p.pago?G.green:G.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>
                   {p.nome[0]?.toUpperCase()||"?"}
@@ -2703,7 +2708,7 @@ function DivisoesView({uid}){
         <div key={div.id} style={{background:G.card,border:"1px solid "+G.green+"33",borderRadius:16,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <div style={{fontSize:13,fontWeight:600}}>{div.desc}</div>
-            <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · {div.partes?.length} pessoas</div>
+            <div style={{fontSize:11,color:G.muted}}>{fmtD(div.data)} · {toPartes(div.partes).length} pessoas</div>
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:13,fontWeight:700,color:G.green}}>✓ {fmt(div.total)}</div>
