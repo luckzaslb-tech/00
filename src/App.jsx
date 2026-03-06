@@ -2184,15 +2184,15 @@ function ContatosView({uid,user}){
     });
     // Ouve inbox de contatos novos (pessoas que digitaram meu codigo)
     const unsubInbox=onSnapshot(collection(db,"inbox",uid,"contatos"),snap=>{
-      snap.docs.forEach(async d=>{
+            snap.docs.forEach(d=>{
         const data=d.data();
-        // Move para minha lista de contatos permanente
-        await setDoc(doc(db,"users",uid,"contatos",data.uid),{
-          nome:data.nome,uid:data.uid,vinculado:true,categoria:data.categoria||"Amigos",criadoEm:data.criadoEm
-        });
-        // Remove do inbox
-        await deleteDoc(doc(db,"inbox",uid,"contatos",d.id));
-      });
+        if(!data||!data.uid)return;
+        setDoc(doc(db,"users",uid,"contatos",data.uid),{
+          nome:data.nome||"Contato",uid:data.uid,vinculado:true,
+          categoria:data.categoria||"Amigos",criadoEm:data.criadoEm||today()
+        }).then(()=>deleteDoc(doc(db,"inbox",uid,"contatos",d.id)))
+          .catch(e=>console.warn("inbox contato:",e.message));
+      });    });
     });
     return()=>{unsub();unsubInbox();};
   },[uid]);
@@ -2413,7 +2413,6 @@ function ContatosView({uid,user}){
       </div>
     </Sheet>
   </div>);
-}
 
 // ─── CASAL VIEW ────────────────────────────────────────────────────────────────
 function CasalView({uid,lancs,user}){
@@ -2863,7 +2862,7 @@ export default function App(){
           <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
-        <main key={view} style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
+        <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
@@ -2873,8 +2872,8 @@ export default function App(){
           {view==="compartilhados-casal"&&<CasalView uid={user.uid} lancs={lancs} user={user}/>}
           {view==="compartilhados-divisoes"&&<DivisoesView uid={user.uid}/>}
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
-          {view.startsWith("financas")&&<ErrorBoundary><FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/></ErrorBoundary>}
-        </main>
+          {view.startsWith("financas")&&<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>}
+        </main></ErrorBoundary>
       )}
       <Nav view={view} setView={setView}/>
       <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} profilePhoto={profilePhoto} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
