@@ -2525,21 +2525,26 @@ function DivisoesView({uid}){
     });
     // Listener: outra pessoa marcou pago na minha divisão
     const unsubPagas=onSnapshot(collection(db,"inbox",uid,"divisoes_pagas"),snap=>{
-      snap.docs.forEach(async d=>{
+      snap.docs.forEach(d=>{
         const data=d.data();
-        // Atualiza a divisão local com o status de pagamento
+        // Valida campos obrigatórios antes de processar
+        if(!data||!data.divOrigemId||data.parteIdx==null)return;
+        // Atualiza estado local imediatamente (sem async no map)
         setDivisoes(prev=>prev.map(div=>{
           if(div.id!==data.divOrigemId)return div;
-          const partes=div.partes.map((p,i)=>i===data.parteIdx?{...p,pago:data.pago}:p);
-          return{...div,partes};
+          const novasPartes=(div.partes||[]).map((p,i)=>
+            i===data.parteIdx?{...p,pago:!!data.pago}:p
+          );
+          return{...div,partes:novasPartes};
         }));
-        // Persiste no Firestore e remove do inbox
-        try{
-          await updateDoc(doc(db,"users",uid,"divisoes",data.divOrigemId),{
-            [`partes.${data.parteIdx}.pago`]:data.pago
-          });
-          await deleteDoc(doc(db,"inbox",uid,"divisoes_pagas",d.id));
-        }catch(e){console.warn("Erro ao aplicar pagamento",e.message);}
+        // Persiste e limpa inbox em background (não bloqueia render)
+        const divRef=doc(db,"users",uid,"divisoes",data.divOrigemId);
+        const inboxRef=doc(db,"inbox",uid,"divisoes_pagas",d.id);
+        const novasPartes={};
+        novasPartes[`partes.${data.parteIdx}.pago`]=!!data.pago;
+        updateDoc(divRef,novasPartes)
+          .then(()=>deleteDoc(inboxRef))
+          .catch(e=>console.warn("divisoes_pagas sync:",e.message));
       });
     });
     return()=>{unsub();unsubP();unsubC();unsubPagas();};
