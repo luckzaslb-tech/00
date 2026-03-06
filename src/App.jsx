@@ -2184,7 +2184,7 @@ function ContatosView({uid,user}){
     });
     // Ouve inbox de contatos novos (pessoas que digitaram meu codigo)
     const unsubInbox=onSnapshot(collection(db,"inbox",uid,"contatos"),snap=>{
-            snap.docs.forEach(d=>{
+      snap.docs.forEach(d=>{
         const data=d.data();
         if(!data||!data.uid)return;
         setDoc(doc(db,"users",uid,"contatos",data.uid),{
@@ -2192,7 +2192,7 @@ function ContatosView({uid,user}){
           categoria:data.categoria||"Amigos",criadoEm:data.criadoEm||today()
         }).then(()=>deleteDoc(doc(db,"inbox",uid,"contatos",d.id)))
           .catch(e=>console.warn("inbox contato:",e.message));
-      });    });
+      });
     });
     return()=>{unsub();unsubInbox();};
   },[uid]);
@@ -2413,6 +2413,7 @@ function ContatosView({uid,user}){
       </div>
     </Sheet>
   </div>);
+}
 
 // ─── CASAL VIEW ────────────────────────────────────────────────────────────────
 function CasalView({uid,lancs,user}){
