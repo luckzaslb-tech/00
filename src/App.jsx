@@ -353,7 +353,7 @@ function Nav({view,setView}){
 }
 
 // ─── DRAWER ───────────────────────────────────────────────────────────────────
-function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,onToggleTheme}){
+function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,onLogout,theme,onToggleTheme}){
   const [finOpen,setFinOpen]=useState(true);
   const [compOpen,setCompOpen]=useState(false);
   const G2=G;
@@ -744,7 +744,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
 }
 
 // ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
-function CarreiraView({uid,user}){
+function CarreiraView({uid,user,onPhotoSave}){
   const [perfil,setPerfil]=useState(null);
   const [historico,setHistorico]=useState([]);
   const [metas,setMetas]=useState([]);
@@ -822,7 +822,7 @@ function CarreiraView({uid,user}){
     const v={...fp,fotoUrl:fotoFinal,salarioAtual:parseFloat(fp.salarioAtual)||0,updatedAt:today()};
     try{
       await setDoc(doc(db,"users",uid,"carreira","perfil"),v);
-      setPerfil(v);setSheet(null);if(v.fotoUrl)setProfilePhoto(v.fotoUrl);
+      setPerfil(v);setSheet(null);if(v.fotoUrl&&onPhotoSave)onPhotoSave(v.fotoUrl);
     }catch(e){
       console.error(e);
       if(e.message?.includes("1048487"))alert("Foto muito grande. Tire uma foto menor ou use uma URL.");
@@ -2833,7 +2833,7 @@ export default function App(){
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
-          {view==="carreira"&&<CarreiraView uid={user.uid} user={user}/>}
+          {view==="carreira"&&<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)}/>}
           {view==="cartoes"&&<CartoesView uid={user.uid} lancs={lancs}/>}
           {view==="contatos"&&<ContatosView uid={user.uid} user={user}/>}
           {view==="compartilhados-casal"&&<CasalView uid={user.uid} lancs={lancs} user={user}/>}
@@ -2843,7 +2843,7 @@ export default function App(){
         </main>
       )}
       <Nav view={view} setView={setView}/>
-      <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
+      <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} profilePhoto={profilePhoto} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
     </div>
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">
       <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoesList}/>
