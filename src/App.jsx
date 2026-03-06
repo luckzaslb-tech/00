@@ -2523,7 +2523,26 @@ function DivisoesView({uid}){
     const unsubC=onSnapshot(collection(db,"users",uid,"contatos"),snap=>{
       setContatos(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
-    return()=>{unsub();unsubP();unsubC();};
+    // Listener: outra pessoa marcou pago na minha divisão
+    const unsubPagas=onSnapshot(collection(db,"inbox",uid,"divisoes_pagas"),snap=>{
+      snap.docs.forEach(async d=>{
+        const data=d.data();
+        // Atualiza a divisão local com o status de pagamento
+        setDivisoes(prev=>prev.map(div=>{
+          if(div.id!==data.divOrigemId)return div;
+          const partes=div.partes.map((p,i)=>i===data.parteIdx?{...p,pago:data.pago}:p);
+          return{...div,partes};
+        }));
+        // Persiste no Firestore e remove do inbox
+        try{
+          await updateDoc(doc(db,"users",uid,"divisoes",data.divOrigemId),{
+            [`partes.${data.parteIdx}.pago`]:data.pago
+          });
+          await deleteDoc(doc(db,"inbox",uid,"divisoes_pagas",d.id));
+        }catch(e){console.warn("Erro ao aplicar pagamento",e.message);}
+      });
+    });
+    return()=>{unsub();unsubP();unsubC();unsubPagas();};
   },[uid]);
 
   function toggleSel(nome){
@@ -2578,6 +2597,16 @@ function DivisoesView({uid}){
     const div=divisoes.find(d=>d.id===divId);if(!div)return;
     const partes=div.partes.map((p,i)=>i===parteIdx?{...p,pago:!p.pago}:p);
     await updateDoc(doc(db,"users",uid,"divisoes",divId),{partes});
+    // Se é divisão recebida, notifica o criador que esta parte foi paga
+    if(div.recebida&&div.criadoPor&&div.divOrigemId){
+      try{
+        await setDoc(doc(db,"inbox",div.criadoPor,"divisoes_pagas",div.divOrigemId),{
+          parteIdx,pago:partes[parteIdx].pago,
+          pagoEm:today(),pagoPor:uid,
+          divOrigemId:div.divOrigemId
+        });
+      }catch(e){console.warn("Erro ao notificar pagamento",e.message);}
+    }
   }
 
   async function deletarDiv(id){
@@ -2639,7 +2668,7 @@ function DivisoesView({uid}){
             </div>
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:12,color:G.yellow,fontWeight:700}}>{fmt(pendente.reduce((s,p)=>s+p.valor,0))} pendente</div>
-              <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+              <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.red+"99",cursor:"pointer",fontSize:18,padding:"2px 4px",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.red+"99"}>×</button>
             </div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -2673,7 +2702,7 @@ function DivisoesView({uid}){
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:13,fontWeight:700,color:G.green}}>✓ {fmt(div.total)}</div>
-            <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:11,padding:0}}>remover</button>
+            <button onClick={()=>deletarDiv(div.id)} style={{background:"none",border:"none",color:G.red+"99",cursor:"pointer",fontSize:18,padding:"2px 4px",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.red+"99"}>×</button>
           </div>
         </div>
       ))}
