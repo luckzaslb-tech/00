@@ -172,7 +172,7 @@ function localAI(msg,lancs){
   desc=desc.charAt(0).toUpperCase()+desc.slice(1);
 
   const tipo=isRec?"Receita":"Despesa";
-  const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Farmácia":"💊","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Salário":"","Freelance":"🖥️","Investimentos":<Ic d={ICON.chart} size={15}/>,"Bônus":"⭐","Renda Extra":"💡"};
+  const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Farmácia":"💊","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Salário":"","Freelance":"🖥️","Investimentos":"📈","Bônus":"⭐","Renda Extra":"💡"};
   const emoji=icons[cat]||"💰";
   const confirmacao=tipo==="Receita"
     ?`${emoji} Receita de R$${valor.toFixed(2)} em ${cat}! Confirma?`
