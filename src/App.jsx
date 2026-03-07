@@ -111,8 +111,13 @@ function localAI(msg,lancs){
   const t=norm(msg);
 
   // valor
-  const vm=t.match(/r?\$?\s*(\d+(?:[.,]\d{1,2})?)/);
-  const valor=vm?parseFloat(vm[1].replace(",",".")):0;
+  // Captura valor: suporta 1566, 1.566, 1.566,00, R$1.566,50
+  const vm=t.match(/r?\$?\s*(\d{1,3}(?:[.]\d{3})*(?:[,]\d{1,2})?|\d+(?:[,]\d{1,2})?)/);
+  const valorStr=(vm?.[1]||"0");
+  // Converte: "1.566,50" → 1566.50 | "1566" → 1566 | "1,50" → 1.50
+  const valor=parseFloat(valorStr.includes(",")?
+    valorStr.replace(/\./g,"").replace(",","."):
+    valorStr.replace(/\./g,""))||0;
 
   // tipo
   const recW=["recebi","salario","salario","freelance","pagaram","renda","entrada","deposito","reembolso","dividendo","bonus","lucro","ganhei","caiu na conta","transferencia recebi"];
@@ -592,6 +597,8 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({lancs,onDelete}){
   const [mes,setMes]=useState(curMes());
+  const [hide,setHide]=useState(false);
+  const hv=v=>hide?"•••":v;
   const md=[...new Set(lancs.map(l=>getMes(l.data)))].sort().reverse().slice(0,8);
   if(!md.includes(curMes()))md.unshift(curMes());
   const dm=lancs.filter(l=>getMes(l.data)===mes&&isRealizado(l.data,l.agendado));
@@ -615,10 +622,15 @@ function Dashboard({lancs,onDelete}){
   return(<div style={{paddingBottom:8}}>
     <div style={{background:"linear-gradient(145deg,#14142A,#0d0d1a)",border:`1px solid ${G.border}`,borderRadius:20,padding:"24px 20px 20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}18,transparent 70%)`,pointerEvents:"none"}}/>
-      <div style={{fontSize:11,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:4}}>Saldo do Mês</div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,marginBottom:16,lineHeight:1}}>{(sal<0?"-":"")+fmt(Math.abs(sal))}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+        <span style={{fontSize:11,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Saldo do Mês</span>
+        <button onClick={()=>setHide(h=>!h)} style={{background:"none",border:"none",cursor:"pointer",padding:"2px 6px",color:G.muted,display:"flex",alignItems:"center",gap:4,fontSize:11}}>
+          {hide?"Mostrar":"Ocultar"}
+        </button>
+      </div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,marginBottom:16,filter:hide?"blur(8px)":"none",userSelect:hide?"none":"auto",lineHeight:1}}>{(sal<0?"-":"")+fmt(Math.abs(sal))}</div>
       <div style={{display:"flex"}}>
-        {[{l:"Receitas",v:"+"+fmtK(tR),c:G.green},{l:"Despesas",v:"-"+fmtK(tD),c:G.red},{l:"Renda Livre",v:(po*100).toFixed(0)+"%",c:G.yellow}].map((k,i)=>(
+        {[{l:"Receitas",v:hide?"•••":"+"+fmtK(tR),c:G.green},{l:"Despesas",v:hide?"•••":"-"+fmtK(tD),c:G.red},{l:"Renda Livre",v:hide?"•••":(po*100).toFixed(0)+"%",c:G.yellow}].map((k,i)=>(
           <div key={i} style={{flex:1,borderRight:i<2?`1px solid ${G.border}`:"none",paddingRight:i<2?16:0,paddingLeft:i>0?16:0}}>
             <div style={{fontSize:10,color:G.muted,marginBottom:3}}>{k.l}</div>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:k.c}}>{k.v}</div>
@@ -932,21 +944,21 @@ function CarreiraView({uid,user,onPhotoSave}){
           {perfil?.skills?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Skills</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {perfil.skills.map((s,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${G.accent}22`,color:G.accent,border:`1px solid ${G.accent}33`}}>{s}</span>)}
+              {(perfil.skills||[]).map((s,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${G.accent}22`,color:G.accent,border:`1px solid ${G.accent}33`}}>{s}</span>)}
             </div>
           </div>}
 
           {/* Formação */}
           {perfil?.formacao?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Formação</div>
-            {perfil.formacao.slice(0,2).map((f,i)=><div key={i} style={{fontSize:12,color:G.text,marginBottom:4}}>{f.curso}{f.inst?" — "+f.inst:""}{f.ano?" ("+f.ano+")":""}</div>)}
+            {(perfil.formacao||[]).slice(0,2).map((f,i)=><div key={i} style={{fontSize:12,color:G.text,marginBottom:4}}>{f.curso}{f.inst?" — "+f.inst:""}{f.ano?" ("+f.ano+")":""}</div>)}
           </div>}
 
           {/* Idiomas */}
           {perfil?.idiomas?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Idiomas</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {perfil.idiomas.map((s,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${G.blue}22`,color:G.blue,border:`1px solid ${G.blue}33`}}>{s}</span>)}
+              {(perfil.idiomas||[]).map((s,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${G.blue}22`,color:G.blue,border:`1px solid ${G.blue}33`}}>{s}</span>)}
             </div>
           </div>}
 
@@ -1016,8 +1028,8 @@ function CarreiraView({uid,user,onPhotoSave}){
           </div>
           {/* Skills preview */}
           {perfil.skills?.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
-            {perfil.skills.slice(0,4).map((s,i)=><Tag key={i} color={G.accent}>{s}</Tag>)}
-            {perfil.skills.length>4&&<Tag color={G.muted}>+{perfil.skills.length-4}</Tag>}
+            {(perfil.skills||[]).slice(0,4).map((s,i)=><Tag key={i} color={G.accent}>{s}</Tag>)}
+            {(perfil.skills||[]).length>4&&<Tag color={G.muted}>+{(perfil.skills||[]).length-4}</Tag>}
           </div>}
         </div>
       ):(
@@ -1062,7 +1074,7 @@ function CarreiraView({uid,user,onPhotoSave}){
             <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
           </div>
           {perfil.skills?.length>0
-            ?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{perfil.skills.map((s,i)=><Tag key={i} color={G.accent}>{s}</Tag>)}</div>
+            ?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(perfil.skills||[]).map((s,i)=><Tag key={i} color={G.accent}>{s}</Tag>)}</div>
             :<div style={{fontSize:13,color:G.muted}}>Nenhuma skill adicionada</div>}
         </div>
 
@@ -1073,7 +1085,7 @@ function CarreiraView({uid,user,onPhotoSave}){
             <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
           </div>
           {perfil.formacao?.length>0
-            ?perfil.formacao.map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<perfil.formacao.length-1?`1px solid ${G.border}`:"none"}}>
+            ?(perfil.formacao||[]).map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<(perfil.formacao||[]).length-1?`1px solid ${G.border}`:"none"}}>
                 <div style={{width:34,height:34,borderRadius:10,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}></div>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{f.curso}</div><div style={{fontSize:11,color:G.muted}}>{f.tipo}{f.inst?" · "+f.inst:""}{f.ano?" · "+f.ano:""}</div></div>
               </div>)
@@ -1087,7 +1099,7 @@ function CarreiraView({uid,user,onPhotoSave}){
             <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
           </div>
           {perfil.idiomas?.length>0
-            ?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{perfil.idiomas.map((s,i)=><Tag key={i} color={G.blue}>{s}</Tag>)}</div>
+            ?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(perfil.idiomas||[]).map((s,i)=><Tag key={i} color={G.blue}>{s}</Tag>)}</div>
             :<div style={{fontSize:13,color:G.muted}}>Nenhum idioma adicionado</div>}
         </div>
 
@@ -1817,6 +1829,8 @@ function ChatView({lancs,onAddLanc}){
   const [busy,setBusy]=useState(false);
   const [pending,setPending]=useState(null);
   const [catPick,setCatPick]=useState(null); // {lancamento} aguardando escolha de cat
+  const [editVal,setEditVal]=useState(""); // valor editável no card de confirmação
+  const [editCat,setEditCat]=useState(false); // mostrar picker de cat no card
   const [recSt,setRecSt]=useState("idle");
   const [recSec,setRecSec]=useState(0);
   const [recErr,setRecErr]=useState("");
@@ -1860,15 +1874,10 @@ function ChatView({lancs,onAddLanc}){
     try{
       const r=await callAI(msg,lancs);
       if(r.action==="lancamento"){
-        // If category is generic/unknown, ask user to pick
-        const cats=r.tipo==="Receita"?CATS_REC:CATS_DEP;
-        const catOk=cats.includes(r.cat)&&r.cat!=="Outros";
-        if(!catOk){
-          push("ai",`${r.confirmacao||"Entendido!"}\n\n🏷️ Qual categoria melhor descreve esse lançamento?`);
-          setCatPick(r);
-        } else {
-          push("ai",r.confirmacao||"Entendido!",{lanc:r});setPending(r);
-        }
+        push("ai",r.confirmacao||"Entendido!",{lanc:r});
+        setPending(r);
+        setEditVal(r.valor.toFixed(2));
+        setEditCat(false);
       }
       else if(r.action==="multiplos"){push("ai",`${r.confirmacao}\n\n${r.itens.map(i=>`• ${i.tipo==="Receita"?"↑":"↓"} ${i.desc||i.cat} — R$${Number(i.valor).toFixed(2)}`).join("\n")}`,{multi:r.itens});setPending({action:"multiplos",itens:r.itens});}
       else push("ai",r.resposta||"Não entendi 😊");
@@ -1877,16 +1886,22 @@ function ChatView({lancs,onAddLanc}){
   }
   function confirmar(){
     if(!pending)return;
+    const valorFinal=parseFloat(editVal.replace(",","."))||pending.valor;
     if(pending.action==="multiplos"){pending.itens.forEach(i=>onAddLanc({tipo:i.tipo,desc:i.desc,cat:i.cat,forma:i.forma||"PIX",valor:i.valor,data:i.data||today()}));push("ai",`✅ ${pending.itens.length} lançamentos salvos!`);}
-    else{onAddLanc({tipo:pending.tipo,desc:pending.desc,cat:pending.cat,forma:pending.forma||"PIX",valor:pending.valor,data:pending.data||today()});push("ai","✅ Salvo! 🚀");}
-    setPending(null);
+    else{onAddLanc({tipo:pending.tipo,desc:pending.desc,cat:pending.cat,forma:pending.forma||"PIX",valor:valorFinal,data:pending.data||today()});push("ai","✅ Salvo! 🚀");}
+    setPending(null);setEditVal("");setEditCat(false);
   }
   function escolherCat(cat){
-    if(!catPick)return;
-    const lanc={...catPick,cat};
-    push("ai",`✅ Categoria: *${cat}*`,{lanc});
-    setPending(lanc);
-    setCatPick(null);
+    if(catPick){
+      const lanc={...catPick,cat};
+      push("ai",`✅ Categoria: *${cat}*`,{lanc});
+      setPending(lanc);setEditVal(lanc.valor.toFixed(2));
+      setCatPick(null);return;
+    }
+    if(pending){
+      setPending(p=>({...p,cat}));
+      setEditCat(false);
+    }
   }
   const fmtS=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
   const isRec=recSt==="rec",isProc=recSt==="proc";
@@ -1894,14 +1909,49 @@ function ChatView({lancs,onAddLanc}){
     <div style={{flex:1,overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
       {msgs.map(m=>(<div key={m.id} style={{display:"flex",flexDirection:"column",alignItems:m.from==="user"?"flex-end":"flex-start",animation:"fadeUp .18s ease"}}>
         <div style={{maxWidth:"84%",padding:"10px 14px",borderRadius:m.from==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",background:m.from==="user"?G.accent:G.card2,border:m.from==="ai"?`1px solid ${G.border2}`:"none",fontSize:14,lineHeight:1.55,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{m.text}</div>
-        {m.lanc&&<div style={{marginTop:6,maxWidth:"84%",background:G.card,border:`1px solid ${m.lanc.tipo==="Receita"?G.green:G.red}44`,borderRadius:14,padding:"12px 14px",animation:"popIn .2s ease"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <span style={{fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:20,background:m.lanc.tipo==="Receita"?G.greenL:G.redL,color:m.lanc.tipo==="Receita"?G.green:G.red}}>{m.lanc.tipo==="Receita"?"↑ Receita":"↓ Despesa"}</span>
-            <span style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:m.lanc.tipo==="Receita"?G.green:G.red}}>R${Number(m.lanc.valor).toFixed(2)}</span>
+        {m.lanc&&(()=>{
+  const isLast=msgs[msgs.length-1]?.id===m.id;
+  const isPend=isLast&&!!pending;
+  const cor=m.lanc.tipo==="Receita"?G.green:G.red;
+  const catCor=CAT_COLORS[isPend?pending.cat:m.lanc.cat]||G.muted;
+  return(<div style={{marginTop:6,maxWidth:"88%",background:G.card,border:`1px solid ${cor}44`,borderRadius:16,padding:"14px 14px 10px",animation:"popIn .2s ease"}}>
+    {/* tipo badge */}
+    <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:cor+"22",color:cor,letterSpacing:.5}}>{m.lanc.tipo==="Receita"?"↑ RECEITA":"↓ DESPESA"}</span>
+    {/* desc */}
+    <div style={{fontSize:14,fontWeight:600,marginTop:8,marginBottom:10,color:G.text}}>{m.lanc.desc||m.lanc.cat}</div>
+    {/* valor — editável se isPend */}
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+      <span style={{fontSize:11,color:G.muted,minWidth:36}}>Valor</span>
+      {isPend
+        ?<div style={{display:"flex",alignItems:"center",flex:1,background:G.card2,border:`1px solid ${G.border}`,borderRadius:10,padding:"4px 10px"}}>
+            <span style={{color:cor,fontWeight:700,marginRight:4}}>R$</span>
+            <input value={editVal} onChange={e=>setEditVal(e.target.value.replace(/[^0-9,.]/g,""))}
+              style={{background:"none",border:"none",outline:"none",fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:cor,width:"100%",minWidth:0}}
+              inputMode="decimal" autoFocus={false}/>
           </div>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{m.lanc.desc||m.lanc.cat}</div>
-          <div style={{fontSize:11,color:G.muted}}>{m.lanc.cat} · {m.lanc.forma} · {fmtD(m.lanc.data||today())}</div>
-        </div>}
+        :<span style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:cor}}>R${Number(m.lanc.valor).toFixed(2)}</span>
+      }
+    </div>
+    {/* categoria — clicável se isPend */}
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:isPend?12:0}}>
+      <span style={{fontSize:11,color:G.muted,minWidth:36}}>Cat.</span>
+      {isPend
+        ?<button onClick={()=>setEditCat(true)} className="press"
+            style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",borderRadius:20,border:`1px solid ${catCor}55`,background:catCor+"18",cursor:"pointer"}}>
+            <span style={{fontSize:12,fontWeight:600,color:catCor}}>{pending.cat}</span>
+            <span style={{fontSize:10,color:G.muted}}>✏️</span>
+          </button>
+        :<span style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:catCor+"22",color:catCor,fontWeight:600}}>{m.lanc.cat}</span>
+      }
+      {!isPend&&<span style={{fontSize:11,color:G.muted}}>{m.lanc.forma} · {fmtD(m.lanc.data||today())}</span>}
+    </div>
+    {/* botões confirmar/cancelar — só se isPend */}
+    {isPend&&<div style={{display:"flex",gap:8,marginTop:4}}>
+      <button onClick={confirmar} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",cursor:"pointer",background:G.accent,color:"#fff",fontSize:13,fontWeight:700}}>✓ Confirmar</button>
+      <button onClick={()=>{push("ai","Cancelei! 😊");setPending(null);setEditVal("");setEditCat(false);}} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer"}}>✕</button>
+    </div>}
+  </div>);
+})()}
         {m.multi&&<div style={{marginTop:6,maxWidth:"84%",display:"flex",flexDirection:"column",gap:6}}>
           {m.multi.map((i,idx)=><div key={idx} style={{background:G.card,border:`1px solid ${i.tipo==="Receita"?G.green:G.red}44`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:18,color:i.tipo==="Receita"?G.green:G.red}}>{i.tipo==="Receita"?"↑":"↓"}</span>
@@ -1915,23 +1965,20 @@ function ChatView({lancs,onAddLanc}){
         <div style={{padding:"12px 16px",borderRadius:"18px 18px 18px 4px",background:G.card2,border:`1px solid ${G.border2}`,display:"flex",gap:5,alignItems:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:G.muted,animation:`bounce .9s ${i*.15}s infinite`}}/>)}</div>
         {isProc&&<span style={{fontSize:12,color:G.muted}}>transcrevendo...</span>}
       </div>}
-      {pending&&!busy&&<div style={{display:"flex",gap:8,animation:"fadeUp .2s ease"}}>
-        <button onClick={confirmar} className="press" style={{flex:1,padding:"13px",borderRadius:12,border:"none",cursor:"pointer",background:G.green,color:"#fff",fontWeight:700,fontSize:14,fontFamily:"inherit"}}>✓ Confirmar e salvar</button>
-        <button onClick={()=>{push("ai","Cancelei! 😊");setPending(null);}} className="press" style={{padding:"13px 18px",borderRadius:12,border:`1px solid ${G.border2}`,cursor:"pointer",background:"transparent",color:G.muted,fontWeight:600,fontSize:14,fontFamily:"inherit"}}>✕</button>
-      </div>}
-      {catPick&&!busy&&<div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setCatPick(null);}}>
+
+      {(catPick||editCat)&&!busy&&<div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setCatPick(null);}}>
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)"}}/>
         <div style={{position:"relative",background:G.card,borderRadius:"22px 22px 0 0",border:`1px solid ${G.border2}`,padding:"0 0 32px",animation:"slideUp .25s cubic-bezier(.32,.72,0,1)",maxHeight:"72vh",display:"flex",flexDirection:"column"}}>
           <div style={{display:"flex",justifyContent:"center",padding:"10px 0 2px"}}><div style={{width:36,height:4,borderRadius:2,background:G.border2}}/></div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px 14px"}}>
             <div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700}}>Qual a categoria?</div>
-              <div style={{fontSize:12,color:G.muted,marginTop:2}}>{catPick.desc||"Lançamento"} · <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:catPick.tipo==="Receita"?G.green:G.red}}>R${Number(catPick.valor).toFixed(2)}</span></div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700}}>{editCat?"Mudar categoria":"Qual a categoria?"}</div>
+              <div style={{fontSize:12,color:G.muted,marginTop:2}}>{(catPick||pending)?.desc||"Lançamento"} · <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:catPick.tipo==="Receita"?G.green:G.red}}>R${Number(catPick.valor).toFixed(2)}</span></div>
             </div>
-            <button onClick={()=>setCatPick(null)} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <button onClick={()=>{setCatPick(null);setEditCat(false);}} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
           </div>
           <div style={{overflowY:"auto",padding:"0 16px"}}>
-            {(catPick.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=>{
+            {((catPick||pending)?.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=>{
               const cor=CAT_COLORS[c]||G.muted;
               return(
                 <div key={c} onClick={()=>escolherCat(c)} className="press"
@@ -2042,16 +2089,19 @@ function CartoesView({uid,lancs}){
 
   async function salvarCartao(){
     if(!form.nome||!form.limite)return;
-    await addDoc(collection(db,"users",uid,"cartoes"),{
-      nome:form.nome,bandeira:form.bandeira,limite:parseFloat(form.limite),
-      vencimento:parseInt(form.vencimento)||10,cor:form.cor,criadoEm:today()
-    });
-    setSheet(false);
-    setForm({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
+    try{
+      await addDoc(collection(db,"users",uid,"cartoes"),{
+        nome:form.nome,bandeira:form.bandeira,limite:parseFloat(form.limite),
+        vencimento:parseInt(form.vencimento)||10,cor:form.cor,criadoEm:today()
+      });
+      setSheet(false);
+      setForm({nome:"",bandeira:"Visa",limite:"",vencimento:"",cor:"#7C6AF7"});
+    }catch(e){alert("Erro ao salvar cartão: "+e.message);}
   }
 
   async function deletarCartao(id){
-    await deleteDoc(doc(db,"users",uid,"cartoes",id));
+    try{await deleteDoc(doc(db,"users",uid,"cartoes",id));}
+    catch(e){console.error("deletarCartao:",e.message);}
   }
 
   const mes=curMes();
@@ -2164,6 +2214,97 @@ function CartoesView({uid,lancs}){
         </button>
       </div>
     </Sheet>
+  </div>);
+}
+
+
+// ─── IMPORTAR VIEW ────────────────────────────────────────────────────────────
+function ImportarView({uid,lancs,showT}){
+  const [csv,setCsv]=useState("");
+  const [preview,setPreview]=useState([]);
+  const [importing,setImporting]=useState(false);
+
+  function parseCsv(text){
+    const lines=text.trim().split("\n").filter(l=>l.trim());
+    if(lines.length<2)return[];
+    const header=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/["\']/g,""));
+    return lines.slice(1).map(line=>{
+      const cols=line.split(",").map(c=>c.trim().replace(/["\']/g,""));
+      const obj={};
+      header.forEach((h,i)=>obj[h]=cols[i]||"");
+      return{
+        data:obj.data||obj.date||today(),
+        desc:obj.desc||obj.descricao||obj.description||obj.memo||"Importado",
+        valor:parseFloat((obj.valor||obj.value||obj.amount||"0").replace(",","."))||0,
+        tipo:(obj.tipo||obj.type||"").toLowerCase().includes("rec")?"Receita":"Despesa",
+        cat:obj.cat||obj.categoria||obj.category||"Outros",
+        forma:obj.forma||obj.method||"Transferência",
+      };
+    }).filter(r=>r.valor>0);
+  }
+
+  async function importar(){
+    if(!preview.length)return;
+    setImporting(true);
+    try{
+      for(const l of preview){
+        await addDoc(collection(db,"users",uid,"lancamentos"),l);
+      }
+      showT(`${preview.length} lançamentos importados!`);
+      setCsv("");setPreview([]);
+    }catch(e){alert("Erro ao importar: "+e.message);}
+    setImporting(false);
+  }
+
+  return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:20}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Importar CSV</div>
+      <div style={{fontSize:12,color:G.muted,marginBottom:12,lineHeight:1.6}}>
+        Cole o conteúdo do seu CSV abaixo. O arquivo deve ter colunas: <b>data, desc, valor, tipo</b>
+      </div>
+      <textarea value={csv} onChange={e=>{setCsv(e.target.value);setPreview(parseCsv(e.target.value));}}
+        placeholder="data,desc,valor,tipo\n2024-01-15,Mercado,150.00,Despesa"
+        className="inp" style={{width:"100%",minHeight:120,resize:"vertical",fontSize:12}}/>
+      {preview.length>0&&<>
+        <div style={{fontSize:12,color:G.green,marginTop:8,marginBottom:8}}>
+          ✓ {preview.length} lançamentos encontrados
+        </div>
+        <div style={{maxHeight:200,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+          {preview.slice(0,10).map((l,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,
+              padding:"6px 10px",background:G.card2,borderRadius:8}}>
+              <span>{l.desc}</span>
+              <span style={{color:l.tipo==="Receita"?G.green:G.red,fontWeight:600}}>
+                {l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}
+              </span>
+            </div>
+          ))}
+          {preview.length>10&&<div style={{fontSize:11,color:G.muted,textAlign:"center"}}>
+            +{preview.length-10} mais...
+          </div>}
+        </div>
+        <button onClick={importar} disabled={importing} className="press"
+          style={{width:"100%",marginTop:12,padding:14,borderRadius:14,border:"none",
+            background:G.accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+          {importing?"Importando...":"Importar "+preview.length+" lançamentos"}
+        </button>
+      </>}
+    </div>
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:20}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Lançamentos recentes</div>
+      {lancs.slice(0,10).map(l=>(
+        <div key={l.id} style={{display:"flex",justifyContent:"space-between",
+          padding:"8px 0",borderBottom:`1px solid ${G.border}`}}>
+          <div>
+            <div style={{fontSize:13}}>{l.desc}</div>
+            <div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)}</div>
+          </div>
+          <div style={{color:l.tipo==="Receita"?G.green:G.red,fontWeight:700,fontSize:13}}>
+            {l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}
+          </div>
+        </div>
+      ))}
+    </div>
   </div>);
 }
 
@@ -2290,17 +2431,21 @@ function ContatosView({uid,user}){
 
   async function salvarEdicao(){
     if(!editando||!formEdit.nome.trim())return;
-    await updateDoc(doc(db,"users",uid,"contatos",editando.id),{
-      nome:formEdit.nome.trim(),
-      categoria:formEdit.categoria,
-      apelido:formEdit.apelido.trim(),
-      notas:formEdit.notas.trim(),
-    });
-    setEditando(null);
+    try{
+      await updateDoc(doc(db,"users",uid,"contatos",editando.id),{
+        nome:formEdit.nome.trim(),
+        categoria:formEdit.categoria,
+        apelido:formEdit.apelido.trim(),
+        notas:formEdit.notas.trim(),
+      });
+      setEditando(null);
+    }catch(e){console.error("salvarEdicao:",e.message);}
   }
 
   async function deletarContato(id){
-    await deleteDoc(doc(db,"users",uid,"contatos",id));
+    try{
+      await deleteDoc(doc(db,"users",uid,"contatos",id));
+    }catch(e){console.error("deletarContato:",e.message);}
   }
 
   const catColors={"Família":G.green,"Amigos":G.accent,"Trabalho":G.yellow,"Casal":"#F472B6","Outros":G.muted};
@@ -2426,12 +2571,14 @@ function CasalView({uid,lancs,user}){
   async function salvarLanc(){
     const v=parseFloat(formLanc.valor);
     if(!formLanc.data||!v||v<=0)return;
-    await addDoc(collection(db,"users",uid,"lancamentos"),{
-      tipo:formLanc.tipo,desc:formLanc.desc,cat:formLanc.cat,
-      forma:formLanc.forma,valor:v,data:formLanc.data,escopo:"casal",
-      autorNome:user?.displayName||"Você"
-    });
-    setSheetLanc(false);
+    try{
+      await addDoc(collection(db,"users",uid,"lancamentos"),{
+        tipo:formLanc.tipo,desc:formLanc.desc,cat:formLanc.cat,
+        forma:formLanc.forma,valor:v,data:formLanc.data,escopo:"casal",
+        autorNome:user?.displayName||"Você"
+      });
+      setSheetLanc(false);
+    }catch(e){console.error("salvarLanc:",e.message);}
   }
 
   const mes=curMes();
@@ -2566,6 +2713,7 @@ function DivisoesView({uid}){
     if(!formDiv.desc||!v||formDiv.selecionados.length<1)return;
     const valorPorPessoa=v/pessoas.length;
     const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
+    try{
     // Salva minha divisão
     const divRef=await addDoc(collection(db,"users",uid,"divisoes"),{
       desc:formDiv.desc,total:v,data:formDiv.data,partes,criadoEm:today(),criadoPor:uid
@@ -2582,6 +2730,7 @@ function DivisoesView({uid}){
     }
     setSheetDiv(false);
     setFormDiv({desc:"",valor:"",selecionados:[],data:today()});
+    }catch(e){console.error("salvarDiv:",e.message);}
   }
 
   async function aceitarDiv(id,dados){
@@ -2620,7 +2769,8 @@ function DivisoesView({uid}){
   }
 
   async function deletarDiv(id){
-    await deleteDoc(doc(db,"users",uid,"divisoes",id));
+    try{await deleteDoc(doc(db,"users",uid,"divisoes",id));}
+    catch(e){console.error("deletarDiv:",e.message);}
   }
 
   const abertas=divisoes.filter(d=>toPartes(d.partes).some(p=>!p.pago));
