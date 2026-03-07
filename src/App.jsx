@@ -38,7 +38,7 @@ const CAT_COLORS = {
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const fmt    = v => "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtK   = v => v>=1000?`R$${(v/1000).toFixed(1).replace(".",",")}k`:`R$${Number(v).toFixed(0)}`;
+const fmtK   = v => v>=10000?`R$${(v/1000).toFixed(0)}k`:v>=1000?`R$${(v/1000).toFixed(1).replace(".",",")}k`:`R$${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:0})}`;
 const getMes = d => d?d.slice(0,7):"";
 const fmtD   = d => { try{const[y,m,dd]=d.split("-");return`${dd}/${m}/${y}`;}catch{return d;} };
 const today  = () => new Date().toISOString().slice(0,10);
@@ -517,7 +517,7 @@ function TxRow({l,onDelete,full}){
           {isPendente&&<Tag color={G.yellow}> agendado</Tag>}
         </div>
       </div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:isPendente?G.muted:c,flexShrink:0,textDecoration:isPendente?"line-through":"none"}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:isPendente?G.muted:c,flexShrink:0,textDecoration:isPendente?"line-through":"none"}}>{isR?"+":"-"}{fmt(l.valor)}</div>
       <button onClick={()=>onDelete(l.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 4px",lineHeight:1}}
         onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
     </div>
@@ -646,7 +646,7 @@ function Dashboard({lancs,onDelete}){
         <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.yellow,marginBottom:10}}> Agendados</div>
         {ag.map(l=>{const isR=l.tipo==="Receita";return(<div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${G.yellow}22`}}>
           <div><div style={{fontSize:13,fontWeight:500,color:G.muted}}>{l.desc||l.cat}</div><div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}</div></div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:G.muted}}>{isR?"+":"-"}{fmtK(l.valor)}</div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:G.muted}}>{isR?"+":"-"}{fmt(l.valor)}</div>
         </div>);})}
       </div>
     )})()}
@@ -729,7 +729,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
               <div style={{fontSize:13,fontWeight:600,opacity:r.ativo?1:.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.desc||r.cat}</div>
               <div style={{display:"flex",gap:6,marginTop:2}}><Tag color={CAT_COLORS[r.cat]||G.muted}>{r.cat}</Tag><span style={{fontSize:11,color:G.muted}}>{FREQ_OPTS.find(f=>f.id===r.freq)?.label} · dia {r.dia}</span></div>
             </div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:r.ativo?ac:G.muted,flexShrink:0}}>{fmtK(r.valor)}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:r.ativo?ac:G.muted,flexShrink:0}}>{fmt(r.valor)}</div>
             <button onClick={()=>onToggleRec(r.id)} className="press" style={{width:38,height:22,borderRadius:11,border:"none",cursor:"pointer",background:r.ativo?ac:G.border2,position:"relative",flexShrink:0,transition:"background .2s"}}><div style={{position:"absolute",top:2,left:r.ativo?18:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/></button>
             <button onClick={()=>onDeleteRec(r.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
           </div>
@@ -1939,7 +1939,7 @@ function ChatView({lancs,onAddLanc}){
         ?<button onClick={()=>setEditCat(true)} className="press"
             style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",borderRadius:20,border:`1px solid ${catCor}55`,background:catCor+"18",cursor:"pointer"}}>
             <span style={{fontSize:12,fontWeight:600,color:catCor}}>{pending.cat}</span>
-            <span style={{fontSize:10,color:G.muted}}>✏️</span>
+            <Ic d={ICON.repeat} size={11} color={G.muted}/>
           </button>
         :<span style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:catCor+"22",color:catCor,fontWeight:600}}>{m.lanc.cat}</span>
       }
@@ -1965,35 +1965,40 @@ function ChatView({lancs,onAddLanc}){
         <div style={{padding:"12px 16px",borderRadius:"18px 18px 18px 4px",background:G.card2,border:`1px solid ${G.border2}`,display:"flex",gap:5,alignItems:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:G.muted,animation:`bounce .9s ${i*.15}s infinite`}}/>)}</div>
         {isProc&&<span style={{fontSize:12,color:G.muted}}>transcrevendo...</span>}
       </div>}
-
-      {(catPick||editCat)&&!busy&&<div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setCatPick(null);}}>
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)"}}/>
-        <div style={{position:"relative",background:G.card,borderRadius:"22px 22px 0 0",border:`1px solid ${G.border2}`,padding:"0 0 32px",animation:"slideUp .25s cubic-bezier(.32,.72,0,1)",maxHeight:"72vh",display:"flex",flexDirection:"column"}}>
-          <div style={{display:"flex",justifyContent:"center",padding:"10px 0 2px"}}><div style={{width:36,height:4,borderRadius:2,background:G.border2}}/></div>
+      <div ref={botRef}/>
+    </div>
+    {(catPick||editCat)&&!busy&&<div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)"}} onClick={()=>{setCatPick(null);setEditCat(false);}}/>
+        <div style={{position:"relative",background:G.card,borderRadius:"22px 22px 0 0",border:`1px solid ${G.border2}`,padding:"0 0 env(safe-area-inset-bottom,0px)",maxHeight:"70vh",display:"flex",flexDirection:"column"}}>
+          <div style={{display:"flex",justifyContent:"center",padding:"10px 0 2px"}}><div style={{width:36,height:4,borderRadius:2,background:G.border}}/></div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px 14px"}}>
             <div>
               <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700}}>{editCat?"Mudar categoria":"Qual a categoria?"}</div>
-              <div style={{fontSize:12,color:G.muted,marginTop:2}}>{(catPick||pending)?.desc||"Lançamento"} · <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:catPick.tipo==="Receita"?G.green:G.red}}>R${Number(catPick.valor).toFixed(2)}</span></div>
+              <div style={{fontSize:12,color:G.muted,marginTop:2}}>{(catPick||pending)?.desc||"Lançamento"} · <span style={{fontFamily:"'Fraunces',serif",color:(catPick||pending)?.tipo==="Receita"?G.green:G.red}}>R${Number((catPick||pending)?.valor||0).toFixed(2)}</span></div>
             </div>
-            <button onClick={()=>{setCatPick(null);setEditCat(false);}} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <button onClick={()=>{setCatPick(null);setEditCat(false);}} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <Ic d={ICON.x} size={14}/>
+            </button>
           </div>
           <div style={{overflowY:"auto",padding:"0 16px"}}>
             {((catPick||pending)?.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=>{
               const cor=CAT_COLORS[c]||G.muted;
+              const isSelected=(catPick||pending)?.cat===c;
               return(
                 <div key={c} onClick={()=>escolherCat(c)} className="press"
-                  style={{display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:14,marginBottom:6,cursor:"pointer",background:G.card2,border:`1px solid ${G.border}`}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{CAT_ICONS[c]||""}</div>
-                  <span style={{fontSize:15,fontWeight:600,color:G.text}}>{c}</span>
-                  <div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:cor,flexShrink:0}}/>
+                  style={{display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:14,marginBottom:6,cursor:"pointer",
+                    background:isSelected?cor+"22":"transparent",border:`1px solid ${isSelected?cor+"66":"transparent"}`}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{CAT_EMOJI[c]||"💰"}</div>
+                  <span style={{fontSize:15,fontWeight:600,color:isSelected?cor:G.text}}>{c}</span>
+                  {isSelected&&<Ic d={ICON.check} size={16} color={cor} style={{marginLeft:"auto"}}/>}
+                  {!isSelected&&<div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:cor,flexShrink:0}}/>}
                 </div>
               );
             })}
+            <div style={{height:12}}/>
           </div>
         </div>
       </div>}
-      <div ref={botRef}/>
-    </div>
     {recErr&&<div style={{margin:"0 14px 8px",padding:"10px 14px",borderRadius:12,background:G.redL,border:`1px solid ${G.red}44`,fontSize:12,color:G.red,display:"flex",alignItems:"center",gap:8,flexShrink:0}}>⚠️ <span style={{flex:1}}>{recErr}</span><button onClick={()=>setRecErr("")} style={{background:"none",border:"none",color:G.red,cursor:"pointer",fontSize:16}}>×</button></div>}
     {msgs.length<=2&&!isRec&&<div style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 14px 8px",flexShrink:0}}>{SUGS.map(s=><div key={s} onClick={()=>send(s)} className="press" style={{padding:"7px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,background:G.card2,border:`1px solid ${G.border2}`,color:G.muted}}>{s}</div>)}</div>}
     <div style={{padding:"10px 12px",background:G.card,borderTop:`1px solid ${G.border}`,flexShrink:0}}>
@@ -2503,7 +2508,7 @@ function ContatosView({uid,user}){
               {ct.notas&&<div style={{fontSize:11,color:G.muted,fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ct.notas}</div>}
             </div>
             <button onClick={()=>abrirEdicao(ct)}
-              style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:16,padding:"4px 6px"}}>✏️</button>
+              style={{background:"none",border:"none",color:G.muted,cursor:"pointer",padding:"4px 6px",display:"flex",alignItems:"center"}}><Ic d={ICON.repeat} size={11} color={G.muted}/></button>
             <button onClick={()=>deletarContato(ct.id)}
               style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 6px",lineHeight:1}}
               onMouseEnter={e=>e.currentTarget.style.color=G.red}
