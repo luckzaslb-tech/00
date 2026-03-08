@@ -631,7 +631,7 @@ function Dashboard({lancs,onDelete}){
       </div>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,marginBottom:16,filter:hide?"blur(8px)":"none",userSelect:hide?"none":"auto",lineHeight:1}}>{(sal<0?"-":"")+fmt(Math.abs(sal))}</div>
       <div style={{display:"flex"}}>
-        {[{l:"Receitas",v:hide?"•••":"+"+fmtK(tR),c:G.green},{l:"Despesas",v:hide?"•••":"-"+fmtK(tD),c:G.red},{l:"Renda Livre",v:hide?"•••":(po*100).toFixed(0)+"%",c:G.yellow}].map((k,i)=>(
+        {[{l:"Receitas",v:hide?"•••":"+"+fmt(tR),c:G.green},{l:"Despesas",v:hide?"•••":"-"+fmt(tD),c:G.red},{l:"Renda Livre",v:hide?"•••":(po*100).toFixed(0)+"%",c:G.yellow}].map((k,i)=>(
           <div key={i} style={{flex:1,borderRight:i<2?`1px solid ${G.border}`:"none",paddingRight:i<2?16:0,paddingLeft:i>0?16:0}}>
             <div style={{fontSize:10,color:G.muted,marginBottom:3}}>{k.l}</div>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:k.c}}>{k.v}</div>
