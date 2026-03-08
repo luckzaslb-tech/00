@@ -26,6 +26,7 @@ const NIVEIS = [
 ];
 const CATS_CARREIRA = ["Curso / Certificação","Livro / Material","Ferramenta / Software","Equipamento","Uniforme / Vestuário","Evento / Congresso","Transporte Trabalho","Outros"];
 
+const CAT_EMOJI={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"📄","Dívidas":"💳","Farmácia":"💊","Outros":"💰","Salário":"💰","Freelance":"🖥","Investimentos":"📈","Bônus":"🏆","Reembolso":"↩","Renda Extra":"⭐","Aluguel Recebido":"🏘","Dividendos":"📊"};
 const CAT_COLORS = {
   "Moradia":"#60A5FA","Alimentação":"#FB923C","Transporte":"#A78BFA","Saúde":"#34D399","Educação":"#FBBF24",
   "Lazer":"#F472B6","Vestuário":"#2DD4BF","Assinaturas":"#818CF8","Outros":"#94A3B8","Pets":"#F97316",
@@ -1824,13 +1825,12 @@ function FinancasView({uid,lancs,secao}){
 // ─── CHAT VIEW ────────────────────────────────────────────────────────────────
 function ChatView({lancs,onAddLanc}){
   const SUGS=["Gastei 45 no Uber","Paguei 380 no mercado","Recebi salário de 5000","Quanto gastei esse mês?"];
-  const [msgs,setMsgs]=useState([{id:0,from:"ai",ts:new Date(),text:"Oi! Me fale qualquer gasto ou receita!\n\n• \"Gastei 45 no Uber agora\"\n• \"Recebi salário de 5 mil\"\n• \"Paguei 380 no mercado com débito\""}]);
+  const [msgs,setMsgs]=useState([{id:0,from:"ai",ts:new Date(),text:"Oi! Me fale qualquer gasto ou receita!\n\n• \"Gastei 50 no mercado\"\n• \"Recebi 3000 de salário\"\n• \"Quanto gastei esse mês?\""}]);
   const [input,setInput]=useState("");
   const [busy,setBusy]=useState(false);
   const [pending,setPending]=useState(null);
-  const [catPick,setCatPick]=useState(null); // {lancamento} aguardando escolha de cat
-  const [editVal,setEditVal]=useState(""); // valor editável no card de confirmação
-  const [editCat,setEditCat]=useState(false); // mostrar picker de cat no card
+  const [editVal,setEditVal]=useState("");
+  const [showCatPicker,setShowCatPicker]=useState(false);
   const [recSt,setRecSt]=useState("idle");
   const [recSec,setRecSec]=useState(0);
   const [recErr,setRecErr]=useState("");
@@ -1843,7 +1843,7 @@ function ChatView({lancs,onAddLanc}){
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
       chkRef.current=[];
-      const mime=["audio/webm;codecs=opus","audio/webm","audio/ogg","audio/mp4"].find(m=>MediaRecorder.isTypeSupported(m))||"";
+      const mime=["audio/webm;codecs=opus","audio/webm","audio/ogg","audio/mp4"].find(m=>MediaRecorder.isTypeSupported(m));
       const mr=new MediaRecorder(stream,mime?{mimeType:mime}:{});
       mr.ondataavailable=e=>{if(e.data?.size>0)chkRef.current.push(e.data);};
       mr.onstop=async()=>{
@@ -1854,7 +1854,7 @@ function ChatView({lancs,onAddLanc}){
         try{
           try{
             const txt=await transcribeAudio(blob);
-            if(txt.trim()){setInput(txt.trim());push("ai",`🎤 Transcrevi: *"${txt.trim()}"*\nRevise e toque enviar! ✉️`);setTimeout(()=>inpRef.current?.focus(),100);}
+            if(txt.trim()){setInput(txt.trim());push("ai",`🎤 Transcrevi: *"${txt.trim()}"*\nRevise e toque enviar! ✉️`);}
             else push("ai","🎤 Não entendi o áudio. Pode falar de novo? 😊");
           }catch{push("ai","🎤 Erro na transcrição. Pode tentar de novo? 😊");}
         }catch{push("ai","Erro ao transcrever. Pode digitar? 😊");}
@@ -1862,155 +1862,169 @@ function ChatView({lancs,onAddLanc}){
       };
       mr.start(200);mrRef.current=mr;setRecSt("rec");setRecSec(0);
       tmrRef.current=setInterval(()=>setRecSec(s=>s+1),1000);
-    }catch(e){setRecSt("idle");setRecErr(e.name==="NotAllowedError"?"Microfone bloqueado — libere nas configurações.":"Erro ao acessar microfone.");}
+    }catch(e){setRecSt("idle");setRecErr(e.name==="NotAllowedError"?"Microfone bloqueado — libere nas configurações.":"Erro ao gravar.");}
   }
   function stopRec(){clearInterval(tmrRef.current);if(mrRef.current?.state==="recording")mrRef.current.stop();}
-  function cancelRec(){clearInterval(tmrRef.current);if(mrRef.current?.state==="recording"){mrRef.current.onstop=null;mrRef.current.stop();}chkRef.current=[];setRecSt("idle");setRecSec(0);}
+  function cancelRec(){clearInterval(tmrRef.current);if(mrRef.current?.state==="recording"){mrRef.current.onstop=null;mrRef.current.stop();}setRecSt("idle");setRecSec(0);}
 
   async function send(txt){
     const msg=(txt||input).trim();if(!msg||busy)return;
     setInput("");if(inpRef.current)inpRef.current.style.height="auto";
-    push("user",msg);setBusy(true);setPending(null);
+    push("user",msg);setBusy(true);setPending(null);setEditVal("");setShowCatPicker(false);
     try{
       const r=await callAI(msg,lancs);
       if(r.action==="lancamento"){
         push("ai",r.confirmacao||"Entendido!",{lanc:r});
         setPending(r);
         setEditVal(r.valor.toFixed(2));
-        setEditCat(false);
       }
-      else if(r.action==="multiplos"){push("ai",`${r.confirmacao}\n\n${r.itens.map(i=>`• ${i.tipo==="Receita"?"↑":"↓"} ${i.desc||i.cat} — R$${Number(i.valor).toFixed(2)}`).join("\n")}`,{multi:r.itens});setPending({action:"multiplos",itens:r.itens});}
+      else if(r.action==="multiplos"){push("ai",`${r.confirmacao}\n\n${r.itens.map(i=>`• ${i.tipo==="Receita"?"↑":"↓"} ${i.desc} — R$${i.valor.toFixed(2)}`).join("\n")}`,{multi:r.itens});setPending(r);}
       else push("ai",r.resposta||"Não entendi 😊");
-    }catch(e){console.error('Chat error:',e);push("ai","❌ Erro: "+(e?.message||"Tente novamente"));}  
+    }catch(e){console.error('Chat error:',e);push("ai","❌ Erro: "+(e?.message||"Tente novamente"));}
     setBusy(false);
   }
+
   function confirmar(){
     if(!pending)return;
-    const valorFinal=parseFloat(editVal.replace(",","."))||pending.valor;
-    if(pending.action==="multiplos"){pending.itens.forEach(i=>onAddLanc({tipo:i.tipo,desc:i.desc,cat:i.cat,forma:i.forma||"PIX",valor:i.valor,data:i.data||today()}));push("ai",`✅ ${pending.itens.length} lançamentos salvos!`);}
-    else{onAddLanc({tipo:pending.tipo,desc:pending.desc,cat:pending.cat,forma:pending.forma||"PIX",valor:valorFinal,data:pending.data||today()});push("ai","✅ Salvo! 🚀");}
-    setPending(null);setEditVal("");setEditCat(false);
+    const valorFinal=parseFloat((editVal||"0").replace(",","."))||pending.valor;
+    if(pending.action==="multiplos"){pending.itens.forEach(i=>onAddLanc({tipo:i.tipo,desc:i.desc,cat:i.cat,forma:i.forma||"PIX",valor:i.valor,data:i.data||today()}));}
+    else{onAddLanc({tipo:pending.tipo,desc:pending.desc,cat:pending.cat,forma:pending.forma||"PIX",valor:valorFinal,data:pending.data||today()});}
+    push("ai","✅ Lançamento salvo!");
+    setPending(null);setEditVal("");setShowCatPicker(false);
   }
+
+  function cancelar(){
+    push("ai","Cancelei! 😊");
+    setPending(null);setEditVal("");setShowCatPicker(false);
+  }
+
   function escolherCat(cat){
-    if(catPick){
-      const lanc={...catPick,cat};
-      push("ai",`✅ Categoria: *${cat}*`,{lanc});
-      setPending(lanc);setEditVal(lanc.valor.toFixed(2));
-      setCatPick(null);return;
-    }
-    if(pending){
-      setPending(p=>({...p,cat}));
-      setEditCat(false);
-    }
+    if(!pending)return;
+    setPending(p=>({...p,cat}));
+    setShowCatPicker(false);
   }
+
   const fmtS=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
   const isRec=recSt==="rec",isProc=recSt==="proc";
+
+  // Card de confirmação do lançamento
+  function LancCard({lanc}){
+    const isLast=msgs[msgs.length-1]?.lanc===lanc;
+    const isPend=isLast&&!!pending;
+    const cor=lanc.tipo==="Receita"?G.green:G.red;
+    const cat=isPend?pending.cat:lanc.cat;
+    const catCor=CAT_COLORS[cat]||G.muted;
+    return(
+      <div style={{marginTop:6,maxWidth:"88%",background:G.card,border:`1px solid ${cor}33`,borderRadius:16,padding:"14px 14px 12px"}}>
+        <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:cor+"22",color:cor,letterSpacing:.5,textTransform:"uppercase"}}>{lanc.tipo==="Receita"?"↑ Receita":"↓ Despesa"}</span>
+        <div style={{fontSize:14,fontWeight:600,marginTop:8,marginBottom:10,color:G.text}}>{lanc.desc||lanc.cat}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <span style={{fontSize:11,color:G.muted,width:36}}>Valor</span>
+          {isPend
+            ?<div style={{display:"flex",alignItems:"center",flex:1,background:G.card2,border:`1px solid ${G.border}`,borderRadius:10,padding:"4px 10px"}}>
+                <span style={{color:cor,fontWeight:700,marginRight:4,fontSize:13}}>R$</span>
+                <input value={editVal} onChange={e=>setEditVal(e.target.value.replace(/[^0-9,.]/g,""))}
+                  style={{background:"none",border:"none",outline:"none",fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:cor,width:"100%",minWidth:0}}
+                  inputMode="decimal"/>
+              </div>
+            :<span style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:cor}}>R${Number(lanc.valor).toFixed(2).replace(".",",")}</span>
+          }
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:isPend?12:0}}>
+          <span style={{fontSize:11,color:G.muted,width:36}}>Cat.</span>
+          {isPend
+            ?<button onClick={()=>setShowCatPicker(true)} className="press"
+                style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,border:`1px solid ${catCor}55`,background:catCor+"18",cursor:"pointer"}}>
+                <span style={{fontSize:12,fontWeight:600,color:catCor}}>{cat}</span>
+                <Ic d={ICON.repeat} size={11} color={catCor}/>
+              </button>
+            :<span style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:catCor+"22",color:catCor,fontWeight:600}}>{cat}</span>
+          }
+          {!isPend&&<span style={{fontSize:11,color:G.muted}}>{lanc.forma} · {fmtD(lanc.data||today())}</span>}
+        </div>
+        {isPend&&<div style={{display:"flex",gap:8}}>
+          <button onClick={confirmar} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",cursor:"pointer",background:G.accent,color:"#fff",fontSize:13,fontWeight:700}}>✓ Confirmar</button>
+          <button onClick={cancelar} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer"}}>✕</button>
+        </div>}
+      </div>
+    );
+  }
+
   return(<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
     <div style={{flex:1,overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
-      {msgs.map(m=>(<div key={m.id} style={{display:"flex",flexDirection:"column",alignItems:m.from==="user"?"flex-end":"flex-start",animation:"fadeUp .18s ease"}}>
-        <div style={{maxWidth:"84%",padding:"10px 14px",borderRadius:m.from==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",background:m.from==="user"?G.accent:G.card2,border:m.from==="ai"?`1px solid ${G.border2}`:"none",fontSize:14,lineHeight:1.55,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{m.text}</div>
-        {m.lanc&&(()=>{
-  const isLast=msgs[msgs.length-1]?.id===m.id;
-  const isPend=isLast&&!!pending;
-  const cor=m.lanc.tipo==="Receita"?G.green:G.red;
-  const catCor=CAT_COLORS[isPend?pending.cat:m.lanc.cat]||G.muted;
-  return(<div style={{marginTop:6,maxWidth:"88%",background:G.card,border:`1px solid ${cor}44`,borderRadius:16,padding:"14px 14px 10px",animation:"popIn .2s ease"}}>
-    {/* tipo badge */}
-    <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:cor+"22",color:cor,letterSpacing:.5}}>{m.lanc.tipo==="Receita"?"↑ RECEITA":"↓ DESPESA"}</span>
-    {/* desc */}
-    <div style={{fontSize:14,fontWeight:600,marginTop:8,marginBottom:10,color:G.text}}>{m.lanc.desc||m.lanc.cat}</div>
-    {/* valor — editável se isPend */}
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-      <span style={{fontSize:11,color:G.muted,minWidth:36}}>Valor</span>
-      {isPend
-        ?<div style={{display:"flex",alignItems:"center",flex:1,background:G.card2,border:`1px solid ${G.border}`,borderRadius:10,padding:"4px 10px"}}>
-            <span style={{color:cor,fontWeight:700,marginRight:4}}>R$</span>
-            <input value={editVal} onChange={e=>setEditVal(e.target.value.replace(/[^0-9,.]/g,""))}
-              style={{background:"none",border:"none",outline:"none",fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:cor,width:"100%",minWidth:0}}
-              inputMode="decimal" autoFocus={false}/>
-          </div>
-        :<span style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:cor}}>R${Number(m.lanc.valor).toFixed(2)}</span>
-      }
-    </div>
-    {/* categoria — clicável se isPend */}
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:isPend?12:0}}>
-      <span style={{fontSize:11,color:G.muted,minWidth:36}}>Cat.</span>
-      {isPend
-        ?<button onClick={()=>setEditCat(true)} className="press"
-            style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",borderRadius:20,border:`1px solid ${catCor}55`,background:catCor+"18",cursor:"pointer"}}>
-            <span style={{fontSize:12,fontWeight:600,color:catCor}}>{pending.cat}</span>
-            <Ic d={ICON.repeat} size={11} color={G.muted}/>
-          </button>
-        :<span style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:catCor+"22",color:catCor,fontWeight:600}}>{m.lanc.cat}</span>
-      }
-      {!isPend&&<span style={{fontSize:11,color:G.muted}}>{m.lanc.forma} · {fmtD(m.lanc.data||today())}</span>}
-    </div>
-    {/* botões confirmar/cancelar — só se isPend */}
-    {isPend&&<div style={{display:"flex",gap:8,marginTop:4}}>
-      <button onClick={confirmar} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",cursor:"pointer",background:G.accent,color:"#fff",fontSize:13,fontWeight:700}}>✓ Confirmar</button>
-      <button onClick={()=>{push("ai","Cancelei! 😊");setPending(null);setEditVal("");setEditCat(false);}} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer"}}>✕</button>
-    </div>}
-  </div>);
-})()}
+      {msgs.map(m=>(<div key={m.id} style={{display:"flex",flexDirection:"column",alignItems:m.from==="user"?"flex-end":"flex-start"}}>
+        <div style={{maxWidth:"84%",padding:"10px 14px",borderRadius:m.from==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",background:m.from==="user"?G.accent:G.card2,color:m.from==="user"?"#fff":G.text,fontSize:14,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
+          {m.text}
+        </div>
+        {m.lanc&&<LancCard lanc={m.lanc}/>}
         {m.multi&&<div style={{marginTop:6,maxWidth:"84%",display:"flex",flexDirection:"column",gap:6}}>
-          {m.multi.map((i,idx)=><div key={idx} style={{background:G.card,border:`1px solid ${i.tipo==="Receita"?G.green:G.red}44`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+          {m.multi.map((i,idx)=><div key={idx} style={{background:G.card,border:`1px solid ${i.tipo==="Receita"?G.green:G.red}44`,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:18,color:i.tipo==="Receita"?G.green:G.red}}>{i.tipo==="Receita"?"↑":"↓"}</span>
             <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{i.desc||i.cat}</div><div style={{fontSize:11,color:G.muted}}>{i.cat}</div></div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:i.tipo==="Receita"?G.green:G.red}}>R${Number(i.valor).toFixed(2)}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:i.tipo==="Receita"?G.green:G.red}}>R${i.valor.toFixed(2)}</div>
           </div>)}
+          {pending?.action==="multiplos"&&<div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={confirmar} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",cursor:"pointer",background:G.accent,color:"#fff",fontSize:13,fontWeight:700}}>✓ Confirmar tudo</button>
+            <button onClick={cancelar} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer"}}>✕</button>
+          </div>}
         </div>}
         <div style={{fontSize:10,color:G.muted,marginTop:3}}>{m.ts.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
       </div>))}
       {(busy||isProc)&&<div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{padding:"12px 16px",borderRadius:"18px 18px 18px 4px",background:G.card2,border:`1px solid ${G.border2}`,display:"flex",gap:5,alignItems:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:G.muted,animation:`bounce .9s ${i*.15}s infinite`}}/>)}</div>
+        <div style={{padding:"12px 16px",borderRadius:"18px 18px 18px 4px",background:G.card2,border:`1px solid ${G.border}`}}>
+          <div style={{display:"flex",gap:4}}>{[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:G.muted,animation:`bounce .9s ${i*0.15}s infinite`}}/>)}</div>
+        </div>
         {isProc&&<span style={{fontSize:12,color:G.muted}}>transcrevendo...</span>}
       </div>}
       <div ref={botRef}/>
     </div>
-    {(catPick||editCat)&&!busy&&<div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)"}} onClick={()=>{setCatPick(null);setEditCat(false);}}/>
-        <div style={{position:"relative",background:G.card,borderRadius:"22px 22px 0 0",border:`1px solid ${G.border2}`,padding:"0 0 env(safe-area-inset-bottom,0px)",maxHeight:"70vh",display:"flex",flexDirection:"column"}}>
-          <div style={{display:"flex",justifyContent:"center",padding:"10px 0 2px"}}><div style={{width:36,height:4,borderRadius:2,background:G.border}}/></div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px 14px"}}>
-            <div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700}}>{editCat?"Mudar categoria":"Qual a categoria?"}</div>
-              <div style={{fontSize:12,color:G.muted,marginTop:2}}>{(catPick||pending)?.desc||"Lançamento"} · <span style={{fontFamily:"'Fraunces',serif",color:(catPick||pending)?.tipo==="Receita"?G.green:G.red}}>R${Number((catPick||pending)?.valor||0).toFixed(2)}</span></div>
-            </div>
-            <button onClick={()=>{setCatPick(null);setEditCat(false);}} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <Ic d={ICON.x} size={14}/>
-            </button>
-          </div>
-          <div style={{overflowY:"auto",padding:"0 16px"}}>
-            {((catPick||pending)?.tipo==="Receita"?CATS_REC:CATS_DEP).map(c=>{
-              const cor=CAT_COLORS[c]||G.muted;
-              const isSelected=(catPick||pending)?.cat===c;
-              return(
-                <div key={c} onClick={()=>escolherCat(c)} className="press"
-                  style={{display:"flex",alignItems:"center",gap:14,padding:"13px 14px",borderRadius:14,marginBottom:6,cursor:"pointer",
-                    background:isSelected?cor+"22":"transparent",border:`1px solid ${isSelected?cor+"66":"transparent"}`}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{CAT_EMOJI[c]||"💰"}</div>
-                  <span style={{fontSize:15,fontWeight:600,color:isSelected?cor:G.text}}>{c}</span>
-                  {isSelected&&<Ic d={ICON.check} size={16} color={cor} style={{marginLeft:"auto"}}/>}
-                  {!isSelected&&<div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:cor,flexShrink:0}}/>}
-                </div>
-              );
-            })}
-            <div style={{height:12}}/>
-          </div>
+
+    {/* Cat picker modal — fora do scroll div, sem depender de pending */}
+    {showCatPicker&&<div style={{position:"fixed",inset:0,zIndex:500,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+      <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(4px)"}} onClick={()=>setShowCatPicker(false)}/>
+      <div style={{position:"relative",background:G.card,borderRadius:"22px 22px 0 0",maxHeight:"72vh",display:"flex",flexDirection:"column",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
+        <div style={{display:"flex",justifyContent:"center",padding:"10px 0 4px"}}><div style={{width:36,height:4,borderRadius:2,background:G.border}}/></div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 20px 14px"}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700}}>Mudar categoria</div>
+          <button onClick={()=>setShowCatPicker(false)} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Ic d={ICON.x} size={14}/>
+          </button>
         </div>
-      </div>}
-    {recErr&&<div style={{margin:"0 14px 8px",padding:"10px 14px",borderRadius:12,background:G.redL,border:`1px solid ${G.red}44`,fontSize:12,color:G.red,display:"flex",alignItems:"center",gap:8,flexShrink:0}}>⚠️ <span style={{flex:1}}>{recErr}</span><button onClick={()=>setRecErr("")} style={{background:"none",border:"none",color:G.red,cursor:"pointer",fontSize:16}}>×</button></div>}
-    {msgs.length<=2&&!isRec&&<div style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 14px 8px",flexShrink:0}}>{SUGS.map(s=><div key={s} onClick={()=>send(s)} className="press" style={{padding:"7px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,background:G.card2,border:`1px solid ${G.border2}`,color:G.muted}}>{s}</div>)}</div>}
+        <div style={{overflowY:"auto",padding:"0 16px 16px"}}>
+          {(pending?.tipo==="Receita"?CATS_REC:CATS_DEP).map(cat=>{
+            const cor=CAT_COLORS[cat]||G.muted;
+            const sel=pending?.cat===cat;
+            return(
+              <div key={cat} onClick={()=>escolherCat(cat)} className="press"
+                style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",borderRadius:14,marginBottom:6,cursor:"pointer",
+                  background:sel?cor+"22":"transparent",border:`1px solid ${sel?cor+"66":"transparent"}`}}>
+                <div style={{width:36,height:36,borderRadius:10,background:cor+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{CAT_EMOJI[cat]||"💰"}</div>
+                <span style={{fontSize:15,fontWeight:600,color:sel?cor:G.text}}>{cat}</span>
+                {sel&&<Ic d={ICON.check} size={16} color={cor} style={{marginLeft:"auto"}}/>}
+                {!sel&&<div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:cor}}/>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>}
+
+    {recErr&&<div style={{margin:"0 14px 8px",padding:"10px 14px",borderRadius:12,background:G.redL,border:`1px solid ${G.red}44`,fontSize:12,color:G.red}}>{recErr}</div>}
+    {msgs.length<=2&&!isRec&&<div style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 14px 8px",flexShrink:0}}>{SUGS.map(s=><div key={s} onClick={()=>send(s)} className="press" style={{whiteSpace:"nowrap",padding:"8px 14px",borderRadius:20,background:G.card2,border:`1px solid ${G.border}`,fontSize:12,color:G.text,cursor:"pointer",flexShrink:0}}>{s}</div>)}</div>}
     <div style={{padding:"10px 12px",background:G.card,borderTop:`1px solid ${G.border}`,flexShrink:0}}>
       {isRec?(<div style={{display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:44,height:44,borderRadius:"50%",flexShrink:0,background:G.redL,border:`2px solid ${G.red}`,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:14,height:14,borderRadius:"50%",background:G.red,animation:"pulse 1s infinite"}}/></div>
+        <div style={{width:44,height:44,borderRadius:"50%",flexShrink:0,background:G.redL,border:`2px solid ${G.red}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🎙</div>
         <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:G.red}}>Gravando...</div><div style={{fontSize:12,color:G.muted}}>{fmtS(recSec)}</div></div>
-        <button onClick={stopRec} className="press" style={{padding:"10px 16px",borderRadius:22,border:"none",cursor:"pointer",background:G.red,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Enviar ✓</button>
-        <button onClick={cancelRec} className="press" style={{width:36,height:36,borderRadius:"50%",border:`1px solid ${G.border2}`,cursor:"pointer",background:"transparent",color:G.muted,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        <button onClick={stopRec} className="press" style={{padding:"10px 16px",borderRadius:22,border:"none",cursor:"pointer",background:G.accent,color:"#fff",fontSize:13,fontWeight:700}}>Enviar</button>
+        <button onClick={cancelRec} className="press" style={{width:36,height:36,borderRadius:"50%",border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic d={ICON.x} size={16}/>
+        </button>
       </div>):(<div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-        <button onClick={startRec} disabled={busy||isProc} className="press" style={{width:44,height:44,borderRadius:"50%",border:`1px solid ${G.border2}`,flexShrink:0,cursor:"pointer",background:isProc?G.accentL:G.card2,color:G.muted,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>{isProc?<Spinner size={18}/>:"🎤"}</button>
-        <textarea ref={inpRef} value={input} onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,110)+"px";}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Digite como no WhatsApp..." rows={1} style={{flex:1,padding:"11px 14px",background:G.card2,border:`1px solid ${G.border2}`,borderRadius:22,color:G.text,fontSize:15,outline:"none",resize:"none",lineHeight:1.4,maxHeight:110}}/>
-        <button onClick={()=>send()} disabled={!input.trim()||busy} className="press" style={{width:44,height:44,borderRadius:"50%",border:"none",flexShrink:0,cursor:"pointer",background:input.trim()&&!busy?G.accent:G.border2,color:"#fff",fontSize:19,display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s"}}>›</button>
+        <button onClick={startRec} disabled={busy||isProc} className="press" style={{width:44,height:44,borderRadius:"50%",border:`1px solid ${G.border}`,background:G.card2,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🎙</button>
+        <textarea ref={inpRef} value={input} onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,120)+"px";}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Ex: Gastei 50 no mercado..." className="inp" style={{flex:1,borderRadius:22,padding:"11px 14px",fontSize:14,resize:"none",overflow:"hidden",minHeight:44,lineHeight:1.4}}/>
+        <button onClick={()=>send()} disabled={!input.trim()||busy} className="press" style={{width:44,height:44,borderRadius:"50%",border:"none",cursor:"pointer",background:input.trim()&&!busy?G.accent:G.card2,color:input.trim()&&!busy?"#fff":G.muted,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+          <Ic d={ICON.arrow_up} size={20}/>
+        </button>
       </div>)}
     </div>
   </div>);
