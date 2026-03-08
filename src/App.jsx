@@ -599,99 +599,233 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
 function Dashboard({lancs,onDelete}){
   const [mes,setMes]=useState(curMes());
   const [hide,setHide]=useState(false);
-  const hv=v=>hide?"•••":v;
+  const [activeWeek,setActiveWeek]=useState(null);
   const md=[...new Set(lancs.map(l=>getMes(l.data)))].sort().reverse().slice(0,8);
   if(!md.includes(curMes()))md.unshift(curMes());
   const dm=lancs.filter(l=>getMes(l.data)===mes&&isRealizado(l.data,l.agendado));
   const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
   const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-  const sal=tR-tD,po=tR>0?sal/tR:0;
+  const sal=tR-tD, po=tR>0?sal/tR:0;
   const cats=CATS_DEP.map(c=>({name:c,v:dm.filter(l=>l.tipo==="Despesa"&&l.cat===c).reduce((s,l)=>s+l.valor,0),color:CAT_COLORS[c]||"#94A3B8"})).filter(c=>c.v>0).sort((a,b)=>b.v-a.v);
-  // Gastos semanais
   const [y,mNum]=mes.split("-").map(Number);
   const diasNoMes=new Date(y,mNum,0).getDate();
   const semanas=Array.from({length:5},(_,i)=>{
     const dIni=i*7+1,dFim=Math.min((i+1)*7,diasNoMes);
     if(dIni>diasNoMes)return null;
     const dep=dm.filter(l=>l.tipo==="Despesa"&&l.data).filter(l=>{const d=parseInt(l.data.slice(8,10));return d>=dIni&&d<=dFim;}).reduce((s,l)=>s+l.valor,0);
-    return{name:`Sem ${i+1}`,dep,dIni,dFim};
+    const rec=dm.filter(l=>l.tipo==="Receita"&&l.data).filter(l=>{const d=parseInt(l.data.slice(8,10));return d>=dIni&&d<=dFim;}).reduce((s,l)=>s+l.valor,0);
+    return{name:`S${i+1}`,dep,rec,dIni,dFim};
   }).filter(Boolean);
-  const maxDep=Math.max(...semanas.map(s=>s.dep),1);
   const totalSem=semanas.reduce((s,w)=>s+w.dep,0);
-  const melhor=totalSem>0?semanas.reduce((b,w)=>w.dep<b.dep?w:b,semanas[0]):null;
-  const pior=totalSem>0?semanas.reduce((b,w)=>w.dep>b.dep?w:b,semanas[0]):null;
-  return(<div style={{paddingBottom:8}}>
-    <div style={{background:"linear-gradient(145deg,#14142A,#0d0d1a)",border:`1px solid ${G.border}`,borderRadius:20,padding:"24px 20px 20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}18,transparent 70%)`,pointerEvents:"none"}}/>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-        <span style={{fontSize:11,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Saldo do Mês</span>
-        <button onClick={()=>setHide(h=>!h)} style={{background:"none",border:"none",cursor:"pointer",padding:"2px 6px",color:G.muted,display:"flex",alignItems:"center",gap:4,fontSize:11}}>
+  const maxBar=Math.max(...semanas.map(s=>Math.max(s.dep,s.rec)),1);
+  const agendados=lancs.filter(l=>l.agendado&&l.data>today()).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,3);
+  const hv=v=>hide?"•••":v;
+
+  // top 3 cats para donut mini
+  const top3=cats.slice(0,3);
+  const outrosV=cats.slice(3).reduce((s,c)=>s+c.v,0);
+  const donutData=outrosV>0?[...top3,{name:"Outros",v:outrosV,color:"#475569"}]:top3;
+
+  return(<div style={{paddingBottom:24,display:"flex",flexDirection:"column",gap:0}}>
+
+    {/* ── HERO SALDO ─────────────────────────────────── */}
+    <div style={{margin:"0 0 16px",background:"linear-gradient(135deg,#0f0f1e 0%,#1a1040 60%,#0d1a2e 100%)",borderRadius:24,padding:"24px 20px 20px",position:"relative",overflow:"hidden"}}>
+      {/* decorative blobs */}
+      <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}28,transparent 70%)`,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-30,left:-20,width:120,height:120,borderRadius:"50%",background:`radial-gradient(circle,${G.green}18,transparent 70%)`,pointerEvents:"none"}}/>
+
+      {/* header row */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+        <span style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"rgba(255,255,255,.4)"}}>Saldo do Mês</span>
+        <button onClick={()=>setHide(h=>!h)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.5)",display:"flex",alignItems:"center",gap:4}}>
+          <Ic d={hide?ICON.eye:ICON.eye} size={11} color="rgba(255,255,255,.5)"/>
           {hide?"Mostrar":"Ocultar"}
         </button>
       </div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,marginBottom:16,filter:hide?"blur(8px)":"none",userSelect:hide?"none":"auto",lineHeight:1}}>{(sal<0?"-":"")+fmt(Math.abs(sal))}</div>
-      <div style={{display:"flex"}}>
-        {[{l:"Receitas",v:hide?"•••":"+"+fmt(tR),c:G.green},{l:"Despesas",v:hide?"•••":"-"+fmt(tD),c:G.red},{l:"Renda Livre",v:hide?"•••":(po*100).toFixed(0)+"%",c:G.yellow}].map((k,i)=>(
-          <div key={i} style={{flex:1,borderRight:i<2?`1px solid ${G.border}`:"none",paddingRight:i<2?16:0,paddingLeft:i>0?16:0}}>
-            <div style={{fontSize:10,color:G.muted,marginBottom:3}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:k.c}}>{k.v}</div>
+
+      {/* big number */}
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:42,fontWeight:700,letterSpacing:-2,color:hide?"rgba(255,255,255,.15)":sal>=0?G.green:G.red,marginBottom:18,filter:hide?"blur(10px)":"none",transition:"filter .3s",userSelect:hide?"none":"auto",lineHeight:1}}>
+        {hide?"R$ ••••••":fmt(sal)}
+      </div>
+
+      {/* 3 chips */}
+      <div style={{display:"flex",gap:8}}>
+        {[{l:"Receitas",v:"+"+fmt(tR),c:G.green,bg:"rgba(52,211,153,.12)"},{l:"Despesas",v:"-"+fmt(tD),c:G.red,bg:"rgba(248,113,113,.12)"},{l:"Poupança",v:(po*100).toFixed(0)+"%",c:G.yellow,bg:"rgba(251,191,36,.1)"}].map((k,i)=>(
+          <div key={i} style={{flex:1,background:k.bg,border:`1px solid ${k.c}22`,borderRadius:14,padding:"8px 10px"}}>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginBottom:3,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:hide?"rgba(255,255,255,.2)":k.c,filter:hide?"blur(6px)":"none",transition:"filter .3s"}}>{hide?"•••":k.v}</div>
           </div>
         ))}
       </div>
     </div>
-    <div style={{display:"flex",gap:8,overflowX:"auto",marginBottom:16,paddingBottom:2}}>
-      {md.map(m=><div key={m} onClick={()=>setMes(m)} className="press" style={{padding:"7px 16px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:m===mes?G.accentL:G.card2,border:`1px solid ${m===mes?G.accent:G.border}`,color:m===mes?G.accent:G.muted}}>{mesLblFull(m)}</div>)}
+
+    {/* ── MES SELECTOR ───────────────────────────────── */}
+    <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:16,paddingBottom:2,scrollbarWidth:"none"}}>
+      {md.map(m=>{
+        const [my,mm]=m.split("-");
+        const label=MESES[parseInt(mm)-1]+"/"+my.slice(2);
+        const active=m===mes;
+        return(<button key={m} onClick={()=>setMes(m)} className="press"
+          style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${active?G.accent:G.border}`,background:active?G.accent:"transparent",color:active?"#fff":G.muted,fontSize:12,fontWeight:active?700:400,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+          {label}
+        </button>);
+      })}
     </div>
-    {(()=>{const ag=lancs.filter(l=>l.agendado&&l.data>today()).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,3);return ag.length>0&&(
-      <div style={{background:G.yellow+"12",border:`1px solid ${G.yellow}33`,borderRadius:16,padding:16,marginBottom:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.yellow,marginBottom:10}}> Agendados</div>
-        {ag.map(l=>{const isR=l.tipo==="Receita";return(<div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${G.yellow}22`}}>
-          <div><div style={{fontSize:13,fontWeight:500,color:G.muted}}>{l.desc||l.cat}</div><div style={{fontSize:11,color:G.muted}}>{fmtD(l.data)} · {l.cat}</div></div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:G.muted}}>{isR?"+":"-"}{fmt(l.valor)}</div>
-        </div>);})}
-      </div>
-    )})()}
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:16}}>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Últimos Lançamentos</div>
-      {lancs.length===0?<div style={{textAlign:"center",color:G.muted,padding:"24px 0",fontSize:13}}>Sem lançamentos ainda</div>
-        :[...lancs].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,7).map(l=><TxRow key={l.id} l={l} onDelete={onDelete}/>)}
-    </div>
-    {cats.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:16}}>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Por Categoria</div>
-      {cats.slice(0,6).map(c=>{const p=tD>0?c.v/tD*100:0;return(<div key={c.name} style={{marginBottom:11}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:7,height:7,borderRadius:"50%",background:c.color}}/><span style={{fontSize:13}}>{c.name}</span></div>
-          <span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:c.color}}>{fmt(c.v)}</span>
+
+    {/* ── MINI INSIGHTS ROW ──────────────────────────── */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+
+      {/* Maior gasto */}
+      {cats[0]&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"14px 16px"}}>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:6}}>Maior categoria</div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:32,height:32,borderRadius:10,background:(cats[0].color)+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{CAT_EMOJI[cats[0].name]||"💸"}</div>
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:600,color:G.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cats[0].name}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:cats[0].color}}>{hide?"•••":fmt(cats[0].v)}</div>
+          </div>
         </div>
-        <div style={{height:3,background:G.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c.color,borderRadius:3}}/></div>
-      </div>);})}
-    </div>}
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Gastos Semanais</div>
-        <div style={{fontSize:11,color:G.muted}}>{mesLblFull(mes)}</div>
-      </div>
-      <ResponsiveContainer width="100%" height={140}>
-        <BarChart data={semanas} barCategoryGap="30%" margin={{left:-18,right:8}}>
-          <XAxis dataKey="name" tick={{fill:G.muted,fontSize:11}} axisLine={false} tickLine={false}/>
-          <YAxis tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
-          <Tooltip contentStyle={{background:G.card2,border:`1px solid ${G.border2}`,borderRadius:10,fontSize:11}} cursor={{fill:"#ffffff06"}} formatter={v=>"R$ "+v.toLocaleString("pt-BR",{minimumFractionDigits:2})}/>
-          <Bar dataKey="dep" name="Gastos" radius={[6,6,0,0]} fill={G.red} fillOpacity={.75}/>
-        </BarChart>
-      </ResponsiveContainer>
-      {totalSem>0&&<div style={{display:"flex",justifyContent:"space-between",marginTop:12,paddingTop:12,borderTop:`1px solid ${G.border}`}}>
-        {[{l:"Total",v:fmtK(totalSem),c:G.red},{l:"Menor gasto",v:melhor?.name||"—",c:G.green},{l:"Maior gasto",v:pior?.name||"—",c:G.orange}].map((k,i)=>(
-          <div key={i} style={{textAlign:"center",flex:1,borderRight:i<2?`1px solid ${G.border}`:"none"}}>
-            <div style={{fontSize:10,color:G.muted,marginBottom:2}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:k.c}}>{k.v}</div>
-          </div>
-        ))}
       </div>}
-      {totalSem===0&&<div style={{fontSize:13,color:G.muted,textAlign:"center",marginTop:8}}>Sem despesas este mês</div>}
+
+      {/* Lançamentos do mês */}
+      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"14px 16px"}}>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:6}}>Lançamentos</div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:32,height:32,borderRadius:10,background:G.accent+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <Ic d={ICON.chart} size={16} color={G.accent}/>
+          </div>
+          <div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:G.accent,lineHeight:1}}>{dm.length}</div>
+            <div style={{fontSize:11,color:G.muted}}>{dm.filter(l=>l.tipo==="Despesa").length} desp · {dm.filter(l=>l.tipo==="Receita").length} rec</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Média diária */}
+      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"14px 16px"}}>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:6}}>Média/dia</div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:32,height:32,borderRadius:10,background:G.red+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <Ic d={ICON.calendar} size={16} color={G.red}/>
+          </div>
+          <div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:G.red,lineHeight:1.2}}>{hide?"•••":fmt(tD/Math.max(new Date().getDate(),1))}</div>
+            <div style={{fontSize:11,color:G.muted}}>em despesas</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Saldo vs mês anterior */}
+      {(()=>{
+        const prevMes=md[1];
+        if(!prevMes)return(<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"14px 16px"}}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:6}}>Vs. mês anterior</div>
+          <div style={{fontSize:12,color:G.muted,marginTop:8}}>Sem dados anteriores</div>
+        </div>);
+        const prevDm=lancs.filter(l=>getMes(l.data)===prevMes&&isRealizado(l.data,l.agendado));
+        const prevSal=prevDm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0)-prevDm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
+        const diff=sal-prevSal;
+        const pct=prevSal!==0?Math.abs(diff/prevSal*100):0;
+        return(<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"14px 16px"}}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:6}}>Vs. anterior</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:32,height:32,borderRadius:10,background:(diff>=0?G.green:G.red)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Ic d={diff>=0?ICON.arrow_up:ICON.arrow_down} size={16} color={diff>=0?G.green:G.red}/>
+            </div>
+            <div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:diff>=0?G.green:G.red,lineHeight:1.2}}>{hide?"•••":(diff>=0?"+":"")+fmt(diff)}</div>
+              <div style={{fontSize:11,color:G.muted}}>{pct.toFixed(0)}% vs mês ant.</div>
+            </div>
+          </div>
+        </div>);
+      })()}
+    </div>
+
+    {/* ── GRÁFICO SEMANAL INTERATIVO ─────────────────── */}
+    {semanas.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"16px",marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Gastos semanais</div>
+          {activeWeek&&<div style={{fontSize:12,color:G.text,marginTop:2}}>S{activeWeek.name.slice(1)}: <span style={{color:G.red,fontWeight:700}}>{fmt(activeWeek.dep)}</span></div>}
+        </div>
+        <div style={{fontSize:11,color:G.muted}}>{totalSem>0?fmt(totalSem)+" total":"Sem gastos"}</div>
+      </div>
+      {/* barras customizadas */}
+      <div style={{display:"flex",alignItems:"flex-end",gap:6,height:90}}>
+        {semanas.map((w,i)=>{
+          const hDep=maxBar>0?(w.dep/maxBar)*80:0;
+          const isActive=activeWeek?.name===w.name;
+          return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer"}}
+            onClick={()=>setActiveWeek(v=>v?.name===w.name?null:w)}>
+            <div style={{fontSize:9,color:isActive?G.red:G.muted,fontWeight:isActive?700:400,transition:"color .2s"}}>{w.dep>0?fmt(w.dep):""}</div>
+            <div style={{width:"100%",display:"flex",flexDirection:"column",justifyContent:"flex-end",height:72,gap:2}}>
+              <div style={{width:"100%",height:Math.max(hDep,w.dep>0?4:0),borderRadius:"6px 6px 0 0",
+                background:isActive?G.red:`linear-gradient(180deg,${G.red}cc,${G.red}66)`,
+                transition:"all .25s",boxShadow:isActive?`0 0 10px ${G.red}66`:""}}/>
+            </div>
+            <div style={{fontSize:10,color:isActive?G.text:G.muted,fontWeight:isActive?600:400}}>{w.name}</div>
+          </div>);
+        })}
+      </div>
+      {totalSem===0&&<div style={{textAlign:"center",color:G.muted,fontSize:13,padding:"20px 0"}}>Sem despesas este mês</div>}
+    </div>}
+
+    {/* ── AGENDADOS ─────────────────────────────────── */}
+    {agendados.length>0&&<div style={{background:G.yellow+"10",border:`1px solid ${G.yellow}33`,borderRadius:18,padding:"14px 16px",marginBottom:16}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.yellow,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+        <Ic d={ICON.clock} size={12} color={G.yellow}/> Próximos agendados
+      </div>
+      {agendados.map(l=>{const isR=l.tipo==="Receita";return(
+        <div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${G.yellow}20`}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:28,height:28,borderRadius:8,background:(isR?G.green:G.red)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <Ic d={isR?ICON.arrow_up:ICON.arrow_down} size={13} color={isR?G.green:G.red}/>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:G.text}}>{l.desc||l.cat}</div>
+              <div style={{fontSize:10,color:G.muted}}>{fmtD(l.data)}</div>
+            </div>
+          </div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:isR?G.green:G.red}}>{isR?"+":"-"}{fmt(l.valor)}</div>
+        </div>
+      );})}
+    </div>}
+
+    {/* ── CATEGORIAS VISUAL ─────────────────────────── */}
+    {cats.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"16px",marginBottom:16}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:14}}>Por categoria</div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {cats.slice(0,5).map(c=>{
+          const p=tD>0?c.v/tD*100:0;
+          return(<div key={c.name}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:14}}>{CAT_EMOJI[c.name]||"💸"}</span>
+                <span style={{fontSize:13,color:G.text}}>{c.name}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:10,color:G.muted}}>{p.toFixed(0)}%</span>
+                <span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:c.color}}>{hide?"•••":fmt(c.v)}</span>
+              </div>
+            </div>
+            <div style={{height:4,background:G.border,borderRadius:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${p}%`,background:`linear-gradient(90deg,${c.color},${c.color}99)`,borderRadius:4,transition:"width .4s ease"}}/>
+            </div>
+          </div>);
+        })}
+      </div>
+    </div>}
+
+    {/* ── ÚLTIMOS LANÇAMENTOS ───────────────────────── */}
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:"16px"}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Últimos lançamentos</div>
+      {lancs.length===0
+        ?<div style={{textAlign:"center",color:G.muted,padding:"24px 0",fontSize:13}}>Sem lançamentos ainda</div>
+        :[...lancs].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,7).map(l=><TxRow key={l.id} l={l} onDelete={onDelete}/>)
+      }
     </div>
   </div>);
 }
-
 // ─── LANCS VIEW ───────────────────────────────────────────────────────────────
 function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
   const [mf,setMf]=useState(curMes());
@@ -761,60 +895,44 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
 
 // ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
 function CarreiraView({uid,user,onPhotoSave}){
+  // ── perfil ───────────────────────────────────────
   const [perfil,setPerfil]=useState(null);
-  const [historico,setHistorico]=useState([]);
-  const [metas,setMetas]=useState([]);
-  const [gastos,setGastos]=useState([]);
-  const [secao,setSecao]=useState("sobre");
-  const [sheet,setSheet]=useState(null);
-  const [showCard,setShowCard]=useState(false);
+  const [editando,setEditando]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [fp,setFp]=useState({nome:"",bio:"",fotoUrl:"",humor:"",site:"",instagram:"",linkedin:""});
 
-  // forms
-  const [fp,setFp]=useState({
-    nome:"",cargo:"",empresa:"",area:AREAS[0],nivel:NIVEIS[0],
-    salarioAtual:"",desde:"",bio:"",fotoUrl:"",
-    linkedin:"",instagram:"",site:"",
-    skills:[],idiomas:[],
-    formacao:[]
-  });
-  const [fh,setFh]=useState({cargo:"",empresa:"",salario:"",data:today().slice(0,7),obs:""});
-  const [fm,setFm]=useState({titulo:"",valorAlvo:"",prazo:"",tipo:"Renda Mensal"});
-  const [fg,setFg]=useState({desc:"",cat:CATS_CARREIRA[0],valor:"",data:today(),retorno:""});
-  const [fform,setFform]=useState({curso:"",inst:"",ano:"",tipo:"Graduação"});
-  const [newSkill,setNewSkill]=useState("");
-  const [newIdioma,setNewIdioma]=useState("");
+  // ── rotinas ──────────────────────────────────────
+  const [rotinas,setRotinas]=useState([]);   // {id,texto,feita,ordem}
+  const [novaRotina,setNovaRotina]=useState("");
+  const [addingRotina,setAddingRotina]=useState(false);
+  const [roRenaming,setRoRenaming]=useState(null); // id being renamed
+  const [roRenameVal,setRoRenameVal]=useState("");
+
+  // ── metas pessoais ───────────────────────────────
+  const [metas,setMetas]=useState([]);
+  const [addingMeta,setAddingMeta]=useState(false);
+  const [novaMeta,setNovaMeta]=useState({titulo:"",emoji:"🎯",prazo:"",progresso:0,total:100});
 
   useEffect(()=>{
-    if(!uid) return;
-    async function load(){
-      try{
-        const pSnap=await getDoc(doc(db,"users",uid,"carreira","perfil"));
-        if(pSnap.exists()){
-          const d=pSnap.data();
-          setPerfil(d);
-          setFp(f=>({...f,...d,skills:d.skills||[],idiomas:d.idiomas||[],formacao:d.formacao||[]}));
-        }
-      }catch(e){console.warn("perfil:",e);}
-      try{
-        const hSnap=await getDocs(collection(db,"users",uid,"carreira_historico"));
-        setHistorico(hSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.data||"").localeCompare(a.data||"")));
-      }catch(e){console.warn("historico:",e);}
-      try{
-        const mSnap=await getDocs(collection(db,"users",uid,"carreira_metas"));
-        setMetas(mSnap.docs.map(d=>({id:d.id,...d.data()})));
-      }catch(e){console.warn("metas:",e);}
-      try{
-        const gSnap=await getDocs(collection(db,"users",uid,"carreira_gastos"));
-        setGastos(gSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.data||"").localeCompare(a.data||"")));
-      }catch(e){console.warn("gastos:",e);}
-    }
-    load();
+    if(!uid)return;
+    // Load perfil
+    getDoc(doc(db,"users",uid,"carreira","perfil")).then(s=>{
+      if(s.exists()){const d=s.data();setPerfil(d);setFp(f=>({...f,...d}));}
+    }).catch(()=>{});
+    // Load rotinas (ordered by ordem)
+    getDocs(collection(db,"users",uid,"rotinas")).then(s=>{
+      const list=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      setRotinas(list);
+    }).catch(()=>{});
+    // Load metas pessoais
+    getDocs(collection(db,"users",uid,"metas_pessoais")).then(s=>{
+      setMetas(s.docs.map(d=>({id:d.id,...d.data()})));
+    }).catch(()=>{});
   },[uid]);
 
+  // ── save perfil ──────────────────────────────────
   async function salvarPerfil(){
     setSaving(true);
-    // Comprime foto se for base64 grande (>200kb)
     let fotoFinal=fp.fotoUrl||"";
     if(fotoFinal.startsWith("data:image")&&fotoFinal.length>200000){
       try{
@@ -822,574 +940,347 @@ function CarreiraView({uid,user,onPhotoSave}){
           const img=new Image();
           img.onload=()=>{
             const canvas=document.createElement("canvas");
-            const MAX=400;
-            let w=img.width,h=img.height;
+            const MAX=400;let w=img.width,h=img.height;
             if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
             else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
             canvas.width=w;canvas.height=h;
             canvas.getContext("2d").drawImage(img,0,0,w,h);
             res(canvas.toDataURL("image/jpeg",0.7));
           };
-          img.onerror=rej;
-          img.src=fotoFinal;
+          img.onerror=rej;img.src=fotoFinal;
         });
       }catch(_){fotoFinal="";}
     }
-    const v={...fp,fotoUrl:fotoFinal,salarioAtual:parseFloat(fp.salarioAtual)||0,updatedAt:today()};
+    const v={...fp,fotoUrl:fotoFinal,updatedAt:today()};
     try{
       await setDoc(doc(db,"users",uid,"carreira","perfil"),v);
-      setPerfil(v);setSheet(null);if(v.fotoUrl&&onPhotoSave)onPhotoSave(v.fotoUrl);
-    }catch(e){
-      console.error(e);
-      if(e.message?.includes("1048487"))alert("Foto muito grande. Tire uma foto menor ou use uma URL.");
-      else alert("Erro ao salvar. Verifique as regras do Firestore.");
-    }
+      setPerfil(v);setEditando(false);
+      if(v.fotoUrl&&onPhotoSave)onPhotoSave(v.fotoUrl);
+    }catch(e){alert("Erro ao salvar: "+e.message);}
     setSaving(false);
   }
-  async function salvarHistorico(){
-    setSaving(true);
+
+  // ── rotinas CRUD ─────────────────────────────────
+  async function addRotina(){
+    if(!novaRotina.trim())return;
     try{
-      const v={...fh,salario:parseFloat(fh.salario)||0};
-      const ref=await addDoc(collection(db,"users",uid,"carreira_historico"),v);
-      setHistorico(p=>[{id:ref.id,...v},...p].sort((a,b)=>(b.data||"").localeCompare(a.data||"")));
-      setFh({cargo:"",empresa:"",salario:"",data:today().slice(0,7),obs:""});setSheet(null);
-    }catch(e){console.error(e);alert("Erro ao salvar.");}
-    setSaving(false);
+      const ref=await addDoc(collection(db,"users",uid,"rotinas"),{texto:novaRotina.trim(),feita:false,ordem:rotinas.length,criadoEm:today()});
+      setRotinas(p=>[...p,{id:ref.id,texto:novaRotina.trim(),feita:false,ordem:p.length}]);
+      setNovaRotina("");setAddingRotina(false);
+    }catch(e){console.error(e);}
   }
-  async function salvarMeta(){
-    setSaving(true);
+  async function toggleRotina(id){
+    const r=rotinas.find(r=>r.id===id);if(!r)return;
+    const nova=!r.feita;
+    setRotinas(p=>p.map(x=>x.id===id?{...x,feita:nova}:x));
+    try{await updateDoc(doc(db,"users",uid,"rotinas",id),{feita:nova});}catch(e){console.error(e);}
+  }
+  async function deleteRotina(id){
+    setRotinas(p=>p.filter(x=>x.id!==id));
+    try{await deleteDoc(doc(db,"users",uid,"rotinas",id));}catch(e){console.error(e);}
+  }
+  async function renameRotina(id){
+    if(!roRenameVal.trim())return;
+    setRotinas(p=>p.map(x=>x.id===id?{...x,texto:roRenameVal.trim()}:x));
+    setRoRenaming(null);
+    try{await updateDoc(doc(db,"users",uid,"rotinas",id),{texto:roRenameVal.trim()});}catch(e){console.error(e);}
+  }
+  async function resetRotinas(){
+    const updated=rotinas.map(r=>({...r,feita:false}));
+    setRotinas(updated);
+    try{await Promise.all(updated.map(r=>updateDoc(doc(db,"users",uid,"rotinas",r.id),{feita:false})));}catch(e){console.error(e);}
+  }
+
+  // ── metas pessoais CRUD ──────────────────────────
+  async function addMeta(){
+    if(!novaMeta.titulo.trim())return;
     try{
-      const v={...fm,valorAlvo:parseFloat(fm.valorAlvo)||0,valorAtual:0,createdAt:today()};
-      const ref=await addDoc(collection(db,"users",uid,"carreira_metas"),v);
+      const v={...novaMeta,progresso:0,criadoEm:today()};
+      const ref=await addDoc(collection(db,"users",uid,"metas_pessoais"),v);
       setMetas(p=>[...p,{id:ref.id,...v}]);
-      setFm({titulo:"",valorAlvo:"",prazo:"",tipo:"Renda Mensal"});setSheet(null);
-    }catch(e){console.error(e);alert("Erro ao salvar.");}
-    setSaving(false);
-  }
-  async function salvarGasto(){
-    setSaving(true);
-    try{
-      const v={...fg,valor:parseFloat(fg.valor)||0};
-      const ref=await addDoc(collection(db,"users",uid,"carreira_gastos"),v);
-      setGastos(p=>[{id:ref.id,...v},...p]);
-      setFg({desc:"",cat:CATS_CARREIRA[0],valor:"",data:today(),retorno:""});setSheet(null);
-    }catch(e){console.error(e);alert("Erro ao salvar.");}
-    setSaving(false);
-  }
-  async function deletarItem(col,id,setter){
-    try{
-      await deleteDoc(doc(db,"users",uid,col,id));
-      setter(p=>p.filter(x=>x.id!==id));
+      setNovaMeta({titulo:"",emoji:"🎯",prazo:"",progresso:0,total:100});setAddingMeta(false);
     }catch(e){console.error(e);}
   }
-  async function atualizarMeta(id,valorAtual){
-    try{
-      await updateDoc(doc(db,"users",uid,"carreira_metas",id),{valorAtual});
-      setMetas(p=>p.map(m=>m.id===id?{...m,valorAtual}:m));
-    }catch(e){console.error(e);}
+  async function updateMetaProgress(id,delta){
+    const m=metas.find(x=>x.id===id);if(!m)return;
+    const np=Math.max(0,Math.min(m.total||100,(m.progresso||0)+delta));
+    setMetas(p=>p.map(x=>x.id===id?{...x,progresso:np}:x));
+    try{await updateDoc(doc(db,"users",uid,"metas_pessoais",id),{progresso:np});}catch(e){console.error(e);}
+  }
+  async function deleteMeta(id){
+    setMetas(p=>p.filter(x=>x.id!==id));
+    try{await deleteDoc(doc(db,"users",uid,"metas_pessoais",id));}catch(e){console.error(e);}
   }
 
-  const addSkill=()=>{ if(newSkill.trim()){setFp(f=>({...f,skills:[...f.skills,newSkill.trim()]}));setNewSkill("");}};
-  const rmSkill=i=>setFp(f=>({...f,skills:f.skills.filter((_,j)=>j!==i)}));
-  const addIdioma=()=>{ if(newIdioma.trim()){setFp(f=>({...f,idiomas:[...f.idiomas,newIdioma.trim()]}));setNewIdioma("");}};
-  const rmIdioma=i=>setFp(f=>({...f,idiomas:f.idiomas.filter((_,j)=>j!==i)}));
-  const addForm=()=>{ if(fform.curso.trim()){setFp(f=>({...f,formacao:[...f.formacao,{...fform}]}));setFform({curso:"",inst:"",ano:"",tipo:"Graduação"});}};
-  const rmForm=i=>setFp(f=>({...f,formacao:f.formacao.filter((_,j)=>j!==i)}));
+  const feitas=rotinas.filter(r=>r.feita).length;
+  const total=rotinas.length;
+  const progRot=total>0?feitas/total:0;
+  const HUMORES=["😄","😊","😐","😔","😤","😴","🤩","😰"];
 
-  const totalGastos=gastos.reduce((s,g)=>s+g.valor,0);
-  const salAtual=perfil?.salarioAtual||0;
-  const ultimoAumento=historico.length>1?(historico[0].salario-historico[1].salario):0;
-  const nomeExibido=perfil?.nome||(user?.displayName)||"";
+  return(<div style={{paddingBottom:24,display:"flex",flexDirection:"column",gap:16}}>
 
-  const SECOES=[
-    {id:"sobre",icon:<Ic d={ICON.user} size={15}/>,label:"Sobre"},
-    {id:"historico",icon:<Ic d={ICON.chart} size={15}/>,label:"Histórico"},
-    {id:"metas",icon:<Ic d={ICON.target} size={15}/>,label:"Metas"},
-    {id:"gastos",icon:<Ic d={ICON.briefcase} size={15}/>,label:"Gastos"},
-  ];
+    {/* ── HERO IDENTIDADE ──────────────────────────── */}
+    <div style={{background:"linear-gradient(135deg,#0f0f1e,#1a1040)",borderRadius:24,padding:"24px 20px",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:-30,right:-30,width:140,height:140,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}28,transparent 70%)`,pointerEvents:"none"}}/>
 
-  // ── CARD VISUAL ──────────────────────────────────────────────────────────────
-  const CardVisita=()=>(
-    <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,.85)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{width:"100%",maxWidth:360}}>
-        {/* The Card */}
-        <div id="profile-card" style={{background:G.card,border:`1px solid ${G.border2}`,borderRadius:24,padding:"28px 24px",position:"relative",overflow:"hidden"}}>
-          {/* BG decoration */}
-          <div style={{position:"absolute",top:-60,right:-60,width:200,height:200,borderRadius:"50%",background:`radial-gradient(circle,${G.orange}20,transparent 65%)`,pointerEvents:"none"}}/>
-          <div style={{position:"absolute",bottom:-40,left:-40,width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}15,transparent 65%)`,pointerEvents:"none"}}/>
-
-          {/* Top row */}
-          <div style={{display:"flex",alignItems:"flex-start",gap:16,marginBottom:20,position:"relative"}}>
-            <div style={{width:64,height:64,borderRadius:18,flexShrink:0,overflow:"hidden",border:`2px solid ${G.orange}55`,background:`linear-gradient(135deg,${G.orange}44,${G.accent}44)`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {perfil?.fotoUrl
-                ?<img src={perfil.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                :<span style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:G.orange}}>{nomeExibido?nomeExibido[0].toUpperCase():"?"}</span>}
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,lineHeight:1.2,marginBottom:4,color:G.text}}>{nomeExibido||"Seu Nome"}</div>
-              <div style={{fontSize:13,fontWeight:600,color:G.orange}}>{perfil?.cargo||"Cargo"}</div>
-              <div style={{fontSize:12,color:G.muted,marginTop:2}}>{perfil?.empresa||""}{perfil?.empresa&&perfil?.area?" · ":""}{perfil?.area||""}</div>
-            </div>
-          </div>
-
-          {/* Nível + área tags */}
-          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap",position:"relative"}}>
-            {perfil?.nivel&&<Tag color={G.orange}>{perfil.nivel}</Tag>}
-            {perfil?.desde&&<Tag color={G.muted}>desde {perfil.desde}</Tag>}
-          </div>
-
-          {/* Bio */}
-          {perfil?.bio&&<div style={{fontSize:12,color:G.muted,lineHeight:1.6,marginBottom:16,padding:"12px 14px",background:"rgba(255,255,255,.04)",borderRadius:12,position:"relative"}}>{perfil.bio}</div>}
-
-          {/* Skills */}
-          {perfil?.skills?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Skills</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {(perfil.skills||[]).map((s,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${G.accent}22`,color:G.accent,border:`1px solid ${G.accent}33`}}>{s}</span>)}
-            </div>
-          </div>}
-
-          {/* Formação */}
-          {perfil?.formacao?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Formação</div>
-            {(perfil.formacao||[]).slice(0,2).map((f,i)=><div key={i} style={{fontSize:12,color:G.text,marginBottom:4}}>{f.curso}{f.inst?" — "+f.inst:""}{f.ano?" ("+f.ano+")":""}</div>)}
-          </div>}
-
-          {/* Idiomas */}
-          {perfil?.idiomas?.length>0&&<div style={{marginBottom:16,position:"relative"}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Idiomas</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {(perfil.idiomas||[]).map((s,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${G.blue}22`,color:G.blue,border:`1px solid ${G.blue}33`}}>{s}</span>)}
-            </div>
-          </div>}
-
-          {/* Redes */}
-          <div style={{display:"flex",gap:10,flexWrap:"wrap",position:"relative"}}>
-            {perfil?.linkedin&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#60A5FA"}}> {perfil.linkedin}</div>}
-            {perfil?.instagram&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#E879F9"}}> {perfil.instagram}</div>}
-            {perfil?.site&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:G.green}}>🔗 {perfil.site}</div>}
-          </div>
-
-          {/* Bottom watermark */}
-          <div style={{marginTop:20,paddingTop:14,borderTop:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"relative"}}>
-            <span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:G.muted}}>fin<span style={{color:G.accent}}>ance</span></span>
-            <span style={{fontSize:10,color:G.border2}}>fincance-app.vercel.app</span>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div style={{display:"flex",gap:10,marginTop:16}}>
-          <button onClick={()=>{
-            if(navigator.share){navigator.share({title:`${nomeExibido} — Perfil Profissional`,text:`${perfil?.cargo||""} ${perfil?.empresa?`@ ${perfil.empresa}`:""}`,url:window.location.href});}
-            else{navigator.clipboard?.writeText(window.location.href);alert("Link copiado!");}
-          }} className="press" style={{flex:1,padding:"14px",borderRadius:14,border:"none",background:G.orange,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-            Compartilhar
-          </button>
-          <button onClick={()=>setShowCard(false)} className="press" style={{padding:"14px 20px",borderRadius:14,border:`1px solid ${G.border2}`,background:"none",color:G.muted,fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  return(<div style={{paddingBottom:8}}>
-    {showCard&&<CardVisita/>}
-
-    {/* ── HERO PERFIL ─────────────────────────────────────────────── */}
-    <div style={{background:"linear-gradient(145deg,#1a1040,#0d0d1a)",border:`1px solid ${G.border}`,borderRadius:20,padding:"20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${G.orange}18,transparent 70%)`,pointerEvents:"none"}}/>
-      {perfil?(
+      {!editando?(
         <div>
-          <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:14}}>
-            {/* Avatar */}
-            <div style={{width:58,height:58,borderRadius:16,flexShrink:0,overflow:"hidden",border:`2px solid ${G.orange}55`,background:`linear-gradient(135deg,${G.orange}44,${G.accent}44)`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}} onClick={()=>setSheet("perfil")}>
-              {perfil.fotoUrl
-                ?<img src={perfil.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                :<span style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:G.orange}}>{nomeExibido?nomeExibido[0].toUpperCase():"?"}</span>}
+          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
+            {/* avatar */}
+            <div style={{width:72,height:72,borderRadius:"50%",flexShrink:0,border:`2px solid ${G.accent}55`,overflow:"hidden",background:G.card2,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {perfil?.fotoUrl
+                ?<img src={perfil.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                :<Ic d={ICON.user} size={28} color={G.muted}/>
+              }
             </div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,lineHeight:1.2}}>{nomeExibido||"Seu nome"}</div>
-              <div style={{fontSize:13,color:G.orange,fontWeight:600,marginTop:1}}>{perfil.cargo||"—"}</div>
-              <div style={{fontSize:12,color:G.muted}}>{perfil.empresa||""}{perfil.empresa&&perfil.area?" · ":""}{perfil.area}</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"#fff",lineHeight:1.1}}>{perfil?.nome||user?.displayName||"Sem nome"}</div>
+              {perfil?.humor&&<div style={{fontSize:18,marginTop:4}}>{perfil.humor}</div>}
             </div>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowCard(true)} className="press" title="Ver cartão" style={{width:34,height:34,borderRadius:10,border:`1px solid ${G.orange}55`,background:G.orange+"18",color:G.orange,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>◻</button>
-              <button onClick={()=>setSheet("perfil")} style={{width:34,height:34,borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}></button>
-            </div>
+            <button onClick={()=>setEditando(true)} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <Ic d={ICON.edit} size={15} color="rgba(255,255,255,.6)"/>
+            </button>
           </div>
-          {/* KPIs */}
-          <div style={{display:"flex",borderTop:`1px solid ${G.border}`,paddingTop:12}}>
-            {[{l:"Salário",v:fmtK(salAtual),c:G.green},{l:"Investido",v:fmtK(totalGastos),c:G.orange},{l:"Aumento",v:(ultimoAumento>=0?"+":"")+fmtK(ultimoAumento),c:ultimoAumento>=0?G.green:G.red}].map((k,i)=>(
-              <div key={i} style={{flex:1,borderRight:i<2?`1px solid ${G.border}`:"none",paddingRight:i<2?12:0,paddingLeft:i>0?12:0}}>
-                <div style={{fontSize:10,color:G.muted,marginBottom:2}}>{k.l}</div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:k.c}}>{k.v}</div>
-              </div>
-            ))}
+          {perfil?.bio&&<p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.6,margin:"0 0 12px"}}>{perfil.bio}</p>}
+          {/* links sociais */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {perfil?.instagram&&<a href={`https://instagram.com/${perfil.instagram.replace("@","")}`} target="_blank" rel="noreferrer"
+              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.6)"}}>
+              📸 @{perfil.instagram.replace("@","")}
+            </a>}
+            {perfil?.site&&<a href={perfil.site} target="_blank" rel="noreferrer"
+              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.6)"}}>
+              🌐 Site
+            </a>}
           </div>
-          {/* Skills preview */}
-          {perfil.skills?.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
-            {(perfil.skills||[]).slice(0,4).map((s,i)=><Tag key={i} color={G.accent}>{s}</Tag>)}
-            {(perfil.skills||[]).length>4&&<Tag color={G.muted}>+{(perfil.skills||[]).length-4}</Tag>}
-          </div>}
         </div>
       ):(
-        <div style={{textAlign:"center",padding:"8px 0"}}>
-          <div style={{fontSize:36,marginBottom:8}}>◈</div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,marginBottom:6}}>Crie seu perfil</div>
-          <div style={{fontSize:13,color:G.muted,marginBottom:16}}>Cargo, salário, skills e muito mais</div>
-          <button onClick={()=>setSheet("perfil")} className="press" style={{padding:"12px 28px",borderRadius:20,border:"none",background:G.orange,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>+ Criar perfil</button>
+        /* ── FORM EDITAR ───────────────────────────── */
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:"#fff",marginBottom:4}}>Editar perfil</div>
+
+          {/* foto */}
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:60,height:60,borderRadius:"50%",overflow:"hidden",background:G.card2,flexShrink:0,border:`2px solid ${G.accent}44`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {fp.fotoUrl?<img src={fp.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<Ic d={ICON.user} size={22} color={G.muted}/>}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:6}}>URL da foto ou base64</div>
+              <input value={fp.fotoUrl||""} onChange={e=>setFp(f=>({...f,fotoUrl:e.target.value}))}
+                placeholder="https://... ou tire uma foto"
+                className="inp" style={{width:"100%",fontSize:12}}/>
+              <label style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:6,cursor:"pointer",fontSize:11,color:G.accent}}>
+                <Ic d={ICON.camera} size={12} color={G.accent}/> Câmera
+                <input type="file" accept="image/*" capture="user" style={{display:"none"}}
+                  onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=x=>setFp(p=>({...p,fotoUrl:x.target.result}));r.readAsDataURL(f);}}/>
+              </label>
+            </div>
+          </div>
+
+          {[{l:"Nome",k:"nome",ph:"Seu nome"},{l:"Bio",k:"bio",ph:"Uma linha sobre você..."},{l:"Instagram",k:"instagram",ph:"@usuario"},{l:"Site",k:"site",ph:"https://..."}].map(({l,k,ph})=>(
+            <div key={k}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>{l}</div>
+              <input value={fp[k]||""} onChange={e=>setFp(f=>({...f,[k]:e.target.value}))} placeholder={ph} className="inp" style={{width:"100%"}}/>
+            </div>
+          ))}
+
+          {/* humor */}
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:6}}>Como você está hoje?</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {HUMORES.map(h=>(
+                <button key={h} onClick={()=>setFp(f=>({...f,humor:f.humor===h?"":h}))}
+                  style={{fontSize:22,background:fp.humor===h?"rgba(255,255,255,.15)":"transparent",border:`1px solid ${fp.humor===h?"rgba(255,255,255,.3)":"transparent"}`,borderRadius:10,padding:"4px 6px",cursor:"pointer",transition:"all .15s"}}>
+                  {h}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={salvarPerfil} disabled={saving} className="press"
+              style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:G.accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              {saving?"Salvando...":"Salvar"}
+            </button>
+            <button onClick={()=>setEditando(false)} className="press"
+              style={{padding:"12px 16px",borderRadius:12,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.06)",color:"rgba(255,255,255,.5)",cursor:"pointer"}}>
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
     </div>
 
-    {/* ── TABS ──────────────────────────────────────────────────────── */}
-    <div style={{display:"flex",gap:0,marginBottom:16,background:G.card2,borderRadius:12,padding:4}}>
-      {SECOES.map(s=><button key={s.id} onClick={()=>setSecao(s.id)} style={{flex:1,padding:"9px 4px",borderRadius:9,border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:600,fontSize:11,background:secao===s.id?G.card:G.card2,color:secao===s.id?G.text:G.muted,transition:"all .15s",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span>{s.icon}</span>{s.label}</button>)}
-    </div>
-
-    {/* ── SOBRE ─────────────────────────────────────────────────────── */}
-    {secao==="sobre"&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
-      {!perfil?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:24,textAlign:"center",color:G.muted}}>
-        <div style={{fontSize:13,marginBottom:12}}>Configure seu perfil para começar</div>
-        <button onClick={()=>setSheet("perfil")} className="press" style={{padding:"10px 24px",borderRadius:20,border:"none",background:G.orange,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Configurar</button>
-      </div>:<>
-        {/* Info geral */}
-        <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Informações Profissionais</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            {[{l:"Cargo",v:perfil.cargo},{l:"Empresa",v:perfil.empresa||"—"},{l:"Área",v:perfil.area},{l:"Nível",v:perfil.nivel},{l:"Desde",v:perfil.desde||"—"},{l:"Salário",v:fmt(salAtual)}].map((f,i)=>(
-              <div key={i}><div style={{fontSize:10,color:G.muted,textTransform:"uppercase",letterSpacing:.8,marginBottom:2}}>{f.l}</div><div style={{fontSize:13,fontWeight:500}}>{f.v}</div></div>
-            ))}
-          </div>
-          {perfil.bio&&<div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${G.border}`}}>
-            <div style={{fontSize:10,color:G.muted,textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>Bio</div>
-            <div style={{fontSize:13,color:G.muted,lineHeight:1.6}}>{perfil.bio}</div>
-          </div>}
+    {/* ── ROTINAS DO DIA ───────────────────────────── */}
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"18px 16px"}}>
+      {/* header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:G.text}}>Rotinas do dia</div>
+          {total>0&&<div style={{fontSize:11,color:G.muted,marginTop:1}}>{feitas}/{total} concluídas</div>}
         </div>
-
-        {/* Skills */}
-        <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Skills</div>
-            <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
-          </div>
-          {perfil.skills?.length>0
-            ?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(perfil.skills||[]).map((s,i)=><Tag key={i} color={G.accent}>{s}</Tag>)}</div>
-            :<div style={{fontSize:13,color:G.muted}}>Nenhuma skill adicionada</div>}
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {total>0&&feitas>0&&<button onClick={resetRotinas} className="press"
+            style={{fontSize:11,color:G.muted,background:"none",border:`1px solid ${G.border}`,borderRadius:20,padding:"4px 10px",cursor:"pointer"}}>
+            Resetar
+          </button>}
+          <button onClick={()=>setAddingRotina(true)} className="press"
+            style={{width:32,height:32,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Ic d={ICON.plus} size={16}/>
+          </button>
         </div>
-
-        {/* Formação */}
-        <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Formação Acadêmica</div>
-            <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
-          </div>
-          {perfil.formacao?.length>0
-            ?(perfil.formacao||[]).map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<(perfil.formacao||[]).length-1?`1px solid ${G.border}`:"none"}}>
-                <div style={{width:34,height:34,borderRadius:10,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}></div>
-                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{f.curso}</div><div style={{fontSize:11,color:G.muted}}>{f.tipo}{f.inst?" · "+f.inst:""}{f.ano?" · "+f.ano:""}</div></div>
-              </div>)
-            :<div style={{fontSize:13,color:G.muted}}>Nenhuma formação adicionada</div>}
-        </div>
-
-        {/* Idiomas */}
-        <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Idiomas</div>
-            <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
-          </div>
-          {perfil.idiomas?.length>0
-            ?<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(perfil.idiomas||[]).map((s,i)=><Tag key={i} color={G.blue}>{s}</Tag>)}</div>
-            :<div style={{fontSize:13,color:G.muted}}>Nenhum idioma adicionado</div>}
-        </div>
-
-        {/* Redes sociais */}
-        <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Redes & Contato</div>
-            <button onClick={()=>setSheet("perfil")} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ editar</button>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {perfil.linkedin?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}></span><span style={{color:"#60A5FA"}}>{perfil.linkedin}</span></div>:<div style={{fontSize:13,color:G.border2}}> LinkedIn não adicionado</div>}
-            {perfil.instagram?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}><Ic d={ICON.camera} size={16}/></span><span style={{color:"#E879F9"}}>{perfil.instagram}</span></div>:<div style={{fontSize:13,color:G.border2}}> Instagram não adicionado</div>}
-            {perfil.site?<div style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}><span style={{width:28,textAlign:"center"}}><Ic d={ICON.link} size={16}/></span><span style={{color:G.green}}>{perfil.site}</span></div>:<div style={{fontSize:13,color:G.border2}}>🔗 Site não adicionado</div>}
-          </div>
-        </div>
-
-        {/* Botão card */}
-        <button onClick={()=>setShowCard(true)} className="press" style={{width:"100%",padding:"15px",borderRadius:14,border:`1px solid ${G.orange}55`,background:G.orange+"18",color:G.orange,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          ◻ Ver meu cartão de visita
-        </button>
-      </>}
-    </div>}
-
-    {/* ── HISTÓRICO ─────────────────────────────────────────────────── */}
-    {secao==="historico"&&<div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <span style={{fontSize:13,fontWeight:600,color:G.muted}}>{historico.length} registro{historico.length!==1?"s":""}</span>
-        <button onClick={()=>setSheet("historico")} className="press" style={{padding:"8px 16px",borderRadius:20,border:`1px solid ${G.orange}55`,background:G.orange+"18",color:G.orange,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Adicionar</button>
       </div>
-      {historico.length>1&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 8px 8px",marginBottom:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12,paddingLeft:10}}>Evolução Salarial</div>
-        <ResponsiveContainer width="100%" height={140}>
-          <LineChart data={[...historico].reverse().map(h=>({name:h.data?.slice(0,7)||"",valor:h.salario}))} margin={{left:-14,right:8}}>
-            <XAxis dataKey="name" tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-            <YAxis tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
-            <Tooltip contentStyle={{background:G.card2,border:`1px solid ${G.border2}`,borderRadius:10,fontSize:11}} cursor={{stroke:G.border2}}/>
-            <Line type="monotone" dataKey="valor" name="Salário" stroke={G.orange} strokeWidth={2} dot={{fill:G.orange,r:4}} activeDot={{r:6}}/>
-          </LineChart>
-        </ResponsiveContainer>
+
+      {/* barra de progresso */}
+      {total>0&&<div style={{marginBottom:14}}>
+        <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${progRot*100}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6,transition:"width .4s ease"}}/>
+        </div>
+        {progRot===1&&<div style={{fontSize:12,color:G.green,marginTop:6,textAlign:"center",fontWeight:600}}>🎉 Todas concluídas!</div>}
       </div>}
-      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,overflow:"hidden"}}>
-        {historico.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhum histórico ainda</div></div>
-          :<div style={{padding:"0 16px"}}>
-          {historico.map((h,i)=>{
-            const aum=i<historico.length-1?h.salario-historico[i+1].salario:0;
-            return(<div key={h.id} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<historico.length-1?`1px solid ${G.border}`:"none"}}>
-              <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:G.orange+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}></div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.cargo}</div>
-                <div style={{fontSize:11,color:G.muted,marginTop:2}}>{h.empresa||"—"} · {h.data}</div>
-                {h.obs&&<div style={{fontSize:11,color:G.muted}}>{h.obs}</div>}
-              </div>
-              <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:G.orange}}>{fmtK(h.salario)}</div>
-                {aum!==0&&<div style={{fontSize:11,color:aum>0?G.green:G.red}}>{aum>0?"+":""}{fmtK(aum)}</div>}
-              </div>
-              <button onClick={()=>deletarItem("carreira_historico",h.id,setHistorico)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
-            </div>);
-          })}
+
+      {/* lista */}
+      {rotinas.length===0&&!addingRotina&&(
+        <div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
+          <div style={{fontSize:28,marginBottom:8}}>✅</div>
+          <div>Nenhuma rotina ainda</div>
+          <div style={{fontSize:12,marginTop:4}}>Toque + para adicionar</div>
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+        {rotinas.map(r=>(
+          <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:12,background:r.feita?G.green+"0a":"transparent",border:`1px solid ${r.feita?G.green+"33":G.border}`,transition:"all .2s"}}>
+            {/* checkbox */}
+            <button onClick={()=>toggleRotina(r.id)} className="press"
+              style={{width:22,height:22,borderRadius:6,border:`2px solid ${r.feita?G.green:G.border}`,background:r.feita?G.green:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s"}}>
+              {r.feita&&<Ic d={ICON.check} size={12} color="#fff"/>}
+            </button>
+
+            {/* texto ou input rename */}
+            {roRenaming===r.id
+              ?<input autoFocus value={roRenameVal} onChange={e=>setRoRenameVal(e.target.value)}
+                  onKeyDown={e=>{if(e.key==="Enter")renameRotina(r.id);if(e.key==="Escape")setRoRenaming(null);}}
+                  onBlur={()=>renameRotina(r.id)}
+                  className="inp" style={{flex:1,fontSize:13,padding:"2px 8px"}}/>
+              :<span onClick={()=>{setRoRenaming(r.id);setRoRenameVal(r.texto);}} style={{flex:1,fontSize:13,color:r.feita?G.muted:G.text,textDecoration:r.feita?"line-through":"none",cursor:"text",transition:"all .2s"}}>{r.texto}</span>
+            }
+
+            {/* delete */}
+            <button onClick={()=>deleteRotina(r.id)} className="press"
+              style={{width:24,height:24,borderRadius:6,border:"none",background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:.5}}>
+              <Ic d={ICON.x} size={12}/>
+            </button>
+          </div>
+        ))}
+
+        {/* input nova rotina */}
+        {addingRotina&&<div style={{display:"flex",gap:8,marginTop:4}}>
+          <input autoFocus value={novaRotina} onChange={e=>setNovaRotina(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")addRotina();if(e.key==="Escape"){setAddingRotina(false);setNovaRotina("");}}}
+            placeholder="Ex: Beber água, Meditar 10min..."
+            className="inp" style={{flex:1,fontSize:13}}/>
+          <button onClick={addRotina} className="press" style={{padding:"8px 14px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700}}>+</button>
+          <button onClick={()=>{setAddingRotina(false);setNovaRotina("");}} className="press" style={{padding:"8px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>✕</button>
         </div>}
       </div>
-    </div>}
+    </div>
 
-    {/* ── METAS ─────────────────────────────────────────────────────── */}
-    {secao==="metas"&&<div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <span style={{fontSize:13,fontWeight:600,color:G.muted}}>{metas.length} meta{metas.length!==1?"s":""}</span>
-        <button onClick={()=>setSheet("meta")} className="press" style={{padding:"8px 16px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Nova Meta</button>
+    {/* ── METAS PESSOAIS ───────────────────────────── */}
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"18px 16px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,color:G.text}}>Metas pessoais</div>
+        <button onClick={()=>setAddingMeta(true)} className="press"
+          style={{width:32,height:32,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic d={ICON.plus} size={16}/>
+        </button>
       </div>
-      {metas.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhuma meta cadastrada</div></div>
-        :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+      {metas.length===0&&!addingMeta&&(
+        <div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
+          <div style={{fontSize:28,marginBottom:8}}>🎯</div>
+          <div>Nenhuma meta ainda</div>
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {metas.map(m=>{
-          const p=m.valorAlvo>0?Math.min(100,((m.valorAtual||0)/m.valorAlvo)*100):0;
-          const faltam=Math.max(0,(m.valorAlvo||0)-(m.valorAtual||0));
-          return(<div key={m.id} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:10}}>
-              <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{m.titulo}</div>
-                <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}><Tag color={G.accent}>{m.tipo}</Tag>{m.prazo&&<span style={{fontSize:11,color:G.muted}}>📅 {m.prazo}</span>}</div>
+          const p=Math.min((m.progresso||0)/(m.total||100),1);
+          const done=p>=1;
+          return(<div key={m.id} style={{background:G.card2,borderRadius:14,padding:"12px 14px",border:`1px solid ${done?G.green+"44":G.border}`}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:18}}>{m.emoji||"🎯"}</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:done?G.green:G.text}}>{m.titulo}</div>
+                  {m.prazo&&<div style={{fontSize:10,color:G.muted}}>até {fmtD(m.prazo)}</div>}
+                </div>
               </div>
-              <button onClick={()=>deletarItem("carreira_metas",m.id,setMetas)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,fontFamily:"'Fraunces',serif",fontWeight:700,color:done?G.green:G.accent}}>{(p*100).toFixed(0)}%</span>
+                <button onClick={()=>deleteMeta(m.id)} style={{background:"none",border:"none",cursor:"pointer",color:G.muted,display:"flex",alignItems:"center"}}>
+                  <Ic d={ICON.x} size={12}/>
+                </button>
+              </div>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-              <div><div style={{fontSize:10,color:G.muted,marginBottom:2}}>Atual</div><div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.green}}>{fmtK(m.valorAtual||0)}</div></div>
-              <div style={{textAlign:"right"}}><div style={{fontSize:10,color:G.muted,marginBottom:2}}>Meta</div><div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.accent}}>{fmtK(m.valorAlvo)}</div></div>
+            {/* barra */}
+            <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden",marginBottom:8}}>
+              <div style={{height:"100%",width:`${p*100}%`,background:done?`linear-gradient(90deg,${G.green},${G.green}99)`:`linear-gradient(90deg,${G.accent},${G.accent}99)`,borderRadius:6,transition:"width .4s"}}/>
             </div>
-            <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden",marginBottom:8}}><div style={{height:"100%",width:`${p}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6,transition:"width .4s"}}/></div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:12,color:G.muted}}>{p.toFixed(0)}% · faltam {fmtK(faltam)}</span>
-              <input type="number" placeholder="Atualizar R$" onBlur={e=>{const v=parseFloat(e.target.value);if(v)atualizarMeta(m.id,v);e.target.value="";}} style={{width:120,padding:"6px 10px",background:G.card2,border:`1px solid ${G.border2}`,borderRadius:8,color:G.text,fontSize:12,outline:"none",textAlign:"right"}}/>
+            {/* controles */}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:G.muted,flex:1}}>{m.progresso||0} / {m.total||100}</span>
+              {!done&&<>
+                <button onClick={()=>updateMetaProgress(m.id,-10)} className="press"
+                  style={{width:28,height:28,borderRadius:8,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Ic d={ICON.minus} size={12}/>
+                </button>
+                <button onClick={()=>updateMetaProgress(m.id,10)} className="press"
+                  style={{width:28,height:28,borderRadius:8,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Ic d={ICON.plus} size={12}/>
+                </button>
+              </>}
+              {done&&<span style={{fontSize:11,color:G.green,fontWeight:700}}>🎉 Concluída!</span>}
             </div>
           </div>);
         })}
-      </div>}
-    </div>}
-
-    {/* ── GASTOS ────────────────────────────────────────────────────── */}
-    {secao==="gastos"&&<div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <span style={{fontSize:13,fontWeight:600,color:G.muted}}>Total: {fmt(totalGastos)}</span>
-        <button onClick={()=>setSheet("gasto")} className="press" style={{padding:"8px 16px",borderRadius:20,border:`1px solid ${G.yellow}55`,background:G.yellow+"18",color:G.yellow,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Adicionar</button>
       </div>
-      {gastos.length>0&&(()=>{
-        const porCat=CATS_CARREIRA.map(c=>({c,v:gastos.filter(g=>g.cat===c).reduce((s,g)=>s+g.valor,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
-        return(<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:16}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Por Categoria</div>
-          {porCat.map(x=>{const p=totalGastos>0?x.v/totalGastos*100:0;return(<div key={x.c} style={{marginBottom:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:13}}>{x.c}</span><span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:G.yellow}}>{fmtK(x.v)}</span></div>
-            <div style={{height:3,background:G.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:G.yellow,borderRadius:3}}/></div>
-          </div>);})}
-        </div>);
-      })()}
-      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,overflow:"hidden"}}>
-        {gastos.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}></div><div>Nenhum gasto registrado</div></div>
-          :<div style={{padding:"0 16px"}}>
-          {gastos.map((g,i)=>(
-            <div key={g.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<gastos.length-1?`1px solid ${G.border}`:"none"}}>
-              <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:G.yellow+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}></div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.desc||g.cat}</div>
-                <div style={{display:"flex",gap:6,marginTop:2,flexWrap:"wrap"}}>
-                  <span style={{fontSize:11,color:G.muted}}>{fmtD(g.data)}</span>
-                  <Tag color={G.yellow}>{g.cat}</Tag>
-                  {g.retorno&&<span style={{fontSize:11,color:G.green}}>↑ {g.retorno}</span>}
-                </div>
-              </div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:G.yellow,flexShrink:0}}>{fmtK(g.valor)}</div>
-              <button onClick={()=>deletarItem("carreira_gastos",g.id,setGastos)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px"}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
-            </div>
+
+      {/* form nova meta */}
+      {addingMeta&&<div style={{background:G.card2,borderRadius:14,padding:"14px",marginTop:10,display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{fontSize:12,fontWeight:700,color:G.text}}>Nova meta</div>
+        {/* emoji picker simples */}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {["🎯","💪","📚","✈️","🏃","🎸","💰","🧘","🏋️","🌱","❤️","⭐"].map(e=>(
+            <button key={e} onClick={()=>setNovaMeta(m=>({...m,emoji:e}))}
+              style={{fontSize:18,padding:"4px 6px",borderRadius:8,border:`1px solid ${novaMeta.emoji===e?G.accent:"transparent"}`,background:novaMeta.emoji===e?G.accent+"22":"transparent",cursor:"pointer"}}>
+              {e}
+            </button>
           ))}
-        </div>}
-      </div>
-    </div>}
-
-    {/* ── SHEET PERFIL COMPLETO ─────────────────────────────────────── */}
-    <Sheet open={sheet==="perfil"} onClose={()=>setSheet(null)} title="Editar Perfil">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        {/* Foto Upload */}
-        <div>
-          <Lbl opt>Foto de Perfil</Lbl>
-          <div style={{display:"flex",alignItems:"center",gap:14}}>
-            <div style={{width:64,height:64,borderRadius:16,overflow:"hidden",flexShrink:0,border:`1px solid ${G.border2}`,background:G.card2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,color:G.muted}}>
-              {fp.fotoUrl
-                ?<img src={fp.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                :""}
-            </div>
-            <div style={{flex:1}}>
-              <label style={{display:"block",padding:"11px 14px",borderRadius:12,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:13,fontWeight:700,cursor:"pointer",textAlign:"center"}}>
-                Escolher foto
-                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
-                  const file=e.target.files?.[0];
-                  if(!file)return;
-                  if(file.size>5*1024*1024){alert("Foto muito grande. Máx 5MB.");return;}
-                  const reader=new FileReader();
-                  reader.onload=ev=>setFp(f=>({...f,fotoUrl:ev.target.result}));
-                  reader.readAsDataURL(file);
-                }}/>
-              </label>
-              {fp.fotoUrl&&<button onClick={()=>setFp(f=>({...f,fotoUrl:""}))} style={{width:"100%",marginTop:6,padding:"7px",borderRadius:10,border:"none",background:"none",color:G.muted,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>× Remover foto</button>}
-              <div style={{fontSize:11,color:G.muted,marginTop:4,textAlign:"center"}}>JPG, PNG • máx 5MB</div>
-            </div>
+        </div>
+        <input value={novaMeta.titulo} onChange={e=>setNovaMeta(m=>({...m,titulo:e.target.value}))}
+          placeholder="Título da meta" className="inp" style={{fontSize:13}}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div>
+            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Meta (total)</div>
+            <input type="number" value={novaMeta.total} onChange={e=>setNovaMeta(m=>({...m,total:parseInt(e.target.value)||100}))}
+              className="inp" style={{fontSize:13,width:"100%"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Prazo (opcional)</div>
+            <input type="date" value={novaMeta.prazo} onChange={e=>setNovaMeta(m=>({...m,prazo:e.target.value}))}
+              className="inp" style={{fontSize:13,width:"100%"}}/>
           </div>
         </div>
-        <div><Lbl>Nome completo</Lbl><input value={fp.nome} onChange={e=>setFp(f=>({...f,nome:e.target.value}))} placeholder="Seu nome" className="inp"/></div>
-        <div><Lbl>Cargo atual</Lbl><input value={fp.cargo} onChange={e=>setFp(f=>({...f,cargo:e.target.value}))} placeholder="Ex: Desenvolvedor Sênior" className="inp"/></div>
-        <div><Lbl opt>Empresa</Lbl><input value={fp.empresa} onChange={e=>setFp(f=>({...f,empresa:e.target.value}))} placeholder="Ex: Google" className="inp"/></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Área</Lbl><select value={fp.area} onChange={e=>setFp(f=>({...f,area:e.target.value}))} className="inp">{AREAS.map(a=><option key={a}>{a}</option>)}</select></div>
-          <div><Lbl>Nível</Lbl><select value={fp.nivel} onChange={e=>setFp(f=>({...f,nivel:e.target.value}))} className="inp">{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={addMeta} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Criar meta</button>
+          <button onClick={()=>setAddingMeta(false)} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>Cancelar</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Salário (R$)</Lbl><input type="number" value={fp.salarioAtual} onChange={e=>setFp(f=>({...f,salarioAtual:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl opt>Desde</Lbl><input type="month" value={fp.desde} onChange={e=>setFp(f=>({...f,desde:e.target.value}))} className="inp"/></div>
-        </div>
-        <div><Lbl opt>Bio</Lbl><textarea value={fp.bio} onChange={e=>setFp(f=>({...f,bio:e.target.value}))} placeholder="Sua trajetória, objetivos..." rows={3} className="inp" style={{resize:"none",lineHeight:1.5}}/></div>
+      </div>}
+    </div>
 
-        {/* Redes */}
-        <div style={{borderTop:`1px solid ${G.border}`,paddingTop:14}}>
-          <div style={{fontSize:12,fontWeight:700,color:G.muted,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>Redes & Contato</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}></span><input value={fp.linkedin} onChange={e=>setFp(f=>({...f,linkedin:e.target.value}))} placeholder="linkedin.com/in/..." className="inp" style={{flex:1}}/></div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}><Ic d={ICON.camera} size={16}/></span><input value={fp.instagram} onChange={e=>setFp(f=>({...f,instagram:e.target.value}))} placeholder="@usuario" className="inp" style={{flex:1}}/></div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,width:28,textAlign:"center"}}><Ic d={ICON.link} size={16}/></span><input value={fp.site} onChange={e=>setFp(f=>({...f,site:e.target.value}))} placeholder="seusite.com" className="inp" style={{flex:1}}/></div>
-          </div>
-        </div>
-
-        {/* Skills */}
-        <div style={{borderTop:`1px solid ${G.border}`,paddingTop:14}}>
-          <div style={{fontSize:12,fontWeight:700,color:G.muted,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>Skills</div>
-          <div style={{display:"flex",gap:8,marginBottom:8}}>
-            <input value={newSkill} onChange={e=>setNewSkill(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSkill()} placeholder="Ex: React, Python, Excel..." className="inp" style={{flex:1}}/>
-            <button onClick={addSkill} className="press" style={{padding:"0 16px",borderRadius:12,border:"none",background:G.accent,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>+</button>
-          </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {fp.skills.map((s,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:20,background:G.accentL,border:`1px solid ${G.accent}33`}}>
-              <span style={{fontSize:11,fontWeight:600,color:G.accent}}>{s}</span>
-              <button onClick={()=>rmSkill(i)} style={{background:"none",border:"none",color:G.accent,cursor:"pointer",fontSize:13,lineHeight:1,padding:0}}>×</button>
-            </div>)}
-          </div>
-        </div>
-
-        {/* Idiomas */}
-        <div style={{borderTop:`1px solid ${G.border}`,paddingTop:14}}>
-          <div style={{fontSize:12,fontWeight:700,color:G.muted,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>Idiomas</div>
-          <div style={{display:"flex",gap:8,marginBottom:8}}>
-            <input value={newIdioma} onChange={e=>setNewIdioma(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addIdioma()} placeholder="Ex: Inglês C1, Espanhol B2..." className="inp" style={{flex:1}}/>
-            <button onClick={addIdioma} className="press" style={{padding:"0 16px",borderRadius:12,border:"none",background:G.blue,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>+</button>
-          </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {fp.idiomas.map((s,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:20,background:G.blue+"22",border:`1px solid ${G.blue}33`}}>
-              <span style={{fontSize:11,fontWeight:600,color:G.blue}}>{s}</span>
-              <button onClick={()=>rmIdioma(i)} style={{background:"none",border:"none",color:G.blue,cursor:"pointer",fontSize:13,lineHeight:1,padding:0}}>×</button>
-            </div>)}
-          </div>
-        </div>
-
-        {/* Formação */}
-        <div style={{borderTop:`1px solid ${G.border}`,paddingTop:14}}>
-          <div style={{fontSize:12,fontWeight:700,color:G.muted,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>Formação Acadêmica</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>
-            <select value={fform.tipo} onChange={e=>setFform(f=>({...f,tipo:e.target.value}))} className="inp">
-              {["Graduação","Pós-graduação","MBA","Mestrado","Doutorado","Técnico","Curso","Bootcamp","Certificação"].map(t=><option key={t}>{t}</option>)}
-            </select>
-            <input value={fform.curso} onChange={e=>setFform(f=>({...f,curso:e.target.value}))} placeholder="Nome do curso" className="inp"/>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <input value={fform.inst} onChange={e=>setFform(f=>({...f,inst:e.target.value}))} placeholder="Instituição" className="inp"/>
-              <input value={fform.ano} onChange={e=>setFform(f=>({...f,ano:e.target.value}))} placeholder="Ano" className="inp"/>
-            </div>
-            <button onClick={addForm} className="press" style={{padding:"10px",borderRadius:12,border:"none",background:G.yellow+"22",color:G.yellow,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:`1px solid ${G.yellow}44`}}>+ Adicionar formação</button>
-          </div>
-          {fp.formacao.map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:G.card2,borderRadius:10,marginBottom:6}}>
-            <div style={{flex:1,fontSize:12}}><div style={{fontWeight:600}}>{f.curso}</div><div style={{color:G.muted}}>{f.tipo}{f.inst?" · "+f.inst:""}{f.ano?" · "+f.ano:""}</div></div>
-            <button onClick={()=>rmForm(i)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:16}}>×</button>
-          </div>)}
-        </div>
-
-        <button onClick={salvarPerfil} disabled={saving} className="press" style={{padding:"15px",borderRadius:14,border:"none",background:G.orange,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          {saving?<Spinner size={16} color="#fff"/>:null} Salvar Perfil
-        </button>
-      </div>
-    </Sheet>
-
-    <Sheet open={sheet==="historico"} onClose={()=>setSheet(null)} title="Histórico Salarial">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Cargo</Lbl><input value={fh.cargo} onChange={e=>setFh(f=>({...f,cargo:e.target.value}))} placeholder="Ex: Analista Pleno" className="inp"/></div>
-        <div><Lbl opt>Empresa</Lbl><input value={fh.empresa} onChange={e=>setFh(f=>({...f,empresa:e.target.value}))} placeholder="Nome da empresa" className="inp"/></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Salário (R$)</Lbl><input type="number" value={fh.salario} onChange={e=>setFh(f=>({...f,salario:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl>Mês/Ano</Lbl><input type="month" value={fh.data} onChange={e=>setFh(f=>({...f,data:e.target.value}))} className="inp"/></div>
-        </div>
-        <div><Lbl opt>Observação</Lbl><input value={fh.obs} onChange={e=>setFh(f=>({...f,obs:e.target.value}))} placeholder="Ex: Promoção, mudança..." className="inp"/></div>
-        <button onClick={salvarHistorico} disabled={saving} className="press" style={{padding:"15px",borderRadius:14,border:"none",background:G.orange,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          {saving?<Spinner size={16} color="#fff"/>:null} Salvar
-        </button>
-      </div>
-    </Sheet>
-
-    <Sheet open={sheet==="meta"} onClose={()=>setSheet(null)} title="Nova Meta de Renda">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Título</Lbl><input value={fm.titulo} onChange={e=>setFm(f=>({...f,titulo:e.target.value}))} placeholder="Ex: Ganhar R$10k/mês" className="inp"/></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Valor alvo (R$)</Lbl><input type="number" value={fm.valorAlvo} onChange={e=>setFm(f=>({...f,valorAlvo:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl opt>Prazo</Lbl><input type="month" value={fm.prazo} onChange={e=>setFm(f=>({...f,prazo:e.target.value}))} className="inp"/></div>
-        </div>
-        <div><Lbl>Tipo</Lbl><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {["Renda Mensal","Renda Anual","Patrimônio","Salário CLT","Renda Passiva"].map(t=><div key={t} onClick={()=>setFm(f=>({...f,tipo:t}))} className="press" style={{padding:"8px 14px",borderRadius:20,cursor:"pointer",fontSize:12,fontWeight:600,background:fm.tipo===t?G.accentL:G.card2,border:`1px solid ${fm.tipo===t?G.accent:G.border}`,color:fm.tipo===t?G.accent:G.muted}}>{t}</div>)}
-        </div></div>
-        <button onClick={salvarMeta} disabled={saving} className="press" style={{padding:"15px",borderRadius:14,border:"none",background:G.accent,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          {saving?<Spinner size={16} color="#fff"/>:null} Criar Meta
-        </button>
-      </div>
-    </Sheet>
-
-    <Sheet open={sheet==="gasto"} onClose={()=>setSheet(null)} title="Gasto com Carreira">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Descrição</Lbl><input value={fg.desc} onChange={e=>setFg(f=>({...f,desc:e.target.value}))} placeholder="Ex: Curso React, Livro..." className="inp"/></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Valor (R$)</Lbl><input type="number" value={fg.valor} onChange={e=>setFg(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
-          <div><Lbl>Data</Lbl><input type="date" value={fg.data} onChange={e=>setFg(f=>({...f,data:e.target.value}))} className="inp"/></div>
-        </div>
-        <div><Lbl>Categoria</Lbl><select value={fg.cat} onChange={e=>setFg(f=>({...f,cat:e.target.value}))} className="inp">{CATS_CARREIRA.map(c=><option key={c}>{c}</option>)}</select></div>
-        <div><Lbl opt>Retorno esperado</Lbl><input value={fg.retorno} onChange={e=>setFg(f=>({...f,retorno:e.target.value}))} placeholder="Ex: Aumento de 20%..." className="inp"/></div>
-        <button onClick={salvarGasto} disabled={saving} className="press" style={{padding:"15px",borderRadius:14,border:"none",background:G.yellow,color:"#000",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          {saving?<Spinner size={16} color="#000"/>:null} Salvar Gasto
-        </button>
-      </div>
-    </Sheet>
   </div>);
 }
-
 // ─── FINANÇAS VIEW ────────────────────────────────────────────────────────────
 const CAT_ICONS={"Moradia":"🏠","Alimentação":"🍔","Transporte":"🚗","Saúde":"❤️","Educação":"📚","Lazer":"🎮","Vestuário":"👕","Assinaturas":"📱","Pets":"🐾","Beleza e Cuidados":"💅","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Seguros":"🛡️","Academia":"💪","Farmácia":"💊","Outros":"","Salário":"","Freelance":"🖥️","Investimentos":<Ic d={ICON.chart} size={15}/>,"Aluguel Recebido":"🏡","Bônus":"⭐","Reembolso":"↩️","Renda Extra":"💡","Dividendos":"💰"};
 const ORC_CORES=["#FB923C","#A78BFA","#F472B6","#34D399","#FBBF24","#60A5FA","#818CF8","#2DD4BF","#F97316","#E879F9"];
