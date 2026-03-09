@@ -656,89 +656,103 @@ function Dashboard({lancs,onDelete}){
   <div style={{paddingBottom:32}}>
 
     {/* ════ HERO CARD ════════════════════════════════ */}
-    {/* ════ HERO CARD ════════════════════════════════ */}
     <div style={{
       margin:"0 0 20px",
       borderRadius:28,
       padding:"26px 22px 22px",
       position:"relative",
       overflow:"hidden",
-      background:G.card2,
-      border:`1px solid ${G.border}`,
-      boxShadow:`0 12px 40px rgba(0,0,0,.18)`,
+      background:"linear-gradient(145deg,#0e0c1e 0%,#160f30 45%,#0a1628 100%)",
+      boxShadow:"0 24px 48px rgba(0,0,0,.45)",
     }}>
-      {/* gráfico semanal como fundo decorativo */}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,height:90,opacity:.18,pointerEvents:"none"}}>
-        {(()=>{
-          if(!weeks.length||!weeks.some(w=>w.v>0))return null;
-          const W=400,H=90;
-          const max=Math.max(...weeks.map(w=>w.v),1);
-          const pts=weeks.map((w,i)=>`${(i/(Math.max(weeks.length-1,1)))*W},${H-((w.v/max)*H*0.85)}`).join(" ");
-          const fillPts=`0,${H} ${pts} ${W},${H}`;
-          const lineColor=sal>=0?G.green:G.red;
-          return(
-            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
-              <defs>
-                <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={lineColor} stopOpacity=".6"/>
-                  <stop offset="100%" stopColor={lineColor} stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              <polygon points={fillPts} fill="url(#hg)"/>
-              <polyline points={pts} fill="none" stroke={lineColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          );
-        })()}
-      </div>
+      {/* mesh blobs */}
+      <div style={{position:"absolute",top:-60,left:-40,width:220,height:220,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,106,247,.22),transparent 65%)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-50,right:-30,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle,rgba(46,204,142,.14),transparent 65%)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",top:"30%",right:"20%",width:80,height:80,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,.1),transparent 65%)",pointerEvents:"none"}}/>
 
-      {/* blobs de cor */}
-      <div style={{position:"absolute",top:-60,left:-40,width:200,height:200,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}18,transparent 65%)`,pointerEvents:"none"}}/>
-      <div style={{position:"absolute",top:"20%",right:"-10%",width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${sal>=0?G.green:G.red}12,transparent 65%)`,pointerEvents:"none"}}/>
-
-      {/* hide button */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-        <span style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:G.muted}}>Saldo do mês</span>
-        <button onClick={()=>setHide(h=>!h)} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,color:G.muted}}>
+      {/* top row: label + hide + mes */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
+          {md.map(m=>{
+            const [my,mm]=m.split("-");
+            const lbl=MESES[parseInt(mm)-1]+" '"+my.slice(2);
+            const on=m===mes;
+            return(<button key={m} onClick={()=>setMes(m)} className="press"
+              style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${on?"rgba(255,255,255,.35)":"rgba(255,255,255,.1)"}`,
+                background:on?"rgba(255,255,255,.12)":"transparent",
+                color:on?"rgba(255,255,255,.9)":"rgba(255,255,255,.35)",
+                fontSize:11,fontWeight:on?700:400,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .2s"}}>
+              {lbl}
+            </button>);
+          })}
+        </div>
+        <button onClick={()=>setHide(h=>!h)} style={{background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.4)",flexShrink:0,marginLeft:8}}>
           {hide?"👁 Ver":"👁 Ocultar"}
         </button>
       </div>
 
       {/* saldo grande */}
       <div style={{marginBottom:4}}>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",marginBottom:6}}>Saldo do mês</div>
         <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,letterSpacing:-2,lineHeight:1,
-          color:hide?G.border:sal>=0?G.green:G.red,
+          color:hide?"transparent":sal>=0?"#2ECC8E":"#F87171",
+          textShadow:hide?"none":sal>=0?"0 0 40px rgba(46,204,142,.3)":"0 0 40px rgba(248,113,113,.3)",
           filter:hide?"blur(12px)":"none",transition:"filter .3s,color .3s",userSelect:hide?"none":"auto"}}>
           {fmt(sal)}
         </div>
-        {diff!==null&&!hide&&<div style={{fontSize:12,color:diff>=0?G.green:G.red,marginTop:6,display:"flex",alignItems:"center",gap:4,opacity:.8}}>
-          <Ic d={diff>=0?ICON.arrow_up:ICON.arrow_down} size={11} color={diff>=0?G.green:G.red}/>
+        {diff!==null&&!hide&&<div style={{fontSize:12,color:diff>=0?"rgba(46,204,142,.7)":"rgba(248,113,113,.7)",marginTop:6,display:"flex",alignItems:"center",gap:4}}>
+          <Ic d={diff>=0?ICON.arrow_up:ICON.arrow_down} size={11} color={diff>=0?"rgba(46,204,142,.7)":"rgba(248,113,113,.7)"}/>
           {diff>=0?"+":""}{fmt(diff)} vs mês anterior
         </div>}
       </div>
 
-      {/* semanas mini label */}
-      {weeks.length>0&&weeks.some(w=>w.v>0)&&!hide&&<div style={{display:"flex",gap:4,marginBottom:16,marginTop:10}}>
-        {weeks.map((w,i)=>(
-          <div key={i} style={{flex:1,textAlign:"center"}}>
-            <div style={{fontSize:9,color:G.muted,fontWeight:500}}>{w.name}</div>
-          </div>
-        ))}
+      {/* sparkline SVG — últimos meses */}
+      {spark.length>1&&<div style={{height:52,margin:"16px 0 14px",position:"relative"}}>
+        {(()=>{
+          const vals=spark.map(s=>s.sal);
+          const min=Math.min(...vals),max=Math.max(...vals);
+          const range=max-min||1;
+          const W=320,H=48;
+          const pts=vals.map((v,i)=>`${(i/(vals.length-1))*W},${H-((v-min)/range)*H*0.85-4}`).join(" ");
+          const fillPts=`0,${H} ${pts} ${W},${H}`;
+          const lineColor=sal>=0?"rgba(46,204,142,.6)":"rgba(248,113,113,.6)";
+          return(
+            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
+              <defs>
+                <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={sal>=0?"rgba(46,204,142,.25)":"rgba(248,113,113,.25)"}/>
+                  <stop offset="100%" stopColor="transparent"/>
+                </linearGradient>
+              </defs>
+              <polygon points={fillPts} fill="url(#sg)"/>
+              <polyline points={pts} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              {vals.map((v,i)=>{
+                const cx=(i/(vals.length-1))*W,cy=H-((v-min)/range)*H*0.85-4;
+                return i===vals.length-1?<circle key={i} cx={cx} cy={cy} r={4} fill={lineColor} opacity={.9}/>:null;
+              })}
+            </svg>
+          );
+        })()}
+        <div style={{position:"absolute",bottom:-2,left:0,right:0,display:"flex",justifyContent:"space-between"}}>
+          {spark.map((s,i)=><span key={i} style={{fontSize:9,color:"rgba(255,255,255,.25)"}}>{MESES[parseInt(s.m.split("-")[1])-1]}</span>)}
+        </div>
       </div>}
 
       {/* 3 chips */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:4}}>
         {[
-          {l:"Receitas",v:"+"+fmt(tR),c:G.green,bg:`${G.green}12`,b:`${G.green}25`},
-          {l:"Despesas",v:"-"+fmt(tD),c:G.red,bg:`${G.red}12`,b:`${G.red}25`},
-          {l:"Poupança",v:pct+"%",c:G.yellow,bg:`${G.yellow}10`,b:`${G.yellow}25`},
+          {l:"Receitas",v:"+"+fmt(tR),c:"rgba(46,204,142,1)",bg:"rgba(46,204,142,.1)",b:"rgba(46,204,142,.2)"},
+          {l:"Despesas",v:"-"+fmt(tD),c:"rgba(248,113,113,1)",bg:"rgba(248,113,113,.1)",b:"rgba(248,113,113,.2)"},
+          {l:"Poupança",v:pct+"%",c:"rgba(251,191,36,1)",bg:"rgba(251,191,36,.1)",b:"rgba(251,191,36,.2)"},
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg,border:`1px solid ${k.b}`,borderRadius:16,padding:"10px 10px 8px"}}>
-            <div style={{fontSize:9,color:G.muted,marginBottom:4,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:12,fontWeight:700,color:hide?G.border:k.c,filter:hide?"blur(5px)":"none",transition:"filter .3s",lineHeight:1.2}}>{hide?"•••":k.v}</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.35)",marginBottom:4,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:12,fontWeight:700,color:hide?"rgba(255,255,255,.15)":k.c,filter:hide?"blur(5px)":"none",transition:"filter .3s",lineHeight:1.2}}>{hide?"•••":k.v}</div>
           </div>
         ))}
       </div>
     </div>
+
 
     {/* ════ GRÁFICO SEMANAL ══════════════════════════ */}
     <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:24,padding:"18px 16px",marginBottom:16}}>
