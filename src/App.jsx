@@ -898,69 +898,190 @@ function Dashboard({lancs,onDelete}){
 function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
   const [mf,setMf]=useState(curMes());
   const [cf,setCf]=useState("");
-  const [sc,setSc]=useState(false);
-  const isR=tipo==="Receita",ac=isR?G.green:G.red,cats=isR?CATS_REC:CATS_DEP;
+  const [showCats,setShowCats]=useState(false);
+  const isR=tipo==="Receita", ac=isR?G.green:G.red;
+  const cats=isR?CATS_REC:CATS_DEP;
+
   const todos=lancs.filter(l=>l.tipo===tipo);
   const meses=[...new Set(todos.map(l=>getMes(l.data)))].sort().reverse();
+  if(!meses.includes(curMes()))meses.unshift(curMes());
+
   let data=todos;
-  if(mf)data=data.filter(l=>getMes(l.data)===mf);
-  if(cf)data=data.filter(l=>l.cat===cf);
+  if(mf) data=data.filter(l=>getMes(l.data)===mf);
+  if(cf) data=data.filter(l=>l.cat===cf);
   data=[...data].sort((a,b)=>b.data.localeCompare(a.data));
+
   const mt=todos.filter(l=>getMes(l.data)===curMes()&&isRealizado(l.data,l.agendado)).reduce((s,l)=>s+l.valor,0);
   const at=todos.filter(l=>l.data.startsWith(new Date().getFullYear())).reduce((s,l)=>s+l.valor,0);
   const listaRec=recorrentes.filter(r=>r.tipo===tipo);
-  return(<div style={{paddingBottom:8}}>
-    <div style={{display:"flex",gap:10,overflowX:"auto",marginBottom:16,paddingBottom:2}}>
-      {[{l:"Mês atual",v:fmtK(mt),c:ac},{l:`Ano ${new Date().getFullYear()}`,v:fmtK(at),c:G.blue},{l:"Registros",v:String(todos.length),c:G.yellow},{l:"Recorrentes",v:String(listaRec.filter(r=>r.ativo).length),c:G.accent}].map((k,i)=>(
-        <div key={i} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:14,padding:"14px 18px",flexShrink:0,minWidth:115,position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:k.c}}/>
-          <div style={{fontSize:10,color:G.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>{k.l}</div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:k.c}}>{k.v}</div>
-        </div>
-      ))}
+  const totalRec=listaRec.filter(r=>r.ativo).reduce((s,r)=>s+r.valor,0);
+  const totalFiltro=data.reduce((s,l)=>s+l.valor,0);
+
+  // cat breakdown for filtered month
+  const catBreak=cats.map(cat=>({
+    name:cat,
+    v:data.filter(l=>l.cat===cat).reduce((s,l)=>s+l.valor,0),
+    color:CAT_COLORS[cat]||G.muted,
+  })).filter(c=>c.v>0).sort((a,b)=>b.v-a.v);
+
+  return(<div style={{paddingBottom:24}}>
+
+    {/* ── HERO BANNER ─────────────────────────────── */}
+    <div style={{
+      borderRadius:24,padding:"22px 20px 20px",marginBottom:16,
+      position:"relative",overflow:"hidden",
+      background:isR
+        ?"linear-gradient(135deg,#0a1f15 0%,#0d2a1a 60%,#061410 100%)"
+        :"linear-gradient(135deg,#1f0a0e 0%,#2a0d12 60%,#140609 100%)",
+      boxShadow:`0 20px 40px ${ac}15`,
+    }}>
+      <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${ac}20,transparent 65%)`,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-30,left:-20,width:130,height:130,borderRadius:"50%",background:`radial-gradient(circle,${ac}10,transparent 65%)`,pointerEvents:"none"}}/>
+
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:`${ac}88`,marginBottom:8}}>
+        {isR?"Total de Receitas":"Total de Despesas"} · {mf?mesLblFull(mf):"Todos os meses"}
+      </div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-1.5,lineHeight:1,color:ac,
+        textShadow:`0 0 32px ${ac}44`,marginBottom:16}}>
+        {(isR?"+":"-")}{fmt(totalFiltro)}
+      </div>
+
+      {/* 3 stats */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {[
+          {l:"Este mês",v:fmt(mt),c:ac,bg:`${ac}12`,b:`${ac}20`},
+          {l:`Ano ${new Date().getFullYear()}`,v:fmt(at),c:G.blue,bg:`${G.blue}12`,b:`${G.blue}20`},
+          {l:"Registros",v:String(todos.length),c:G.muted,bg:"rgba(255,255,255,.04)",b:"rgba(255,255,255,.08)"},
+        ].map((k,i)=>(
+          <div key={i} style={{background:k.bg,border:`1px solid ${k.b}`,borderRadius:14,padding:"10px 10px 8px"}}>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.3)",marginBottom:3,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:k.c,lineHeight:1.2}}>{k.v}</div>
+          </div>
+        ))}
+      </div>
     </div>
-    {listaRec.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,marginBottom:16,overflow:"hidden"}}>
-      <div style={{padding:"12px 16px",borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",gap:8}}>
-        <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.accent}}>↻ {isR?"Ganhos":"Custos"} recorrentes</span>
-        <span style={{fontSize:11,color:G.muted,marginLeft:"auto"}}>{fmtK(listaRec.filter(r=>r.ativo).reduce((s,r)=>s+r.valor,0))}/mês</span>
+
+    {/* ── RECORRENTES ─────────────────────────────── */}
+    {listaRec.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,marginBottom:16,overflow:"hidden"}}>
+      <div style={{padding:"13px 16px",borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:6,height:6,borderRadius:"50%",background:G.accent}}/>
+        <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.accent}}>
+          {isR?"Ganhos":"Custos"} recorrentes
+        </span>
+        <span style={{fontSize:12,fontFamily:"'Fraunces',serif",fontWeight:700,color:ac,marginLeft:"auto"}}>{fmt(totalRec)}<span style={{fontSize:10,color:G.muted,fontWeight:400}}>/mês</span></span>
       </div>
       <div style={{padding:"0 16px"}}>
         {listaRec.map(r=>(
-          <div key={r.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:`1px solid ${G.border}`}}>
-            <div style={{width:36,height:36,borderRadius:10,flexShrink:0,background:r.ativo?(isR?G.greenL:G.redL):G.border2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>{FREQ_OPTS.find(f=>f.id===r.freq)?.icon||"📅"}</div>
+          <div key={r.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:`1px solid ${G.border}`}}>
+            <div style={{width:36,height:36,borderRadius:11,flexShrink:0,
+              background:r.ativo?(isR?G.greenL:G.redL):G.border,
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
+              {CAT_EMOJI[r.cat]||"🔁"}
+            </div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:600,opacity:r.ativo?1:.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.desc||r.cat}</div>
-              <div style={{display:"flex",gap:6,marginTop:2}}><Tag color={CAT_COLORS[r.cat]||G.muted}>{r.cat}</Tag><span style={{fontSize:11,color:G.muted}}>{FREQ_OPTS.find(f=>f.id===r.freq)?.label} · dia {r.dia}</span></div>
+              <div style={{fontSize:13,fontWeight:600,color:r.ativo?G.text:G.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.desc||r.cat}</div>
+              <div style={{display:"flex",gap:6,marginTop:3,alignItems:"center"}}>
+                <Tag color={CAT_COLORS[r.cat]||G.muted}>{r.cat}</Tag>
+                <span style={{fontSize:10,color:G.muted}}>{r.dia?`dia ${r.dia}`:""}</span>
+              </div>
             </div>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:r.ativo?ac:G.muted,flexShrink:0}}>{fmt(r.valor)}</div>
-            <button onClick={()=>onToggleRec(r.id)} className="press" style={{width:38,height:22,borderRadius:11,border:"none",cursor:"pointer",background:r.ativo?ac:G.border2,position:"relative",flexShrink:0,transition:"background .2s"}}><div style={{position:"absolute",top:2,left:r.ativo?18:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/></button>
-            <button onClick={()=>onDeleteRec(r.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:"2px",lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
+            <button onClick={()=>onToggleRec(r.id)} className="press"
+              style={{width:38,height:22,borderRadius:11,border:"none",cursor:"pointer",transition:"background .2s",flexShrink:0,
+                background:r.ativo?ac:G.border,position:"relative"}}>
+              <div style={{position:"absolute",top:3,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s",
+                left:r.ativo?19:3,boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
+            </button>
+            <button onClick={()=>onDeleteRec(r.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:16,padding:4,opacity:.5}}>×</button>
           </div>
         ))}
       </div>
     </div>}
-    <div style={{display:"flex",gap:8,overflowX:"auto",marginBottom:10,paddingBottom:2}}>
-      <div onClick={()=>setMf("")} className="press" style={{padding:"7px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:!mf?G.accentL:G.card2,border:`1px solid ${!mf?G.accent:G.border}`,color:!mf?G.accent:G.muted}}>Todos</div>
-      {meses.map(m=><div key={m} onClick={()=>setMf(mf===m?"":m)} className="press" style={{padding:"7px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:mf===m?G.accentL:G.card2,border:`1px solid ${mf===m?G.accent:G.border}`,color:mf===m?G.accent:G.muted}}>{mesLblFull(m)}</div>)}
-    </div>
-    <div style={{marginBottom:14}}>
-      <div onClick={()=>setSc(v=>!v)} className="press" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:20,cursor:"pointer",fontSize:12,fontWeight:600,background:cf?ac+"22":G.card2,border:`1px solid ${cf?ac+"88":G.border}`,color:cf?ac:G.muted,marginBottom:sc?10:0}}>{cf||"Categoria"} {sc?"▴":"▾"}</div>
-      {sc&&<div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
-        <div onClick={()=>{setCf("");setSc(false);}} className="press" style={{padding:"6px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:!cf?G.accentL:G.card2,border:`1px solid ${!cf?G.accent:G.border}`,color:!cf?G.accent:G.muted}}>Todas</div>
-        {cats.map(c=><div key={c} onClick={()=>{setCf(cf===c?"":c);setSc(false);}} className="press" style={{padding:"6px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:cf===c?(CAT_COLORS[c]||ac)+"22":G.card2,border:`1px solid ${cf===c?(CAT_COLORS[c]||ac)+"88":G.border}`,color:cf===c?(CAT_COLORS[c]||ac):G.muted}}>{c}</div>)}
+
+    {/* ── FILTROS ─────────────────────────────────── */}
+    <div style={{marginBottom:12}}>
+      {/* meses */}
+      <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",paddingBottom:2,marginBottom:8}}>
+        {["",  ...meses].map((m,i)=>{
+          const lbl=m?(()=>{const [y,mm]=m.split("-");return MESES[parseInt(mm)-1]+" '"+y.slice(2);})():"Todos";
+          const on=(mf===m)||(m===""&&mf==="");
+          return(<button key={i} onClick={()=>setMf(m)} className="press"
+            style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${on?ac:G.border}`,
+              background:on?ac+"18":"transparent",
+              color:on?ac:G.muted,fontSize:12,fontWeight:on?700:400,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .2s"}}>
+            {lbl}
+          </button>);
+        })}
+      </div>
+      {/* categoria */}
+      <button onClick={()=>setShowCats(v=>!v)} className="press"
+        style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:20,
+          border:`1px solid ${cf?ac:G.border}`,background:cf?ac+"18":"transparent",
+          color:cf?ac:G.muted,fontSize:12,cursor:"pointer",fontWeight:cf?700:400,transition:"all .2s"}}>
+        {cf||"Categoria"} <span style={{fontSize:10}}>{showCats?"▲":"▼"}</span>
+      </button>
+      {showCats&&<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",paddingBottom:4,marginTop:6}}>
+        <button onClick={()=>{setCf("");setShowCats(false);}} className="press"
+          style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${G.border}`,background:"transparent",color:G.muted,fontSize:12,cursor:"pointer",flexShrink:0}}>
+          Todas
+        </button>
+        {cats.map(cat=>(
+          <button key={cat} onClick={()=>{setCf(cf===cat?"":cat);setShowCats(false);}} className="press"
+            style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${cf===cat?ac:G.border}`,
+              background:cf===cat?ac+"18":"transparent",
+              color:cf===cat?ac:G.muted,fontSize:12,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .2s"}}>
+            {CAT_EMOJI[cat]||""} {cat}
+          </button>
+        ))}
       </div>}
     </div>
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,overflow:"hidden"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderBottom:`1px solid ${G.border}`}}>
-        <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>{data.length} registro{data.length!==1?"s":""}</span>
-        <span style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:ac}}>{isR?"+":"-"}{fmtK(data.reduce((s,l)=>s+l.valor,0))}</span>
+
+    {/* ── BREAKDOWN CATEGORIAS (quando tem dados) ── */}
+    {catBreak.length>1&&!cf&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"14px 16px",marginBottom:16}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:10}}>Por categoria</div>
+      <div style={{display:"flex",flexDirection:"column",gap:7}}>
+        {catBreak.slice(0,4).map(cat=>{
+          const p=totalFiltro>0?cat.v/totalFiltro*100:0;
+          return(<div key={cat.name}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <div style={{display:"flex",alignItems:"center",gap:7}}>
+                <span style={{fontSize:14}}>{CAT_EMOJI[cat.name]||"•"}</span>
+                <span style={{fontSize:12,color:G.text}}>{cat.name}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:10,color:G.muted}}>{p.toFixed(0)}%</span>
+                <span style={{fontFamily:"'Fraunces',serif",fontSize:12,fontWeight:700,color:cat.color}}>{fmt(cat.v)}</span>
+              </div>
+            </div>
+            <div style={{height:4,background:G.border,borderRadius:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${p}%`,background:cat.color,borderRadius:4,transition:"width .4s ease"}}/>
+            </div>
+          </div>);
+        })}
       </div>
-      {data.length===0?<div style={{textAlign:"center",padding:"48px 20px",color:G.muted}}><div style={{fontSize:40,marginBottom:10}}>{isR?"💰":""}</div><div style={{fontSize:14}}>Nenhum lançamento</div></div>
-        :<div style={{padding:"0 16px"}}>{data.map(l=><TxRow key={l.id} l={l} onDelete={onDelete} full/>)}</div>}
+    </div>}
+
+    {/* ── LISTA LANÇAMENTOS ────────────────────────── */}
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 16px",borderBottom:`1px solid ${G.border}`}}>
+        <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>
+          {data.length} registro{data.length!==1?"s":""}
+        </span>
+        <span style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:ac}}>
+          {isR?"+":"-"}{fmt(totalFiltro)}
+        </span>
+      </div>
+      {data.length===0
+        ?<div style={{textAlign:"center",padding:"48px 20px",color:G.muted}}>
+          <div style={{fontSize:40,marginBottom:10}}>{isR?"💸":"🎉"}</div>
+          <div style={{fontSize:14}}>{isR?"Nenhuma receita aqui":"Nenhuma despesa no período"}</div>
+        </div>
+        :<div style={{padding:"0 16px"}}>{data.map(l=><TxRow key={l.id} l={l} onDelete={onDelete} full/>)}</div>
+      }
     </div>
+
   </div>);
 }
-
 // ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
 function CarreiraView({uid,user,onPhotoSave}){
   // ── perfil ───────────────────────────────────────
@@ -1622,7 +1743,7 @@ function FinancasView({uid,lancs,secao}){
           <div key={o.id} style={{marginBottom:13}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
               <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:8,height:8,borderRadius:"50%",background:o.cor}}/><span style={{fontSize:13,fontWeight:500}}>{o.cat}</span>{g>o.limite&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`}}>Estourou</span>}</div>
-              <span style={{fontSize:12,color:G.muted}}><span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:g>o.limite?G.red:G.text}}>{fmtK(g)}</span> / {fmtK(o.limite)}</span>
+              <span style={{fontSize:12,color:G.muted}}><span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:g>o.limite?G.red:G.text}}>{fmt(g)}</span> / {fmt(o.limite)}</span>
             </div>
             <div style={{height:4,background:G.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:bar,borderRadius:4}}/></div>
           </div>);})}
@@ -1633,7 +1754,7 @@ function FinancasView({uid,lancs,secao}){
           <div key={c.name} style={{marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:7,height:7,borderRadius:"50%",background:c.color}}/><span style={{fontSize:13}}>{c.name}</span></div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:G.muted}}>{p.toFixed(0)}%</span><span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:c.color}}>{fmtK(c.v)}</span></div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:G.muted}}>{p.toFixed(0)}%</span><span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:c.color}}>{ fmt(c.v)}</span></div>
             </div>
             <div style={{height:3,background:G.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c.color,borderRadius:3}}/></div>
           </div>);})}
@@ -1675,12 +1796,12 @@ function FinancasView({uid,lancs,secao}){
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
               <div style={{width:42,height:42,borderRadius:12,flexShrink:0,background:o.cor+"22",display:"flex",alignItems:"center",justifyContent:"center"}}>{CAT_ICONS[o.cat]||"💰"}</div>
               <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{o.cat}</div><div style={{fontSize:11,color:G.muted}}>Limite: {fmt(o.limite)}/mês</div></div>
-              {over&&<span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`,flexShrink:0}}>+{fmtK(g-o.limite)}</span>}
+              {over&&<span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`,flexShrink:0}}>+{fmt(g-o.limite)}</span>}
               <button onClick={()=>delOrc(o.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:2}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
               <span style={{fontSize:12,color:G.muted}}>Gasto: <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:over?G.red:G.text}}>{fmt(g)}</span></span>
-              <span style={{fontSize:12,color:G.muted}}>{over?<span style={{color:G.red}}>Estourou {fmtK(g-o.limite)}</span>:<span>Faltam <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:G.green}}>{fmt(Math.max(0,o.limite-g))}</span></span>}</span>
+              <span style={{fontSize:12,color:G.muted}}>{over?<span style={{color:G.red}}>Estourou {fmt(g-o.limite)}</span>:<span>Faltam <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:G.green}}>{fmt(Math.max(0,o.limite-g))}</span></span>}</span>
             </div>
             <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:bar,borderRadius:6}}/></div>
             <div style={{fontSize:11,color:G.muted,marginTop:5}}>{p.toFixed(0)}% utilizado</div>
@@ -1710,7 +1831,7 @@ function FinancasView({uid,lancs,secao}){
           const catTop=CATS_DEP.map(c=>({c,v:gastosCat(c)})).sort((a,b)=>b.v-a.v)[0];
           const mC=trend.filter(t=>t.rec>0);
           const mediaPoup=mC.length>0?mC.reduce((s,t)=>s+t.poupanca,0)/mC.length:0;
-          return[{l:"Taxa de poupança",v:taxa.toFixed(1)+"%",sub:"da renda",c:taxa>=20?G.green:taxa>=10?G.yellow:G.red},{l:"Gasto médio/dia",v:fmtK(media),sub:"neste mês",c:G.accent},{l:"Maior categoria",v:catTop?.c||"—",sub:catTop?fmt(catTop.v):"sem gastos",c:G.orange},{l:"Poupança média",v:fmtK(mediaPoup),sub:"6 meses",c:G.blue}].map(m=>(
+          return[{l:"Taxa de poupança",v:taxa.toFixed(1)+"%",sub:"da renda",c:taxa>=20?G.green:taxa>=10?G.yellow:G.red},{l:"Gasto médio/dia",v:fmt(media),sub:"neste mês",c:G.accent},{l:"Maior categoria",v:catTop?.c||"—",sub:catTop?fmt(catTop.v):"sem gastos",c:G.orange},{l:"Poupança média",v:fmt(mediaPoup),sub:"6 meses",c:G.blue}].map(m=>(
             <div key={m.l} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${G.border}`}}>
               <div style={{width:3,height:36,borderRadius:2,background:m.c,flexShrink:0}}/>
               <div style={{flex:1}}><div style={{fontSize:12,color:G.muted}}>{m.l}</div><div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:m.c}}>{m.v}</div></div>
@@ -1728,8 +1849,8 @@ function FinancasView({uid,lancs,secao}){
               <div style={{height:4,borderRadius:2,background:G.red,width:`${t.gasto>0?Math.min(100,t.gasto/8000*100):0}%`}}/>
             </div>
             <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:s>=0?G.green:G.red}}>{s>=0?"+":""}{fmtK(s)}</div>
-              <div style={{fontSize:10,color:G.muted}}>{fmtK(t.gasto)} gastos</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:s>=0?G.green:G.red}}>{s>=0?"+":""}{fmt(s)}</div>
+              <div style={{fontSize:10,color:G.muted}}>{fmt(t.gasto)} gastos</div>
             </div>
           </div>);})}
       </div>
@@ -2569,7 +2690,7 @@ function CasalView({uid,lancs,user}){
       {[{l:"Receitas",v:tR,c:G.green},{l:"Despesas",v:tD,c:G.red},{l:"Saldo",v:tR-tD,c:tR-tD>=0?G.green:G.red}].map((k,i)=>(
         <div key={i} style={{flex:1,background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:12,textAlign:"center"}}>
           <div style={{fontSize:10,color:G.muted,marginBottom:4}}>{k.l}</div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{fmtK(k.v)}</div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{fmt(k.v)}</div>
         </div>
       ))}
     </div>
