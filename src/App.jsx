@@ -957,6 +957,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
             <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:k.c,lineHeight:1.2}}>{k.v}</div>
           </div>
         ))}
+      </div>
     </div>
 
     {/* ── RECORRENTES ─────────────────────────────── */}
