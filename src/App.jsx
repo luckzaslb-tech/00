@@ -930,35 +930,33 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
     <div style={{
       borderRadius:24,padding:"22px 20px 20px",marginBottom:16,
       position:"relative",overflow:"hidden",
-      background:isR
-        ?"linear-gradient(135deg,#0a1f15 0%,#0d2a1a 60%,#061410 100%)"
-        :"linear-gradient(135deg,#1f0a0e 0%,#2a0d12 60%,#140609 100%)",
-      boxShadow:`0 20px 40px ${ac}15`,
+      background:G.card2,
+      border:`1px solid ${ac}33`,
+      boxShadow:`0 8px 32px ${ac}15`,
     }}>
-      <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${ac}20,transparent 65%)`,pointerEvents:"none"}}/>
-      <div style={{position:"absolute",bottom:-30,left:-20,width:130,height:130,borderRadius:"50%",background:`radial-gradient(circle,${ac}10,transparent 65%)`,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,borderRadius:"50%",background:`radial-gradient(circle,${ac}15,transparent 65%)`,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-30,left:-20,width:130,height:130,borderRadius:"50%",background:`radial-gradient(circle,${ac}08,transparent 65%)`,pointerEvents:"none"}}/>
 
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:`${ac}88`,marginBottom:8}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:G.muted,marginBottom:8}}>
         {isR?"Total de Receitas":"Total de Despesas"} · {mf?mesLblFull(mf):"Todos os meses"}
       </div>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-1.5,lineHeight:1,color:ac,
-        textShadow:`0 0 32px ${ac}44`,marginBottom:16}}>
+        textShadow:`0 0 32px ${ac}33`,marginBottom:16}}>
         {(isR?"+":"-")}{fmt(totalFiltro)}
       </div>
 
       {/* 3 stats */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
         {[
-          {l:"Este mês",v:fmt(mt),c:ac,bg:`${ac}12`,b:`${ac}20`},
-          {l:`Ano ${new Date().getFullYear()}`,v:fmt(at),c:G.blue,bg:`${G.blue}12`,b:`${G.blue}20`},
-          {l:"Registros",v:String(todos.length),c:G.muted,bg:"rgba(255,255,255,.04)",b:"rgba(255,255,255,.08)"},
+          {l:"Este mês",v:fmt(mt),c:ac,bg:`${ac}12`,b:`${ac}25`},
+          {l:`Ano ${new Date().getFullYear()}`,v:fmt(at),c:G.blue,bg:`${G.blue}12`,b:`${G.blue}25`},
+          {l:"Registros",v:String(todos.length),c:G.muted,bg:G.card,b:G.border},
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg,border:`1px solid ${k.b}`,borderRadius:14,padding:"10px 10px 8px"}}>
-            <div style={{fontSize:9,color:"rgba(255,255,255,.3)",marginBottom:3,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
+            <div style={{fontSize:9,color:G.muted,marginBottom:3,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:k.c,lineHeight:1.2}}>{k.v}</div>
           </div>
         ))}
-      </div>
     </div>
 
     {/* ── RECORRENTES ─────────────────────────────── */}
