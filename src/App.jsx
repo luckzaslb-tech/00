@@ -238,6 +238,19 @@ function localAI(msg,lancs){
   if(pergW.some(w=>t.includes(norm(w))))return{action:"conversa",isSummary:true};
   return{action:"conversa",resposta:'Não entendi 😕\n\nTente:\n• "Gastei 50 no mercado"\n• "Recebi 3000 de salário"'};
 }
+
+async function callAI(msg,lancs){
+  const r=localAI(msg,lancs);
+  if(r.isSummary){
+    const mes=curMes(),dm=lancs.filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
+    const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
+    const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
+    const sal=tR-tD;
+    const mn=MESES[new Date().getMonth()];
+    return{action:"conversa",resposta:`📊 ${mn}/${new Date().getFullYear()}\n\n💚 Receitas: ${fmt(tR)}\n🔴 Despesas: ${fmt(tD)}\n${sal>=0?"💰":"😬"} Saldo: ${fmt(sal)}`};
+  }
+  return r;
+}
 // ─── DESIGN ────────────────────────────────────────────────────────────────────
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const DARK ={bg:"#0A0A0F",card:"#111118",card2:"#16161F",border:"#1E1E2A",border2:"#2A2A3A",text:"#F0EEF8",muted:"#6B6880",accent:"#7C6AF7",accentL:"#7C6AF720",green:"#2ECC8E",greenL:"#2ECC8E18",red:"#FF5C6A",redL:"#FF5C6A18",yellow:"#F5C842",blue:"#4A9EFF",orange:"#FB923C"};
