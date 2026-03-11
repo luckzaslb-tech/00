@@ -2825,7 +2825,7 @@ function ImportarView({uid,lancs,showT}){
     setImporting(false);
   }
 
-  return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+  return(<div style={{padding:"16px 14px 32px",display:"flex",flexDirection:"column",gap:16}}>
     <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:20}}>
       <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Importar CSV</div>
       <div style={{fontSize:12,color:G.muted,marginBottom:12,lineHeight:1.6}}>
@@ -3580,8 +3580,8 @@ export default function App(){
   return(<>
     <style>{CSS}</style>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:G.bg}}>
-      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} profilePhoto={profilePhoto} onSearch={()=>setSearchOpen(true)} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
-      {searchOpen&&<BuscaView lancs={lancs} onClose={()=>setSearchOpen(false)} onDelete={deletar}/>}
+      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} profilePhoto={profilePhoto} onSearch={()=>setView("busca")} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
+      
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
