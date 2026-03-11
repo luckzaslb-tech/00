@@ -2878,6 +2878,241 @@ function ImportarView({uid,lancs,showT}){
 }
 
 // ─── FAMÍLIA / CASAL VIEW ──────────────────────────────────────────────────────
+// ─── CARTÕES VIEW ────────────────────────────────────────────────────────────
+function CartoesView({uid,lancs}){
+  const [cartoes,setCartoes]=useState([]);
+  const [adding,setAdding]=useState(false);
+  const [form,setForm]=useState({nome:"",limite:"",vencimento:"",cor:"#7C6AF7"});
+  const [saving,setSaving]=useState(false);
+
+  useEffect(()=>{
+    if(!uid)return;
+    const unsub=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{
+      setCartoes(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
+    return()=>unsub();
+  },[uid]);
+
+  async function salvarCartao(){
+    if(!form.nome.trim())return;
+    setSaving(true);
+    try{
+      await addDoc(collection(db,"users",uid,"cartoes"),{
+        nome:form.nome.trim(),
+        limite:parseFloat(form.limite)||0,
+        vencimento:parseInt(form.vencimento)||10,
+        cor:form.cor,
+        criadoEm:today(),
+      });
+      setForm({nome:"",limite:"",vencimento:"",cor:"#7C6AF7"});
+      setAdding(false);
+    }catch(e){alert("Erro: "+e.message);}
+    setSaving(false);
+  }
+
+  async function deletarCartao(id){
+    if(!confirm("Deletar cartão?"))return;
+    try{await deleteDoc(doc(db,"users",uid,"cartoes",id));}catch(e){}
+  }
+
+  const CORES=["#7C6AF7","#2ECC8E","#FF5C6A","#4A9EFF","#F5C842","#FF8C42","#E040FB","#00BCD4"];
+
+  return(<div style={{padding:"16px 14px 32px",display:"flex",flexDirection:"column",gap:14}}>
+
+    {/* Header */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.text}}>Cartões de Crédito</div>
+      <button onClick={()=>setAdding(v=>!v)} className="press"
+        style={{width:36,height:36,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <Ic d={adding?ICON.x:ICON.plus} size={18}/>
+      </button>
+    </div>
+
+    {/* Add form */}
+    {adding&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:18,padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      <div style={{fontSize:13,fontWeight:700,color:G.text}}>Novo cartão</div>
+      {[
+        {l:"Nome do cartão",k:"nome",ph:"Ex: Nubank, Itaú..."},
+        {l:"Limite (R$)",k:"limite",ph:"5000",type:"number"},
+        {l:"Dia do vencimento",k:"vencimento",ph:"10",type:"number"},
+      ].map(({l,k,ph,type})=>(
+        <div key={k}>
+          <div style={{fontSize:11,color:G.muted,marginBottom:4}}>{l}</div>
+          <input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))}
+            placeholder={ph} type={type||"text"} className="inp" style={{width:"100%"}}/>
+        </div>
+      ))}
+      <div>
+        <div style={{fontSize:11,color:G.muted,marginBottom:6}}>Cor</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {CORES.map(cor=>(
+            <button key={cor} onClick={()=>setForm(f=>({...f,cor}))}
+              style={{width:28,height:28,borderRadius:"50%",background:cor,border:`3px solid ${form.cor===cor?"#fff":"transparent"}`,cursor:"pointer",outline:form.cor===cor?`2px solid ${cor}`:"none"}}/>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={salvarCartao} disabled={saving} className="press"
+          style={{flex:1,padding:"11px",borderRadius:12,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+          {saving?"Salvando...":"Adicionar"}
+        </button>
+        <button onClick={()=>setAdding(false)} className="press"
+          style={{padding:"11px 14px",borderRadius:12,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>Cancelar</button>
+      </div>
+    </div>}
+
+    {/* Cards list */}
+    {cartoes.length===0&&!adding&&<div style={{textAlign:"center",padding:"48px 0",color:G.muted}}>
+      <div style={{fontSize:40,marginBottom:8}}>💳</div>
+      <div style={{fontSize:14}}>Nenhum cartão cadastrado</div>
+      <div style={{fontSize:12,marginTop:4}}>Toque em + para adicionar</div>
+    </div>}
+
+    {cartoes.map(k=>{
+      const gastos=lancs.filter(l=>l.cartao===k.id||l.cartao===k.nome).reduce((s,l)=>s+l.valor,0);
+      const pct=k.limite>0?Math.min(gastos/k.limite,1):0;
+      const restante=(k.limite||0)-gastos;
+      const corBarra=pct>.85?G.red:pct>.6?G.yellow:G.green;
+      return(
+        <div key={k.id} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,overflow:"hidden"}}>
+          {/* card visual */}
+          <div style={{background:`linear-gradient(135deg,${k.cor}dd,${k.cor}88)`,padding:"20px 18px 16px",position:"relative"}}>
+            <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
+            <div style={{position:"absolute",bottom:-30,right:20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)"}}/>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:"#fff",marginBottom:12}}>{k.nome}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+              <div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8}}>Gasto</div>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"#fff"}}>{fmt(gastos)}</div>
+              </div>
+              {k.limite>0&&<div style={{textAlign:"right"}}>
+                <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8}}>Limite</div>
+                <div style={{fontSize:14,fontWeight:600,color:"rgba(255,255,255,.8)"}}>{fmt(k.limite)}</div>
+              </div>}
+            </div>
+          </div>
+          {/* barra uso */}
+          {k.limite>0&&<div style={{padding:"12px 18px"}}>
+            <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden",marginBottom:6}}>
+              <div style={{height:"100%",width:`${pct*100}%`,background:corBarra,borderRadius:6,transition:"width .4s"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
+              <span style={{color:G.muted}}>{Math.round(pct*100)}% usado</span>
+              <span style={{color:restante>=0?G.green:G.red,fontWeight:600}}>
+                {restante>=0?`${fmt(restante)} disponível`:`Estourou ${fmt(-restante)}`}
+              </span>
+            </div>
+          </div>}
+          {/* vencimento + delete */}
+          <div style={{padding:"0 18px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            {k.vencimento&&<div style={{fontSize:12,color:G.muted}}>📅 Vence dia {k.vencimento}</div>}
+            <button onClick={()=>deletarCartao(k.id)} className="press"
+              style={{padding:"6px 12px",borderRadius:10,border:`1px solid ${G.red}44`,background:G.red+"11",color:G.red,fontSize:12,cursor:"pointer",marginLeft:"auto"}}>
+              Deletar
+            </button>
+          </div>
+          {/* últimas transações */}
+          {(()=>{
+            const txs=lancs.filter(l=>l.cartao===k.id||l.cartao===k.nome).slice(0,3);
+            if(!txs.length)return null;
+            return(<div style={{borderTop:`1px solid ${G.border}`,padding:"10px 18px 14px"}}>
+              <div style={{fontSize:11,color:G.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Últimas transações</div>
+              {txs.map(l=>(
+                <div key={l.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div>
+                    <div style={{fontSize:12,color:G.text}}>{l.desc}</div>
+                    <div style={{fontSize:10,color:G.muted}}>{fmtD(l.data)}</div>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:700,color:G.red}}>-{fmt(l.valor)}</div>
+                </div>
+              ))}
+            </div>);
+          })()}
+        </div>
+      );
+    })}
+  </div>);
+}
+
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
+  const [modo,setModo]=useState(""); // ""|"login"|"cadastro"
+  const [email,setEmail]=useState("");
+  const [senha,setSenha]=useState("");
+  const [nome,setNome]=useState("");
+  const [emailErr,setEmailErr]=useState("");
+
+  async function handleEmail(){
+    if(!email.includes("@")){setEmailErr("Email inválido");return;}
+    if(senha.length<6){setEmailErr("Senha mínimo 6 caracteres");return;}
+    setEmailErr("");
+    onEmail(email,senha,modo==="cadastro"?nome:"");
+  }
+
+  return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      background:"linear-gradient(145deg,#0a0a12 0%,#0e0c1e 50%,#0a1020 100%)",padding:"24px",position:"relative",overflow:"hidden"}}>
+      {/* blobs */}
+      <div style={{position:"absolute",top:-100,left:-100,width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,106,247,.15),transparent 65%)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-100,right:-80,width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(46,204,142,.1),transparent 65%)",pointerEvents:"none"}}/>
+
+      <div style={{width:"100%",maxWidth:380,position:"relative"}}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:36}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,color:"#fff",marginBottom:6}}>
+            fin<span style={{color:"#7C6AF7"}}>ance</span>
+          </div>
+          <div style={{fontSize:14,color:"rgba(255,255,255,.4)"}}>Controle financeiro inteligente</div>
+        </div>
+
+        {error&&<div style={{background:"rgba(255,92,106,.15)",border:"1px solid rgba(255,92,106,.3)",borderRadius:12,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#FF5C6A"}}>{error}</div>}
+
+        {modo===""&&(
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <button onClick={onGoogle} disabled={loading} className="press"
+              style={{width:"100%",padding:"14px",borderRadius:14,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.06)",
+                color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+              <span style={{fontSize:20}}>G</span> Continuar com Google
+            </button>
+            <button onClick={()=>setModo("login")} className="press"
+              style={{width:"100%",padding:"14px",borderRadius:14,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.06)",
+                color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer"}}>
+              📧 Entrar com Email
+            </button>
+            <button onClick={()=>setModo("cadastro")} className="press"
+              style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:"#7C6AF7",
+                color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer"}}>
+              ✨ Criar conta
+            </button>
+          </div>
+        )}
+
+        {(modo==="login"||modo==="cadastro")&&(
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <button onClick={()=>setModo("")} style={{background:"none",border:"none",color:"rgba(255,255,255,.4)",cursor:"pointer",fontSize:13,textAlign:"left",marginBottom:4}}>← Voltar</button>
+            {modo==="cadastro"&&(
+              <input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome"
+                className="inp" style={{width:"100%",fontSize:15,padding:"13px 14px"}}/>
+            )}
+            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"
+              type="email" className="inp" style={{width:"100%",fontSize:15,padding:"13px 14px"}}/>
+            <input value={senha} onChange={e=>setSenha(e.target.value)} placeholder="Senha"
+              type="password" className="inp" style={{width:"100%",fontSize:15,padding:"13px 14px"}}/>
+            {emailErr&&<div style={{fontSize:12,color:"#FF5C6A"}}>{emailErr}</div>}
+            <button onClick={handleEmail} disabled={loading} className="press"
+              style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:"#7C6AF7",
+                color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:4}}>
+              {loading?"Aguarde...":(modo==="login"?"Entrar":"Criar conta")}
+            </button>
+          </div>
+        )}
+
+        {loading&&<div style={{textAlign:"center",marginTop:16}}><Spinner size={24}/></div>}
+      </div>
+    </div>
+  );
+}
+
 // ─── CONTATOS VIEW ────────────────────────────────────────────────────────────
 function ContatosView({uid,user}){
   const [contatos,setContatos]=useState([]);
