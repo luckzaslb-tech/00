@@ -111,20 +111,8 @@ function localAI(msg,lancs){
   const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const t=norm(msg);
 
-  // valor
-  // Captura valor: suporta 1566, 1.566, 1.566,00, R$1.566,50
-  const vm=t.match(/r?\$?\s*(\d{1,3}(?:[.]\d{3})*(?:[,]\d{1,2})?|\d+(?:[,]\d{1,2})?)/);
-  const valorStr=(vm?.[1]||"0");
-  // Converte: "1.566,50" → 1566.50 | "1566" → 1566 | "1,50" → 1.50
-  const valor=parseFloat(valorStr.includes(",")?
-    valorStr.replace(/\./g,"").replace(",","."):
-    valorStr.replace(/\./g,""))||0;
-
-  // tipo
-  const recW=["recebi","salario","salario","freelance","pagaram","renda","entrada","deposito","reembolso","dividendo","bonus","lucro","ganhei","caiu na conta","transferencia recebi"];
-  const isRec=recW.some(w=>t.includes(norm(w)));
-
-  // categoria
+  // ── helpers ────────────────────────────────────────
+  const recW=["recebi","salario","freelance","pagaram","renda","entrada","deposito","reembolso","dividendo","bonus","lucro","ganhei","caiu na conta","transferencia recebida"];
   const rules=[
     ["Salário",      ["salario","holerite","clr"]],
     ["Freelance",    ["freelance","freela","bico","trampo extra"]],
@@ -132,88 +120,124 @@ function localAI(msg,lancs){
     ["Bônus",        ["bonus","gratificacao","13 salario","premio"]],
     ["Reembolso",    ["reembolso","ressarcimento","devolucao","estorno"]],
     ["Renda Extra",  ["renda extra","extra","vendi","venda"]],
-    ["Alimentação",  ["mercado","supermercado","ifood","restaurante","lanche","pizza","hamburguer","sushi","acai","padaria","cafe","comida","almoco","jantar","feira","hortifruti","kebab","temaki","burguer","mcdonalds","bk ","subway","outback","spoleto"]],
-    ["Transporte",   ["uber","99","taxi","onibus","metro","gasolina","combustivel","estacionamento","pedagio","posto","passagem","bilhete","brt","trem"]],
+    ["Alimentação",  ["mercado","supermercado","ifood","restaurante","lanche","pizza","hamburguer","sushi","acai","padaria","cafe","comida","almoco","jantar","refri","refrigerante","frango","carne","feira","hortifruti","acougue","mercearia","loja","atacadao","assai","carrefour","extra","pao"]],
+    ["Transporte",   ["uber","99","taxi","onibus","metro","gasolina","combustivel","estacionamento","pedagio","posto","passagem","bilhete","brt","trem","carro","moto","gasolina","revisao","mecanico","oficina","pneu","bateria carro"]],
     ["Moradia",      ["aluguel","condominio","iptu","agua ","luz ","energia","internet","gas ","reforma","manutencao","faxina","limpeza"]],
     ["Saúde",        ["medico","consulta","plano de saude","plano saude","exame","hospital","dentista","ortopedista","psicologo","terapia","clinica"]],
     ["Farmácia",     ["farmacia","remedio","drogaria","drogasil","ultrafarma","medicamento","vitamina"]],
     ["Academia",     ["academia","gym","musculacao","crossfit","natacao","pilates","yoga","personal"]],
     ["Educação",     ["curso","faculdade","escola","livro","udemy","alura","coursera","mensalidade escola","material escolar","idioma","ingles"]],
-    ["Lazer",        ["netflix","cinema","show","teatro","viagem","hotel","bar","balada","jogo","game","steam","ingresso","passeio","praia","parque"]],
+    ["Lazer",        ["netflix","cinema","show","teatro","viagem","hotel","bar","balada","jogo","game","steam","ingresso","passeio","praia","parque","drink","cerveja","chopp","boteco"]],
     ["Assinaturas",  ["spotify","amazon prime","apple","youtube premium","deezer","hbo","disney","globoplay","assinatura","prime video"]],
     ["Vestuário",    ["roupa","calcado","tenis ","camisa","calca","vestido","sapato","shein","zara","renner","hm ","c&a","americanas"]],
-    ["Pets",         ["pet","veterinario","racao","banho pet","dog","gato","cachorro","aquario"]],
-    ["Eletrônicos",  ["celular","notebook","computador","tablet","fone","headphone","carregador","alexa","smartwatch"]],
-    ["Presentes",    ["presente","gift","aniversario","natal","casamento","buque"]],
-    ["Impostos",     ["imposto","taxa ","multa","ipva","irpf","darf","decore"]],
+    ["Pets",         ["pet","veterinario","racao","banho pet","dog","gato","cachorro"]],
+    ["Eletrônicos",  ["celular","notebook","computador","tablet","fone","headphone","carregador","smartwatch"]],
+    ["Presentes",    ["presente","gift","aniversario","natal","casamento"]],
+    ["Impostos",     ["imposto","taxa ","multa","ipva","irpf","darf"]],
     ["Dívidas",      ["parcela","prestacao","emprestimo","fatura","divida","financiamento"]],
   ];
   const recCats=["Salário","Freelance","Investimentos","Bônus","Reembolso","Renda Extra","Aluguel Recebido","Dividendos"];
-  let cat=isRec?"Renda Extra":"Outros";
-  for(const [c,words] of rules){
-    if(words.some(w=>t.includes(norm(w)))){
-      if(recCats.includes(c)===isRec){cat=c;break;}
+  const formas=[["Cartão Crédito",["credito","cartao cred","no credito"]],["Cartão Débito",["debito","cartao deb","no debito"]],["PIX",["pix"]],["Dinheiro",["dinheiro","especie","fisico"]]];
+  const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"📄","Dívidas":"💳","Farmácia":"💊","Outros":"💰","Salário":"💰","Freelance":"🖥","Investimentos":"📈","Bônus":"🏆","Reembolso":"↩","Renda Extra":"⭐"};
+
+  function detectCat(fragment,isRec){
+    let cat=isRec?"Renda Extra":"Outros";
+    const fn=norm(fragment);
+    for(const [c,words] of rules){
+      if(words.some(w=>fn.includes(norm(w)))){
+        if(recCats.includes(c)===isRec){cat=c;break;}
+      }
     }
+    return cat;
+  }
+  function detectForma(fragment){
+    const fn=norm(fragment);
+    for(const [f,words] of formas){if(words.some(w=>fn.includes(norm(w))))return f;}
+    return "PIX";
+  }
+  function parseValor(str){
+    const valorStr=str.replace(/\./g,"").replace(",",".");
+    return parseFloat(valorStr)||0;
+  }
+  function limpDesc(fragment,cat){
+    let d=fragment
+      .replace(/r?\$\s*\d+(?:[.,]\d{1,2})?/gi,"")
+      .replace(/\b(gastei|paguei|comprei|recebi|ganhei|transferi|debitou|caiu|saiu|com|de|no|na|nos|nas|um|uma|o|a)\b/gi," ")
+      .replace(/\s+/g," ").trim();
+    if(d.length<2)d=cat;
+    return d.charAt(0).toUpperCase()+d.slice(1);
   }
 
-  // forma
-  const formas=[["Cartão Crédito",["credito","cartao cred","no credito"]],["Cartão Débito",["debito","cartao deb","no debito"]],["PIX",["pix"]],["Dinheiro",["dinheiro","especie","cash"]],["Débito Auto",["debito automatico","automatico"]],["Boleto",["boleto"]]];
-  let forma="PIX";
-  for(const [f,words] of formas){if(words.some(w=>t.includes(norm(w)))){forma=f;break;}}
-
-  // data
+  // ── data ───────────────────────────────────────────
   let data=today();
   if(t.includes("ontem")){const d=new Date();d.setDate(d.getDate()-1);data=d.toISOString().slice(0,10);}
   const dm=t.match(/dia\s+(\d{1,2})/);
   if(dm){const m=curMes();data=`${m}-${String(dm[1]).padStart(2,"0")}`;}
 
-  // sem valor = conversa
-  if(!valor){
-    const pergW=["quanto","gastei","recebi","resumo","relatorio","saldo","como estou","quanto tenho","me mostra","total","mes","esse mes"];
-    if(pergW.some(w=>t.includes(norm(w)))){return{action:"conversa",isSummary:true};}
-    if(t.length<3)return{action:"conversa",resposta:'Oi! Me conte um gasto ou receita. Ex: "Gastei 50 no mercado" 😊'};
+  // ── sem valor = conversa ───────────────────────────
+  const pergW=["quanto","gastei","recebi","resumo","relatorio","saldo","como estou","quanto tenho","me mostra","total","mes","esse mes"];
+  const hasAnyNumber=/\d/.test(t);
+  if(!hasAnyNumber){
+    if(pergW.some(w=>t.includes(norm(w))))return{action:"conversa",isSummary:true};
+    if(t.length<3)return{action:"conversa",resposta:'Oi! Me conte um gasto ou receita 😊'};
     return{action:"conversa",resposta:'Não entendi 😕\n\nTente:\n• "Gastei 50 no mercado"\n• "Recebi 3000 de salário"\n• "Quanto gastei esse mês?"'};
   }
 
-  // descrição limpa
-  let desc=msg.replace(/r?\$\s*\d+(?:[.,]\d{1,2})?/gi,"").replace(/gastei|paguei|comprei|recebi|ganhei|transferi|debitou|caiu|saiu/gi,"").replace(/\s+/g," ").trim();
-  if(desc.length<2)desc=cat;
-  desc=desc.charAt(0).toUpperCase()+desc.slice(1);
-
-  const tipo=isRec?"Receita":"Despesa";
-  const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Farmácia":"💊","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Salário":"","Freelance":"🖥️","Investimentos":"📈","Bônus":"⭐","Renda Extra":"💡"};
-  const emoji=icons[cat]||"💰";
-  const confirmacao=tipo==="Receita"
-    ?`${emoji} Receita de R$${valor.toFixed(2)} em ${cat}! Confirma?`
-    :`${emoji} Despesa de R$${valor.toFixed(2)} em ${cat}. Confirma?`;
-
-  return{action:"lancamento",tipo,desc,cat,forma,valor,data,confirmacao};
-}
-
-async function callAI(msg,lancs){
-  const r=localAI(msg,lancs);
-  if(r.isSummary){
-    const mes=curMes(),dm=lancs.filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
-    const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-    const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-    const sal=tR-tD;
-    const mn=MESES[new Date().getMonth()];
-    return{action:"conversa",resposta:`📊 ${mn}/${new Date().getFullYear()}\n\n💚 Receitas: R$${tR.toFixed(2)}\n🔴 Despesas: R$${tD.toFixed(2)}\n${sal>=0?"💰":"⚠️"} Saldo: ${sal>=0?"+":""}R$${sal.toFixed(2)}`};
+  // ── detectar múltiplos lançamentos ────────────────
+  // Divide por separadores comuns: "gastei X com A gastei Y com B" / "e " / ", " / vírgula
+  // Regex: captura cada bloco "verbo + valor + descrição"
+  const segPattern=/(?:gastei|paguei|comprei|recebi|ganhei)\s+r?\$?\s*[\d.,]+[^,;]*?(?=(?:gastei|paguei|comprei|recebi|ganhei)\s+r?\$?\s*[\d.,]|$)/gi;
+  const segments=[];
+  let match;
+  while((match=segPattern.exec(msg))!==null){
+    segments.push(match[0].trim());
   }
-  return r;
-}
 
-async function transcribeAudio(blob) {
-  const form=new FormData();
-  form.append("file",blob,"audio.webm");
-  form.append("model","whisper-1");
-  form.append("language","pt");
-  const r=await fetch("/api/transcribe",{method:"POST",body:form});
-  if(!r.ok) throw new Error("Transcription failed");
-  const d=await r.json();
-  return d.text||"";
-}
+  // fallback: tenta extrair todos os pares "R$X com/no/na Y" mesmo sem verbo
+  if(segments.length<2){
+    const pairPat=/r?\$?\s*(\d{1,3}(?:[.]\d{3})*(?:[,]\d{1,2})?|\d+(?:[,]\d{1,2})?)\s+(?:com|no|na|nos|nas|de|em|p\/|para|num|numa)?\s*([^,;0-9]+?)(?=r?\$?\s*\d|,|;|$)/gi;
+    let pm;
+    while((pm=pairPat.exec(msg))!==null){
+      segments.push(pm[0].trim());
+    }
+  }
 
+  // ── single lançamento ─────────────────────────────
+  function parseSingle(fragment){
+    const nt=norm(fragment);
+    const vm=nt.match(/r?\$?\s*(\d{1,3}(?:[.]\d{3})*(?:[,]\d{1,2})?|\d+(?:[,]\d{1,2})?)/);
+    if(!vm)return null;
+    const valor=parseValor(vm[1]);
+    if(!valor)return null;
+    const isRec=recW.some(w=>nt.includes(norm(w)));
+    const cat=detectCat(fragment,isRec);
+    const forma=detectForma(fragment);
+    const desc=limpDesc(fragment,cat);
+    const tipo=isRec?"Receita":"Despesa";
+    const emoji=icons[cat]||"💰";
+    return{action:"lancamento",tipo,desc,cat,forma,valor,data,confirmacao:`${emoji} ${tipo} de R$${valor.toFixed(2)} em ${cat}. Confirma?`};
+  }
+
+  if(segments.length>=2){
+    const itens=segments.map(s=>parseSingle(s)).filter(Boolean);
+    if(itens.length>=2){
+      const total=itens.reduce((s,i)=>s+i.valor,0);
+      const resumo=itens.map(i=>`${icons[i.cat]||"💰"} ${i.desc} — R$${i.valor.toFixed(2)}`).join("\n");
+      return{
+        action:"multiplos",
+        itens,
+        confirmacao:`Encontrei ${itens.length} lançamentos (total R$${total.toFixed(2)}):\n\n${resumo}\n\nConfirmo todos?`,
+      };
+    }
+  }
+
+  // ── single fallback ───────────────────────────────
+  const single=parseSingle(msg);
+  if(single)return single;
+
+  if(pergW.some(w=>t.includes(norm(w))))return{action:"conversa",isSummary:true};
+  return{action:"conversa",resposta:'Não entendi 😕\n\nTente:\n• "Gastei 50 no mercado"\n• "Recebi 3000 de salário"'};
+}
 // ─── DESIGN ────────────────────────────────────────────────────────────────────
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const DARK ={bg:"#0A0A0F",card:"#111118",card2:"#16161F",border:"#1E1E2A",border2:"#2A2A3A",text:"#F0EEF8",muted:"#6B6880",accent:"#7C6AF7",accentL:"#7C6AF720",green:"#2ECC8E",greenL:"#2ECC8E18",red:"#FF5C6A",redL:"#FF5C6A18",yellow:"#F5C842",blue:"#4A9EFF",orange:"#FB923C"};
@@ -1081,43 +1105,53 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
   </div>);
 }
 // ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
-function CarreiraView({uid,user,onPhotoSave}){
-  // ── perfil ───────────────────────────────────────
+function CarreiraView({uid,user,onPhotoSave,lancs=[]}){
+  const [secao,setSecao]=useState(null); // which card is expanded
+  const [saving,setSaving]=useState(false);
+
+  // ── perfil ──────────────────────────────────────────
   const [perfil,setPerfil]=useState(null);
   const [editando,setEditando]=useState(false);
-  const [saving,setSaving]=useState(false);
-  const [fp,setFp]=useState({nome:"",bio:"",fotoUrl:"",humor:"",site:"",instagram:"",linkedin:""});
+  const [fp,setFp]=useState({
+    nome:"",bio:"",frase:"",fotoUrl:"",humor:"",
+    instagram:"",site:"",cidade:"",aniversario:"",
+  });
 
-  // ── rotinas ──────────────────────────────────────
-  const [rotinas,setRotinas]=useState([]);   // {id,texto,feita,ordem}
+  // ── humor histórico ──────────────────────────────────
+  const [humores,setHumores]=useState([]); // {data,humor,energia,nota}
+  const [addingHumor,setAddingHumor]=useState(false);
+  const [novoHumor,setNovoHumor]=useState({humor:"😊",energia:3,nota:""});
+
+  // ── rotinas + streaks ────────────────────────────────
+  const [rotinas,setRotinas]=useState([]);
   const [novaRotina,setNovaRotina]=useState("");
   const [addingRotina,setAddingRotina]=useState(false);
-  const [roRenaming,setRoRenaming]=useState(null); // id being renamed
+  const [roRenaming,setRoRenaming]=useState(null);
   const [roRenameVal,setRoRenameVal]=useState("");
 
-  // ── metas pessoais ───────────────────────────────
+  // ── metas pessoais ───────────────────────────────────
   const [metas,setMetas]=useState([]);
   const [addingMeta,setAddingMeta]=useState(false);
   const [novaMeta,setNovaMeta]=useState({titulo:"",emoji:"🎯",prazo:"",progresso:0,total:100});
 
+  // ── load ─────────────────────────────────────────────
   useEffect(()=>{
     if(!uid)return;
-    // Load perfil
     getDoc(doc(db,"users",uid,"carreira","perfil")).then(s=>{
       if(s.exists()){const d=s.data();setPerfil(d);setFp(f=>({...f,...d}));}
     }).catch(()=>{});
-    // Load rotinas (ordered by ordem)
     getDocs(collection(db,"users",uid,"rotinas")).then(s=>{
-      const list=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      setRotinas(list);
+      setRotinas(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ordem||0)-(b.ordem||0)));
     }).catch(()=>{});
-    // Load metas pessoais
     getDocs(collection(db,"users",uid,"metas_pessoais")).then(s=>{
       setMetas(s.docs.map(d=>({id:d.id,...d.data()})));
     }).catch(()=>{});
+    getDocs(collection(db,"users",uid,"humores")).then(s=>{
+      setHumores(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.data.localeCompare(a.data)));
+    }).catch(()=>{});
   },[uid]);
 
-  // ── save perfil ──────────────────────────────────
+  // ── save perfil ──────────────────────────────────────
   async function salvarPerfil(){
     setSaving(true);
     let fotoFinal=fp.fotoUrl||"";
@@ -1143,46 +1177,70 @@ function CarreiraView({uid,user,onPhotoSave}){
       await setDoc(doc(db,"users",uid,"carreira","perfil"),v);
       setPerfil(v);setEditando(false);
       if(v.fotoUrl&&onPhotoSave)onPhotoSave(v.fotoUrl);
-    }catch(e){alert("Erro ao salvar: "+e.message);}
+    }catch(e){alert("Erro: "+e.message);}
     setSaving(false);
   }
 
-  // ── rotinas CRUD ─────────────────────────────────
+  // ── humor CRUD ───────────────────────────────────────
+  async function salvarHumor(){
+    const v={...novoHumor,data:today(),hora:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})};
+    try{
+      const ref=await addDoc(collection(db,"users",uid,"humores"),v);
+      setHumores(p=>[{id:ref.id,...v},...p]);
+      setNovoHumor({humor:"😊",energia:3,nota:""});setAddingHumor(false);
+    }catch(e){console.error(e);}
+  }
+  async function deleteHumor(id){
+    setHumores(p=>p.filter(x=>x.id!==id));
+    try{await deleteDoc(doc(db,"users",uid,"humores",id));}catch(e){}
+  }
+
+  // ── rotinas CRUD ─────────────────────────────────────
   async function addRotina(){
     if(!novaRotina.trim())return;
+    const r={texto:novaRotina.trim(),feita:false,ordem:rotinas.length,streak:0,ultimaFeita:"",criadoEm:today()};
     try{
-      const ref=await addDoc(collection(db,"users",uid,"rotinas"),{texto:novaRotina.trim(),feita:false,ordem:rotinas.length,criadoEm:today()});
-      setRotinas(p=>[...p,{id:ref.id,texto:novaRotina.trim(),feita:false,ordem:p.length}]);
+      const ref=await addDoc(collection(db,"users",uid,"rotinas"),r);
+      setRotinas(p=>[...p,{id:ref.id,...r}]);
       setNovaRotina("");setAddingRotina(false);
     }catch(e){console.error(e);}
   }
   async function toggleRotina(id){
     const r=rotinas.find(r=>r.id===id);if(!r)return;
     const nova=!r.feita;
-    setRotinas(p=>p.map(x=>x.id===id?{...x,feita:nova}:x));
-    try{await updateDoc(doc(db,"users",uid,"rotinas",id),{feita:nova});}catch(e){console.error(e);}
+    // streak logic
+    const ultimaFeita=r.ultimaFeita||"";
+    const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    let streak=r.streak||0;
+    if(nova){
+      if(ultimaFeita===yesterday||ultimaFeita===today()) streak=streak+(ultimaFeita===today()?0:1);
+      else streak=1;
+    }
+    const up={feita:nova,ultimaFeita:nova?today():ultimaFeita,streak};
+    setRotinas(p=>p.map(x=>x.id===id?{...x,...up}:x));
+    try{await updateDoc(doc(db,"users",uid,"rotinas",id),up);}catch(e){}
   }
   async function deleteRotina(id){
     setRotinas(p=>p.filter(x=>x.id!==id));
-    try{await deleteDoc(doc(db,"users",uid,"rotinas",id));}catch(e){console.error(e);}
+    try{await deleteDoc(doc(db,"users",uid,"rotinas",id));}catch(e){}
   }
   async function renameRotina(id){
     if(!roRenameVal.trim())return;
     setRotinas(p=>p.map(x=>x.id===id?{...x,texto:roRenameVal.trim()}:x));
     setRoRenaming(null);
-    try{await updateDoc(doc(db,"users",uid,"rotinas",id),{texto:roRenameVal.trim()});}catch(e){console.error(e);}
+    try{await updateDoc(doc(db,"users",uid,"rotinas",id),{texto:roRenameVal.trim()});}catch(e){}
   }
   async function resetRotinas(){
     const updated=rotinas.map(r=>({...r,feita:false}));
     setRotinas(updated);
-    try{await Promise.all(updated.map(r=>updateDoc(doc(db,"users",uid,"rotinas",r.id),{feita:false})));}catch(e){console.error(e);}
+    try{await Promise.all(updated.map(r=>updateDoc(doc(db,"users",uid,"rotinas",r.id),{feita:false})));}catch(e){}
   }
 
-  // ── metas pessoais CRUD ──────────────────────────
+  // ── metas CRUD ───────────────────────────────────────
   async function addMeta(){
     if(!novaMeta.titulo.trim())return;
+    const v={...novaMeta,progresso:0,criadoEm:today()};
     try{
-      const v={...novaMeta,progresso:0,criadoEm:today()};
       const ref=await addDoc(collection(db,"users",uid,"metas_pessoais"),v);
       setMetas(p=>[...p,{id:ref.id,...v}]);
       setNovaMeta({titulo:"",emoji:"🎯",prazo:"",progresso:0,total:100});setAddingMeta(false);
@@ -1192,96 +1250,158 @@ function CarreiraView({uid,user,onPhotoSave}){
     const m=metas.find(x=>x.id===id);if(!m)return;
     const np=Math.max(0,Math.min(m.total||100,(m.progresso||0)+delta));
     setMetas(p=>p.map(x=>x.id===id?{...x,progresso:np}:x));
-    try{await updateDoc(doc(db,"users",uid,"metas_pessoais",id),{progresso:np});}catch(e){console.error(e);}
+    try{await updateDoc(doc(db,"users",uid,"metas_pessoais",id),{progresso:np});}catch(e){}
   }
   async function deleteMeta(id){
     setMetas(p=>p.filter(x=>x.id!==id));
-    try{await deleteDoc(doc(db,"users",uid,"metas_pessoais",id));}catch(e){console.error(e);}
+    try{await deleteDoc(doc(db,"users",uid,"metas_pessoais",id));}catch(e){}
   }
 
+  // ── stats financeiros ────────────────────────────────
+  const anoAtual=new Date().getFullYear();
+  const lancsAno=lancs.filter(l=>l.data.startsWith(anoAtual)&&isRealizado(l.data,l.agendado));
+  const recAno=lancsAno.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
+  const depAno=lancsAno.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
+  const saldoAno=recAno-depAno;
+  const mesMaisGasto=(()=>{
+    const por={};
+    lancsAno.filter(l=>l.tipo==="Despesa").forEach(l=>{const m=getMes(l.data);por[m]=(por[m]||0)+l.valor;});
+    const sorted=Object.entries(por).sort((a,b)=>b[1]-a[1]);
+    if(!sorted.length)return null;
+    const [m,v]=sorted[0];
+    const [,mm]=m.split("-");
+    return{mes:MESES[parseInt(mm)-1],v};
+  })();
+  const catMaisGasta=(()=>{
+    const por={};
+    lancsAno.filter(l=>l.tipo==="Despesa").forEach(l=>{por[l.cat]=(por[l.cat]||0)+l.valor;});
+    const sorted=Object.entries(por).sort((a,b)=>b[1]-a[1]);
+    return sorted[0]?{cat:sorted[0][0],v:sorted[0][1]}:null;
+  })();
+  const taxaPoupanca=recAno>0?Math.round(saldoAno/recAno*100):0;
+
+  // ── helpers ──────────────────────────────────────────
+  const HUMORES_LIST=["😄","😊","😐","😔","😤","😴","🤩","😰","🥰","😎"];
+  const ENERGIA_LABELS=["","Baixa","Razoável","Boa","Alta","Máxima"];
   const feitas=rotinas.filter(r=>r.feita).length;
-  const total=rotinas.length;
-  const progRot=total>0?feitas/total:0;
-  const HUMORES=["😄","😊","😐","😔","😤","😴","🤩","😰"];
+  const totalRot=rotinas.length;
+  const progRot=totalRot>0?feitas/totalRot:0;
+  const melhorStreak=rotinas.length>0?Math.max(...rotinas.map(r=>r.streak||0)):0;
+  const ultimoHumor=humores[0];
 
-  return(<div style={{paddingBottom:24,display:"flex",flexDirection:"column",gap:16}}>
+  // ── expandable card helper ───────────────────────────
+  function Card({id,icon,title,badge,children,headerExtra}){
+    const open=secao===id;
+    return(
+      <div style={{background:G.card,border:`1px solid ${open?G.accent:G.border}`,borderRadius:20,overflow:"hidden",transition:"border-color .2s",marginBottom:12}}>
+        <div onClick={()=>setSecao(open?null:id)} style={{display:"flex",alignItems:"center",gap:12,padding:"16px",cursor:"pointer"}}>
+          <div style={{width:36,height:36,borderRadius:12,background:G.accentL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{icon}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:14,fontWeight:700,color:G.text}}>{title}</div>
+            {badge&&<div style={{fontSize:11,color:G.muted,marginTop:1}}>{badge}</div>}
+          </div>
+          {headerExtra&&<div onClick={e=>e.stopPropagation()}>{headerExtra}</div>}
+          <div style={{fontSize:12,color:G.muted,transform:open?"rotate(180deg)":"none",transition:"transform .2s",flexShrink:0}}>▼</div>
+        </div>
+        {open&&<div style={{borderTop:`1px solid ${G.border}`,padding:"16px"}}>{children}</div>}
+      </div>
+    );
+  }
 
-    {/* ── HERO IDENTIDADE ──────────────────────────── */}
-    <div style={{background:"linear-gradient(135deg,#0f0f1e,#1a1040)",borderRadius:24,padding:"24px 20px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-30,right:-30,width:140,height:140,borderRadius:"50%",background:`radial-gradient(circle,${G.accent}28,transparent 70%)`,pointerEvents:"none"}}/>
+  return(<div style={{paddingBottom:32}}>
+
+    {/* ══ HERO IDENTIDADE ══════════════════════════════ */}
+    <div style={{
+      borderRadius:24,padding:"24px 20px",marginBottom:16,
+      background:"linear-gradient(145deg,#0e0c1e 0%,#160f30 45%,#0a1628 100%)",
+      position:"relative",overflow:"hidden",
+      boxShadow:"0 20px 48px rgba(0,0,0,.4)",
+    }}>
+      <div style={{position:"absolute",top:-50,right:-40,width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,106,247,.2),transparent 65%)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-40,left:-20,width:150,height:150,borderRadius:"50%",background:"radial-gradient(circle,rgba(46,204,142,.12),transparent 65%)",pointerEvents:"none"}}/>
 
       {!editando?(
         <div>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:14}}>
             {/* avatar */}
-            <div style={{width:72,height:72,borderRadius:"50%",flexShrink:0,border:`2px solid ${G.accent}55`,overflow:"hidden",background:G.card2,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:76,height:76,borderRadius:"50%",flexShrink:0,border:"2px solid rgba(124,106,247,.5)",overflow:"hidden",background:"rgba(255,255,255,.08)",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
               {perfil?.fotoUrl
                 ?<img src={perfil.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-                :<Ic d={ICON.user} size={28} color={G.muted}/>
+                :<Ic d={ICON.user} size={30} color="rgba(255,255,255,.4)"/>
               }
+              {ultimoHumor&&<div style={{position:"absolute",bottom:-2,right:-2,fontSize:18,lineHeight:1}}>{ultimoHumor.humor}</div>}
             </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"#fff",lineHeight:1.1}}>{perfil?.nome||user?.displayName||"Sem nome"}</div>
-              {perfil?.humor&&<div style={{fontSize:18,marginTop:4}}>{perfil.humor}</div>}
+            <div style={{flex:1,minWidth:0,paddingTop:4}}>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"#fff",lineHeight:1.1,marginBottom:4}}>
+                {perfil?.nome||user?.displayName||"Seu nome"}
+              </div>
+              {perfil?.cidade&&<div style={{fontSize:12,color:"rgba(255,255,255,.45)",marginBottom:4}}>📍 {perfil.cidade}</div>}
+              {perfil?.frase&&<div style={{fontSize:12,color:"rgba(255,255,255,.55)",fontStyle:"italic",lineHeight:1.5}}>"{perfil.frase}"</div>}
             </div>
-            <button onClick={()=>setEditando(true)} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <button onClick={()=>setEditando(true)} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <Ic d={ICON.edit} size={15} color="rgba(255,255,255,.6)"/>
             </button>
           </div>
-          {perfil?.bio&&<p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.6,margin:"0 0 12px"}}>{perfil.bio}</p>}
-          {/* links sociais */}
+
+          {/* bio */}
+          {perfil?.bio&&<p style={{fontSize:13,color:"rgba(255,255,255,.55)",lineHeight:1.6,margin:"0 0 14px",borderLeft:"2px solid rgba(124,106,247,.5)",paddingLeft:10}}>{perfil.bio}</p>}
+
+          {/* links + aniversário */}
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {perfil?.aniversario&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",fontSize:11,color:"rgba(255,255,255,.55)"}}>
+              🎂 {perfil.aniversario}
+            </div>}
             {perfil?.instagram&&<a href={`https://instagram.com/${perfil.instagram.replace("@","")}`} target="_blank" rel="noreferrer"
-              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.6)"}}>
+              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.55)"}}>
               📸 @{perfil.instagram.replace("@","")}
             </a>}
             {perfil?.site&&<a href={perfil.site} target="_blank" rel="noreferrer"
-              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.6)"}}>
+              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.55)"}}>
               🌐 Site
             </a>}
           </div>
         </div>
       ):(
-        /* ── FORM EDITAR ───────────────────────────── */
+        /* ── FORM EDITAR ─────────────────────────────── */
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:"#fff",marginBottom:4}}>Editar perfil</div>
 
           {/* foto */}
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:60,height:60,borderRadius:"50%",overflow:"hidden",background:G.card2,flexShrink:0,border:`2px solid ${G.accent}44`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {fp.fotoUrl?<img src={fp.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<Ic d={ICON.user} size={22} color={G.muted}/>}
+            <div style={{width:60,height:60,borderRadius:"50%",overflow:"hidden",background:"rgba(255,255,255,.08)",flexShrink:0,border:"2px solid rgba(124,106,247,.4)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {fp.fotoUrl?<img src={fp.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<Ic d={ICON.user} size={22} color="rgba(255,255,255,.4)"/>}
             </div>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:6}}>URL da foto ou base64</div>
-              <input value={fp.fotoUrl||""} onChange={e=>setFp(f=>({...f,fotoUrl:e.target.value}))}
-                placeholder="https://... ou tire uma foto"
-                className="inp" style={{width:"100%",fontSize:12}}/>
-              <label style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:6,cursor:"pointer",fontSize:11,color:G.accent}}>
-                <Ic d={ICON.camera} size={12} color={G.accent}/> Câmera
-                <input type="file" accept="image/*" capture="user" style={{display:"none"}}
+              <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"rgba(124,106,247,.9)",fontWeight:600}}>
+                <Ic d={ICON.camera} size={13} color="rgba(124,106,247,.9)"/> Câmera / Galeria
+                <input type="file" accept="image/*" style={{display:"none"}}
                   onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=x=>setFp(p=>({...p,fotoUrl:x.target.result}));r.readAsDataURL(f);}}/>
               </label>
+              <input value={fp.fotoUrl||""} onChange={e=>setFp(f=>({...f,fotoUrl:e.target.value}))}
+                placeholder="ou cole uma URL..." className="inp" style={{width:"100%",fontSize:12,marginTop:6}}/>
             </div>
           </div>
 
-          {[{l:"Nome",k:"nome",ph:"Seu nome"},{l:"Bio",k:"bio",ph:"Uma linha sobre você..."},{l:"Instagram",k:"instagram",ph:"@usuario"},{l:"Site",k:"site",ph:"https://..."}].map(({l,k,ph})=>(
+          {/* campos */}
+          {[
+            {l:"Nome",k:"nome",ph:"Seu nome completo"},
+            {l:"Cidade",k:"cidade",ph:"São Paulo, SP"},
+            {l:"Aniversário",k:"aniversario",ph:"DD/MM"},
+            {l:"Instagram",k:"instagram",ph:"@usuario"},
+            {l:"Site",k:"site",ph:"https://..."},
+            {l:"Frase pessoal",k:"frase",ph:"Uma frase que te define..."},
+          ].map(({l,k,ph})=>(
             <div key={k}>
               <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>{l}</div>
               <input value={fp[k]||""} onChange={e=>setFp(f=>({...f,[k]:e.target.value}))} placeholder={ph} className="inp" style={{width:"100%"}}/>
             </div>
           ))}
 
-          {/* humor */}
+          {/* bio */}
           <div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:6}}>Como você está hoje?</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {HUMORES.map(h=>(
-                <button key={h} onClick={()=>setFp(f=>({...f,humor:f.humor===h?"":h}))}
-                  style={{fontSize:22,background:fp.humor===h?"rgba(255,255,255,.15)":"transparent",border:`1px solid ${fp.humor===h?"rgba(255,255,255,.3)":"transparent"}`,borderRadius:10,padding:"4px 6px",cursor:"pointer",transition:"all .15s"}}>
-                  {h}
-                </button>
-              ))}
-            </div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>Bio</div>
+            <textarea value={fp.bio||""} onChange={e=>setFp(f=>({...f,bio:e.target.value}))} placeholder="Conte um pouco sobre você..." rows={3}
+              className="inp" style={{width:"100%",resize:"vertical",lineHeight:1.5}}/>
           </div>
 
           <div style={{display:"flex",gap:8,marginTop:4}}>
@@ -1298,123 +1418,245 @@ function CarreiraView({uid,user,onPhotoSave}){
       )}
     </div>
 
-    {/* ── ROTINAS DO DIA ───────────────────────────── */}
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"18px 16px"}}>
-      {/* header */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div>
-          <div style={{fontSize:13,fontWeight:700,color:G.text}}>Rotinas do dia</div>
-          {total>0&&<div style={{fontSize:11,color:G.muted,marginTop:1}}>{feitas}/{total} concluídas</div>}
+    {/* ══ STATS FINANCEIROS ════════════════════════════ */}
+    <Card id="stats" icon="📊" title="Resumo financeiro" badge={`${anoAtual} · ${fmt(saldoAno)} economizados`}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        {[
+          {l:"Receitas no ano",v:fmt(recAno),c:G.green,e:"💰"},
+          {l:"Despesas no ano",v:fmt(depAno),c:G.red,e:"💸"},
+          {l:"Taxa de poupança",v:taxaPoupanca+"%",c:taxaPoupanca>=20?G.green:taxaPoupanca>=10?G.yellow:G.red,e:"🏦"},
+          {l:"Lançamentos",v:String(lancsAno.length),c:G.accent,e:"📋"},
+        ].map((s,i)=>(
+          <div key={i} style={{background:G.card2,borderRadius:14,padding:"12px 14px",border:`1px solid ${G.border}`}}>
+            <div style={{fontSize:16,marginBottom:4}}>{s.e}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:s.c,lineHeight:1}}>{s.v}</div>
+            <div style={{fontSize:10,color:G.muted,marginTop:3}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      {/* barra poupança */}
+      <div style={{marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+          <span style={{fontSize:11,color:G.muted}}>Meta de poupança (20%)</span>
+          <span style={{fontSize:11,fontWeight:700,color:taxaPoupanca>=20?G.green:G.yellow}}>{taxaPoupanca}%</span>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {total>0&&feitas>0&&<button onClick={resetRotinas} className="press"
-            style={{fontSize:11,color:G.muted,background:"none",border:`1px solid ${G.border}`,borderRadius:20,padding:"4px 10px",cursor:"pointer"}}>
-            Resetar
-          </button>}
-          <button onClick={()=>setAddingRotina(true)} className="press"
-            style={{width:32,height:32,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <Ic d={ICON.plus} size={16}/>
-          </button>
+        <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${Math.min(taxaPoupanca/20*100,100)}%`,background:taxaPoupanca>=20?G.green:G.yellow,borderRadius:6,transition:"width .4s"}}/>
         </div>
       </div>
+      <div style={{display:"flex",gap:8}}>
+        {mesMaisGasto&&<div style={{flex:1,background:G.card2,borderRadius:12,padding:"10px 12px",border:`1px solid ${G.border}`}}>
+          <div style={{fontSize:9,color:G.muted,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Mês com mais gastos</div>
+          <div style={{fontSize:13,fontWeight:700,color:G.red}}>{mesMaisGasto.mes}</div>
+          <div style={{fontSize:11,color:G.muted}}>{fmt(mesMaisGasto.v)}</div>
+        </div>}
+        {catMaisGasta&&<div style={{flex:1,background:G.card2,borderRadius:12,padding:"10px 12px",border:`1px solid ${G.border}`}}>
+          <div style={{fontSize:9,color:G.muted,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Categoria top</div>
+          <div style={{fontSize:13,fontWeight:700,color:CAT_COLORS[catMaisGasta.cat]||G.accent}}>{catMaisGasta.cat}</div>
+          <div style={{fontSize:11,color:G.muted}}>{fmt(catMaisGasta.v)}</div>
+        </div>}
+      </div>
+    </Card>
 
-      {/* barra de progresso */}
-      {total>0&&<div style={{marginBottom:14}}>
-        <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${progRot*100}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6,transition:"width .4s ease"}}/>
+    {/* ══ HUMOR & ENERGIA ══════════════════════════════ */}
+    <Card id="humor" icon="🧠" title="Humor & energia"
+      badge={ultimoHumor?`Último registro: ${ultimoHumor.humor} · ${ultimoHumor.data}`:"Nenhum registro ainda"}
+      headerExtra={
+        <button onClick={()=>setAddingHumor(true)} className="press"
+          style={{width:30,height:30,borderRadius:9,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic d={ICON.plus} size={14}/>
+        </button>
+      }>
+
+      {/* add humor */}
+      {addingHumor&&<div style={{background:G.card2,borderRadius:14,padding:"14px",marginBottom:14,border:`1px solid ${G.border}`}}>
+        <div style={{fontSize:12,fontWeight:700,color:G.text,marginBottom:10}}>Como você está agora?</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+          {HUMORES_LIST.map(h=>(
+            <button key={h} onClick={()=>setNovoHumor(m=>({...m,humor:h}))}
+              style={{fontSize:22,padding:"6px 8px",borderRadius:10,border:`2px solid ${novoHumor.humor===h?G.accent:"transparent"}`,background:novoHumor.humor===h?G.accentL:"transparent",cursor:"pointer",transition:"all .15s"}}>
+              {h}
+            </button>
+          ))}
         </div>
-        {progRot===1&&<div style={{fontSize:12,color:G.green,marginTop:6,textAlign:"center",fontWeight:600}}>🎉 Todas concluídas!</div>}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:11,color:G.muted,marginBottom:6}}>Energia: <span style={{fontWeight:700,color:G.accent}}>{ENERGIA_LABELS[novoHumor.energia]}</span></div>
+          <input type="range" min={1} max={5} value={novoHumor.energia} onChange={e=>setNovoHumor(m=>({...m,energia:parseInt(e.target.value)}))}
+            style={{width:"100%",accentColor:G.accent}}/>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.muted,marginTop:2}}>
+            <span>Baixa</span><span>Máxima</span>
+          </div>
+        </div>
+        <input value={novoHumor.nota} onChange={e=>setNovoHumor(m=>({...m,nota:e.target.value}))}
+          placeholder="Nota rápida (opcional)..." className="inp" style={{width:"100%",marginBottom:10,fontSize:13}}/>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={salvarHumor} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Registrar</button>
+          <button onClick={()=>setAddingHumor(false)} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>✕</button>
+        </div>
       </div>}
 
-      {/* lista */}
-      {rotinas.length===0&&!addingRotina&&(
-        <div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
-          <div style={{fontSize:28,marginBottom:8}}>✅</div>
-          <div>Nenhuma rotina ainda</div>
-          <div style={{fontSize:12,marginTop:4}}>Toque + para adicionar</div>
-        </div>
-      )}
+      {/* histórico */}
+      {humores.length===0&&!addingHumor&&<div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
+        <div style={{fontSize:28,marginBottom:6}}>🧠</div>Nenhum registro ainda
+      </div>}
 
-      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+      {/* últimos 7 dias como barra visual */}
+      {humores.length>0&&(()=>{
+        const dias=Array.from({length:7},(_,i)=>{
+          const d=new Date(Date.now()-i*86400000).toISOString().slice(0,10);
+          const h=humores.find(x=>x.data===d);
+          return{d,h};
+        }).reverse();
+        return(
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:G.muted,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Últimos 7 dias</div>
+            <div style={{display:"flex",gap:4,alignItems:"flex-end",height:56}}>
+              {dias.map(({d,h},i)=>{
+                const energia=h?h.energia:0;
+                const barH=energia?(energia/5)*44:4;
+                const isToday=d===today();
+                return(
+                  <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                    <div style={{fontSize:11,lineHeight:1}}>{h?h.humor:"·"}</div>
+                    <div style={{width:"100%",height:barH,borderRadius:"4px 4px 0 0",
+                      background:energia?`linear-gradient(180deg,${G.accent},${G.accent}66)`:G.border,
+                      border:isToday?`1px solid ${G.accent}`:"none",transition:"height .3s"}}/>
+                    <div style={{fontSize:8,color:isToday?G.accent:G.muted,fontWeight:isToday?700:400}}>
+                      {new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"narrow"})}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* lista registros */}
+      <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
+        {humores.slice(0,10).map(h=>(
+          <div key={h.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:G.card2,borderRadius:12,border:`1px solid ${G.border}`}}>
+            <div style={{fontSize:22,flexShrink:0}}>{h.humor}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:12,fontWeight:600,color:G.text}}>Energia {ENERGIA_LABELS[h.energia]}</span>
+                <div style={{display:"flex",gap:2}}>
+                  {Array.from({length:5},(_,i)=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:i<h.energia?G.accent:G.border}}/>)}
+                </div>
+              </div>
+              {h.nota&&<div style={{fontSize:11,color:G.muted,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.nota}</div>}
+              <div style={{fontSize:10,color:G.muted,marginTop:2}}>{fmtD(h.data)} {h.hora&&`· ${h.hora}`}</div>
+            </div>
+            <button onClick={()=>deleteHumor(h.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",opacity:.5,fontSize:16}}>×</button>
+          </div>
+        ))}
+      </div>
+    </Card>
+
+    {/* ══ ROTINAS + STREAKS ════════════════════════════ */}
+    <Card id="rotinas" icon="✅" title="Rotinas do dia"
+      badge={totalRot>0?`${feitas}/${totalRot} feitas · 🔥 maior streak: ${melhorStreak} dias`:"Nenhuma rotina ainda"}
+      headerExtra={
+        <button onClick={()=>setAddingRotina(true)} className="press"
+          style={{width:30,height:30,borderRadius:9,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic d={ICON.plus} size={14}/>
+        </button>
+      }>
+
+      {/* barra progresso */}
+      {totalRot>0&&<div style={{marginBottom:14}}>
+        <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${progRot*100}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6,transition:"width .4s"}}/>
+        </div>
+        {progRot===1&&<div style={{fontSize:12,color:G.green,marginTop:6,textAlign:"center",fontWeight:700}}>🎉 Todas concluídas hoje!</div>}
+      </div>}
+
+      {rotinas.length===0&&!addingRotina&&<div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
+        <div style={{fontSize:28,marginBottom:6}}>✅</div>Nenhuma rotina ainda
+      </div>}
+
+      <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:addingRotina?12:0}}>
         {rotinas.map(r=>(
-          <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:12,background:r.feita?G.green+"0a":"transparent",border:`1px solid ${r.feita?G.green+"33":G.border}`,transition:"all .2s"}}>
-            {/* checkbox */}
+          <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:12,
+            background:r.feita?G.green+"0a":"transparent",
+            border:`1px solid ${r.feita?G.green+"33":G.border}`,transition:"all .2s"}}>
             <button onClick={()=>toggleRotina(r.id)} className="press"
-              style={{width:22,height:22,borderRadius:6,border:`2px solid ${r.feita?G.green:G.border}`,background:r.feita?G.green:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s"}}>
+              style={{width:22,height:22,borderRadius:6,border:`2px solid ${r.feita?G.green:G.border}`,
+                background:r.feita?G.green:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s"}}>
               {r.feita&&<Ic d={ICON.check} size={12} color="#fff"/>}
             </button>
-
-            {/* texto ou input rename */}
             {roRenaming===r.id
               ?<input autoFocus value={roRenameVal} onChange={e=>setRoRenameVal(e.target.value)}
                   onKeyDown={e=>{if(e.key==="Enter")renameRotina(r.id);if(e.key==="Escape")setRoRenaming(null);}}
-                  onBlur={()=>renameRotina(r.id)}
-                  className="inp" style={{flex:1,fontSize:13,padding:"2px 8px"}}/>
-              :<span onClick={()=>{setRoRenaming(r.id);setRoRenameVal(r.texto);}} style={{flex:1,fontSize:13,color:r.feita?G.muted:G.text,textDecoration:r.feita?"line-through":"none",cursor:"text",transition:"all .2s"}}>{r.texto}</span>
+                  onBlur={()=>renameRotina(r.id)} className="inp" style={{flex:1,fontSize:13,padding:"2px 8px"}}/>
+              :<span onClick={()=>{setRoRenaming(r.id);setRoRenameVal(r.texto);}}
+                  style={{flex:1,fontSize:13,color:r.feita?G.muted:G.text,textDecoration:r.feita?"line-through":"none",cursor:"text",transition:"all .2s"}}>
+                {r.texto}
+              </span>
             }
-
-            {/* delete */}
+            {/* streak badge */}
+            {(r.streak||0)>0&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 8px",borderRadius:20,
+              background:r.streak>=7?G.yellow+"20":G.accent+"15",border:`1px solid ${r.streak>=7?G.yellow:G.accent}33`,flexShrink:0}}>
+              <span style={{fontSize:10}}>🔥</span>
+              <span style={{fontSize:10,fontWeight:700,color:r.streak>=7?G.yellow:G.accent}}>{r.streak}d</span>
+            </div>}
             <button onClick={()=>deleteRotina(r.id)} className="press"
-              style={{width:24,height:24,borderRadius:6,border:"none",background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:.5}}>
-              <Ic d={ICON.x} size={12}/>
+              style={{width:22,height:22,borderRadius:6,border:"none",background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:.5}}>
+              <Ic d={ICON.x} size={11}/>
             </button>
           </div>
         ))}
-
-        {/* input nova rotina */}
-        {addingRotina&&<div style={{display:"flex",gap:8,marginTop:4}}>
-          <input autoFocus value={novaRotina} onChange={e=>setNovaRotina(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter")addRotina();if(e.key==="Escape"){setAddingRotina(false);setNovaRotina("");}}}
-            placeholder="Ex: Beber água, Meditar 10min..."
-            className="inp" style={{flex:1,fontSize:13}}/>
-          <button onClick={addRotina} className="press" style={{padding:"8px 14px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700}}>+</button>
-          <button onClick={()=>{setAddingRotina(false);setNovaRotina("");}} className="press" style={{padding:"8px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>✕</button>
-        </div>}
       </div>
-    </div>
 
-    {/* ── METAS PESSOAIS ───────────────────────────── */}
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"18px 16px"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{fontSize:13,fontWeight:700,color:G.text}}>Metas pessoais</div>
+      {addingRotina&&<div style={{display:"flex",gap:8,marginBottom:8}}>
+        <input autoFocus value={novaRotina} onChange={e=>setNovaRotina(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter")addRotina();if(e.key==="Escape"){setAddingRotina(false);setNovaRotina("");}}}
+          placeholder="Ex: Meditar 10min, Beber água..." className="inp" style={{flex:1,fontSize:13}}/>
+        <button onClick={addRotina} className="press" style={{padding:"8px 14px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700}}>+</button>
+        <button onClick={()=>{setAddingRotina(false);setNovaRotina("");}} className="press" style={{padding:"8px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>✕</button>
+      </div>}
+
+      {totalRot>0&&feitas>0&&<button onClick={resetRotinas} className="press"
+        style={{width:"100%",padding:"8px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",fontSize:12,color:G.muted,cursor:"pointer",marginTop:4}}>
+        Resetar dia
+      </button>}
+    </Card>
+
+    {/* ══ METAS PESSOAIS ═══════════════════════════════ */}
+    <Card id="metas" icon="🎯" title="Metas pessoais"
+      badge={metas.length>0?`${metas.filter(m=>(m.progresso||0)>=(m.total||100)).length}/${metas.length} concluídas`:"Nenhuma meta ainda"}
+      headerExtra={
         <button onClick={()=>setAddingMeta(true)} className="press"
-          style={{width:32,height:32,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <Ic d={ICON.plus} size={16}/>
+          style={{width:30,height:30,borderRadius:9,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic d={ICON.plus} size={14}/>
         </button>
-      </div>
+      }>
 
-      {metas.length===0&&!addingMeta&&(
-        <div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
-          <div style={{fontSize:28,marginBottom:8}}>🎯</div>
-          <div>Nenhuma meta ainda</div>
-        </div>
-      )}
+      {metas.length===0&&!addingMeta&&<div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
+        <div style={{fontSize:28,marginBottom:6}}>🎯</div>Nenhuma meta ainda
+      </div>}
 
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:addingMeta?12:0}}>
         {metas.map(m=>{
           const p=Math.min((m.progresso||0)/(m.total||100),1);
           const done=p>=1;
           return(<div key={m.id} style={{background:G.card2,borderRadius:14,padding:"12px 14px",border:`1px solid ${done?G.green+"44":G.border}`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:18}}>{m.emoji||"🎯"}</span>
+                <span style={{fontSize:20}}>{m.emoji||"🎯"}</span>
                 <div>
                   <div style={{fontSize:13,fontWeight:600,color:done?G.green:G.text}}>{m.titulo}</div>
                   {m.prazo&&<div style={{fontSize:10,color:G.muted}}>até {fmtD(m.prazo)}</div>}
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:11,fontFamily:"'Fraunces',serif",fontWeight:700,color:done?G.green:G.accent}}>{(p*100).toFixed(0)}%</span>
-                <button onClick={()=>deleteMeta(m.id)} style={{background:"none",border:"none",cursor:"pointer",color:G.muted,display:"flex",alignItems:"center"}}>
-                  <Ic d={ICON.x} size={12}/>
-                </button>
+                <span style={{fontSize:12,fontFamily:"'Fraunces',serif",fontWeight:700,color:done?G.green:G.accent}}>{Math.round(p*100)}%</span>
+                <button onClick={()=>deleteMeta(m.id)} style={{background:"none",border:"none",cursor:"pointer",color:G.muted,opacity:.5}}>×</button>
               </div>
             </div>
-            {/* barra */}
             <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden",marginBottom:8}}>
-              <div style={{height:"100%",width:`${p*100}%`,background:done?`linear-gradient(90deg,${G.green},${G.green}99)`:`linear-gradient(90deg,${G.accent},${G.accent}99)`,borderRadius:6,transition:"width .4s"}}/>
+              <div style={{height:"100%",width:`${p*100}%`,background:done?G.green:`linear-gradient(90deg,${G.accent},${G.accent}99)`,borderRadius:6,transition:"width .4s"}}/>
             </div>
-            {/* controles */}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:G.muted,flex:1}}>{m.progresso||0} / {m.total||100}</span>
               {!done&&<>
@@ -1433,38 +1675,36 @@ function CarreiraView({uid,user,onPhotoSave}){
         })}
       </div>
 
-      {/* form nova meta */}
-      {addingMeta&&<div style={{background:G.card2,borderRadius:14,padding:"14px",marginTop:10,display:"flex",flexDirection:"column",gap:10}}>
-        <div style={{fontSize:12,fontWeight:700,color:G.text}}>Nova meta</div>
-        {/* emoji picker simples */}
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {["🎯","💪","📚","✈️","🏃","🎸","💰","🧘","🏋️","🌱","❤️","⭐"].map(e=>(
+      {addingMeta&&<div style={{background:G.card2,borderRadius:14,padding:"14px",border:`1px solid ${G.border}`}}>
+        <div style={{fontSize:12,fontWeight:700,color:G.text,marginBottom:10}}>Nova meta</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          {["🎯","💪","📚","✈️","🏃","🎸","💰","🧘","🏋️","🌱","❤️","⭐","🎓","🏠","🎨"].map(e=>(
             <button key={e} onClick={()=>setNovaMeta(m=>({...m,emoji:e}))}
-              style={{fontSize:18,padding:"4px 6px",borderRadius:8,border:`1px solid ${novaMeta.emoji===e?G.accent:"transparent"}`,background:novaMeta.emoji===e?G.accent+"22":"transparent",cursor:"pointer"}}>
+              style={{fontSize:18,padding:"4px 6px",borderRadius:8,border:`1px solid ${novaMeta.emoji===e?G.accent:"transparent"}`,background:novaMeta.emoji===e?G.accentL:"transparent",cursor:"pointer"}}>
               {e}
             </button>
           ))}
         </div>
         <input value={novaMeta.titulo} onChange={e=>setNovaMeta(m=>({...m,titulo:e.target.value}))}
-          placeholder="Título da meta" className="inp" style={{fontSize:13}}/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          placeholder="Título da meta" className="inp" style={{fontSize:13,width:"100%",marginBottom:8}}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
           <div>
-            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Meta (total)</div>
+            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Meta total</div>
             <input type="number" value={novaMeta.total} onChange={e=>setNovaMeta(m=>({...m,total:parseInt(e.target.value)||100}))}
               className="inp" style={{fontSize:13,width:"100%"}}/>
           </div>
           <div>
-            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Prazo (opcional)</div>
+            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Prazo</div>
             <input type="date" value={novaMeta.prazo} onChange={e=>setNovaMeta(m=>({...m,prazo:e.target.value}))}
               className="inp" style={{fontSize:13,width:"100%"}}/>
           </div>
         </div>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={addMeta} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Criar meta</button>
+          <button onClick={addMeta} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Criar</button>
           <button onClick={()=>setAddingMeta(false)} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>Cancelar</button>
         </div>
       </div>}
-    </div>
+    </Card>
 
   </div>);
 }
@@ -3119,7 +3359,7 @@ export default function App(){
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
-          {view==="carreira"&&<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)}/>}
+          {view==="carreira"&&<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)} lancs={lancs}/>}
           {view==="cartoes"&&<CartoesView uid={user.uid} lancs={lancs}/>}
           {view==="contatos"&&<ContatosView uid={user.uid} user={user}/>}
           {view==="compartilhados-casal"&&<CasalView uid={user.uid} lancs={lancs} user={user}/>}
