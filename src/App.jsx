@@ -347,7 +347,8 @@ const ICON={
   eye:"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 100 6 3 3 0 000-6z",
   target:"M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z",
   briefcase:"M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2",
-  ai:"M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 010 2h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 010-2h1a7 7 0 017-7h1V5.73A2 2 0 0110 4a2 2 0 012-2zM9 11a1 1 0 000 2 1 1 0 000-2zm6 0a1 1 0 000 2 1 1 0 000-2z",
+  ai:"M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 010 2h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 010-2h1a7 7 0 017-7h1V5.73A2 2 0 0110 4a2 2 0 012-2zM9 11a1 1 0 000 2 1 1 0 000-2zm6 0a1 1 0 000 2 1 1 0 000-2z",,
+  search:"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 };
 
 const Tag=({children,color=G.muted})=>(
@@ -411,6 +412,7 @@ function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,o
   const items=[
     {id:"carreira",icon:<Ic d={ICON.user} size={18}/>,l:"Perfil"},
     {id:"dashboard",icon:<Ic d={ICON.home} size={18}/>,l:"Dashboard"},
+    {id:"busca",icon:<Ic d={ICON.search||"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"} size={18}/>,l:"Buscar Lançamentos"},
     {id:"cartoes",icon:<Ic d={ICON.card} size={18}/>,l:"Cartões de Crédito"},
     {id:"contatos",icon:<Ic d={ICON.users} size={18}/>,l:"Contatos"},
     {id:"importar",icon:<Ic d={ICON.import} size={18}/>,l:"Importar Extrato"},
@@ -629,7 +631,7 @@ function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,o
 }
 
 
-function Head({view,onRec,onDep,user,profilePhoto="",onDrawer,divPendCount=0}){
+function Head({view,onRec,onDep,user,profilePhoto="",onDrawer,divPendCount=0,onSearch}){
   const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",carreira:"Meu Perfil",chat:"IA",
     cartoes:"Cartões",familia:"Família / Casal",divisao:"Divisão de Contas",importar:"Importar Extrato",
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
@@ -651,6 +653,7 @@ function Head({view,onRec,onDep,user,profilePhoto="",onDrawer,divPendCount=0}){
         <button onClick={onRec} className="press" style={{padding:"6px 13px",borderRadius:20,border:`1px solid ${G.green}55`,background:G.greenL,color:G.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Rec</button>
         <button onClick={onDep} className="press" style={{padding:"6px 13px",borderRadius:20,border:`1px solid ${G.red}55`,background:G.redL,color:G.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Dep</button>
       </div>}
+      {user&&onSearch&&<button onClick={onSearch} className="press" style={{width:34,height:34,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Ic d={ICON.search} size={18} color={G.muted}/></button>}
       {!showAdd&&user&&<button onClick={onDrawer} className="press"
         style={{width:32,height:32,borderRadius:"50%",border:`1px solid ${G.border2}`,background:"none",cursor:"pointer",overflow:"hidden",padding:0}}>
         {user.photoURL?<img src={user.photoURL} style={{width:"100%",height:"100%",objectFit:"cover"}} referrerPolicy="no-referrer"/>
@@ -2187,39 +2190,119 @@ function FinancasView({uid,lancs,secao}){
 
     {/* ── RELATÓRIO ── */}
     {secao==="relatorio"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* ── Evolução 6 meses ── */}
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 8px 8px"}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12,paddingLeft:10}}>Receitas vs Gastos</div>
-        <ResponsiveContainer width="100%" height={150}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:4,paddingLeft:12}}>Evolução 6 meses</div>
+        <div style={{display:"flex",gap:12,paddingLeft:12,marginBottom:10}}>
+          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:G.green}}><div style={{width:8,height:8,borderRadius:"50%",background:G.green}}/>Receitas</span>
+          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:G.red}}><div style={{width:8,height:8,borderRadius:"50%",background:G.red}}/>Despesas</span>
+          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:G.accent}}><div style={{width:8,height:8,borderRadius:"50%",background:G.accent}}/>Saldo</span>
+        </div>
+        <ResponsiveContainer width="100%" height={160}>
           <LineChart data={trend} margin={{left:-18,right:8}}>
             <XAxis dataKey="name" tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-            <YAxis tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
-            <Tooltip contentStyle={{background:G.card2,border:`1px solid ${G.border2}`,borderRadius:10,fontSize:11}} cursor={{stroke:G.border2}}/>
+            <YAxis tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:`${v}`}/>
+            <Tooltip contentStyle={{background:G.card2,border:`1px solid ${G.border2}`,borderRadius:10,fontSize:11}} cursor={{stroke:G.border2}} formatter={(v,n)=>[fmt(v),n]}/>
             <Line type="monotone" dataKey="rec" name="Receitas" stroke={G.green} strokeWidth={2} dot={{fill:G.green,r:3}} activeDot={{r:5}}/>
             <Line type="monotone" dataKey="gasto" name="Gastos" stroke={G.red} strokeWidth={2} dot={{fill:G.red,r:3}} activeDot={{r:5}}/>
+            <Line type="monotone" dataKey="poupanca" name="Saldo" stroke={G.accent} strokeWidth={2} strokeDasharray="4 2" dot={false}/>
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      {/* ── Top categorias ── */}
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Métricas do Mês</div>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Top categorias — mês atual</div>
+        {(()=>{
+          const catData=CATS_DEP.map(cat=>({cat,v:gastosCat(cat)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,6);
+          const maxV=catData[0]?.v||1;
+          return catData.length===0?<div style={{color:G.muted,fontSize:13,textAlign:"center",padding:"12px 0"}}>Nenhum gasto este mês</div>:catData.map(({cat,v})=>{
+            const cor=CAT_COLORS[cat]||G.muted;
+            const pct=tD>0?Math.round(v/tD*100):0;
+            return(
+              <div key={cat} style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:14}}>{CAT_EMOJI[cat]||"💰"}</span>
+                    <span style={{fontSize:12,fontWeight:600,color:G.text}}>{cat}</span>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:cor}}>{fmt(v)}</span>
+                    <span style={{fontSize:10,color:G.muted,marginLeft:4}}>{pct}%</span>
+                  </div>
+                </div>
+                <div style={{height:5,background:G.border,borderRadius:4,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${(v/maxV)*100}%`,background:cor,borderRadius:4,transition:"width .5s"}}/>
+                </div>
+              </div>
+            );
+          });
+        })()}
+      </div>
+
+      {/* ── Mês atual vs anterior ── */}
+      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Mês atual vs anterior</div>
+        {(()=>{
+          const cur=trend[trend.length-1]||{rec:0,gasto:0};
+          const prev=trend[trend.length-2]||{rec:0,gasto:0};
+          return[
+            {l:"Receitas",cur:cur.rec,prev:prev.rec,c:G.green,inverted:false},
+            {l:"Despesas",cur:cur.gasto,prev:prev.gasto,c:G.red,inverted:true},
+            {l:"Saldo",cur:cur.rec-cur.gasto,prev:prev.rec-prev.gasto,c:G.accent,inverted:false},
+          ].map(r=>{
+            const diff=r.cur-r.prev;
+            const pct=r.prev>0?Math.abs(Math.round(diff/r.prev*100)):null;
+            const up=diff>=0;
+            const good=r.inverted?!up:up;
+            return(
+              <div key={r.l} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${G.border}`}}>
+                <div style={{width:3,height:36,borderRadius:2,background:r.c,flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,color:G.muted}}>{r.l}</div>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:r.c}}>{fmt(r.cur)}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  {pct!==null&&<div style={{fontSize:11,fontWeight:700,color:good?G.green:G.red}}>{up?"↑":"↓"} {pct}%</div>}
+                  <div style={{fontSize:10,color:G.muted}}>{fmt(r.prev)} ant.</div>
+                </div>
+              </div>
+            );
+          });
+        })()}
+      </div>
+
+      {/* ── Métricas ── */}
+      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Métricas do mês</div>
         {(()=>{
           const taxa=tR>0?((tR-tD)/tR*100):0;
           const media=tD>0?tD/hoje.getDate():0;
           const catTop=CATS_DEP.map(c=>({c,v:gastosCat(c)})).sort((a,b)=>b.v-a.v)[0];
           const mC=trend.filter(t=>t.rec>0);
           const mediaPoup=mC.length>0?mC.reduce((s,t)=>s+t.poupanca,0)/mC.length:0;
-          return[{l:"Taxa de poupança",v:taxa.toFixed(1)+"%",sub:"da renda",c:taxa>=20?G.green:taxa>=10?G.yellow:G.red},{l:"Gasto médio/dia",v:fmt(media),sub:"neste mês",c:G.accent},{l:"Maior categoria",v:catTop?.c||"—",sub:catTop?fmt(catTop.v):"sem gastos",c:G.orange},{l:"Poupança média",v:fmt(mediaPoup),sub:"6 meses",c:G.blue}].map(m=>(
+          return[
+            {l:"Taxa de poupança",v:taxa.toFixed(1)+"%",sub:"da renda",c:taxa>=20?G.green:taxa>=10?G.yellow:G.red},
+            {l:"Gasto médio/dia",v:fmt(media),sub:`${hoje.getDate()} dias`,c:G.text},
+            {l:"Categoria top",v:catTop?.c||"—",sub:catTop?fmt(catTop.v):"",c:CAT_COLORS[catTop?.c]||G.muted},
+            {l:"Média poupança/mês",v:fmt(mediaPoup),sub:"últimos 6 meses",c:mediaPoup>0?G.green:G.muted},
+          ].map(m=>(
             <div key={m.l} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${G.border}`}}>
               <div style={{width:3,height:36,borderRadius:2,background:m.c,flexShrink:0}}/>
-              <div style={{flex:1}}><div style={{fontSize:12,color:G.muted}}>{m.l}</div><div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:m.c}}>{m.v}</div></div>
+              <div style={{flex:1}}><div style={{fontSize:12,color:G.muted}}>{m.l}</div><div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:m.c}}>{m.v}</div></div>
               <div style={{fontSize:11,color:G.muted,textAlign:"right"}}>{m.sub}</div>
-            </div>));
+            </div>
+          ));
         })()}
       </div>
+
+      {/* ── Histórico ── */}
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Histórico 6 Meses</div>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Histórico mensal</div>
         {trend.map(t=>{const s=t.rec-t.gasto;return(
           <div key={t.name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:`1px solid ${G.border}`}}>
-            <div style={{fontSize:12,fontWeight:600,color:G.muted,width:28,flexShrink:0}}>{t.name}</div>
+            <div style={{fontSize:12,fontWeight:600,color:G.muted,width:30,flexShrink:0}}>{t.name}</div>
             <div style={{flex:1}}>
               <div style={{height:4,borderRadius:2,background:G.green,width:`${t.rec>0?Math.min(100,t.rec/8000*100):0}%`,marginBottom:3}}/>
               <div style={{height:4,borderRadius:2,background:G.red,width:`${t.gasto>0?Math.min(100,t.gasto/8000*100):0}%`}}/>
@@ -2230,9 +2313,58 @@ function FinancasView({uid,lancs,secao}){
             </div>
           </div>);})}
       </div>
-    </div>}
 
-    {/* ── ALERTAS ── */}
+      {/* ── Projeção fim do mês ── */}
+      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>📈 Projeção fim do mês</div>
+        {(()=>{
+          const diasRestantes=diasNoMes-hoje.getDate();
+          const taxaGastoDiaria=frac>0?tD/frac:0;
+          const taxaRecDiaria=frac>0?tR/frac:0;
+          const projRecFim=tR+(taxaRecDiaria*diasRestantes);
+          const projSaldoFim=projRecFim-projDep;
+          return(
+            <div>
+              <div style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{fontSize:11,color:G.muted}}>Progresso do mês</span>
+                  <span style={{fontSize:11,fontWeight:700,color:G.accent}}>{Math.round(frac*100)}% concluído</span>
+                </div>
+                <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${frac*100}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6}}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.muted,marginTop:3}}>
+                  <span>Dia 1</span><span>Hoje (dia {hoje.getDate()})</span><span>Dia {diasNoMes}</span>
+                </div>
+              </div>
+              {[
+                {l:"Gasto projetado",v:fmt(projDep),sub:`${fmt(tD)} até hoje`,c:G.red},
+                {l:"Receita projetada",v:fmt(projRecFim),sub:`${fmt(tR)} até hoje`,c:G.green},
+                {l:"Saldo projetado",v:fmt(projSaldoFim),sub:projSaldoFim>=0?"Positivo ✓":"Déficit ⚠️",c:projSaldoFim>=0?G.green:G.red},
+                {l:"Dias restantes",v:String(diasRestantes),sub:`de ${diasNoMes} dias`,c:G.accent},
+              ].map(r=>(
+                <div key={r.l} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:`1px solid ${G.border}`}}>
+                  <div style={{width:3,height:32,borderRadius:2,background:r.c,flexShrink:0}}/>
+                  <div style={{flex:1}}><div style={{fontSize:11,color:G.muted}}>{r.l}</div><div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:r.c}}>{r.v}</div></div>
+                  <div style={{fontSize:10,color:G.muted,textAlign:"right",maxWidth:90}}>{r.sub}</div>
+                </div>
+              ))}
+              <div style={{marginTop:12,padding:"10px 12px",borderRadius:12,
+                background:projSaldoFim>=0?G.green+"10":G.red+"10",
+                border:`1px solid ${projSaldoFim>=0?G.green:G.red}33`}}>
+                <div style={{fontSize:12,lineHeight:1.5,color:projSaldoFim>=0?G.green:G.red}}>
+                  {projSaldoFim>=0
+                    ?`✅ No ritmo atual você deve terminar o mês com ${fmt(projSaldoFim)} de saldo positivo.`
+                    :`⚠️ No ritmo atual você pode terminar o mês com ${fmt(Math.abs(projSaldoFim))} de déficit. Considere reduzir gastos.`
+                  }
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+    </div>}
     {secao==="alertas"&&<div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div><div style={{fontSize:15,fontWeight:700}}>Alertas & Notificações</div><div style={{fontSize:12,color:G.muted,marginTop:2}}>{nlidos} não lido{nlidos!==1?"s":""}</div></div>
@@ -2516,6 +2648,106 @@ function ChatView({lancs,onAddLanc}){
   </div>);
 }
 
+
+// ─── BUSCA VIEW ───────────────────────────────────────────────────────────────
+function BuscaView({lancs,onClose,onDelete}){
+  const [q,setQ]=useState("");
+  const [filtroTipo,setFiltroTipo]=useState("Todos");
+  const [filtroCat,setFiltroCat]=useState("Todas");
+  const inpRef=useRef();
+  useEffect(()=>{setTimeout(()=>inpRef.current?.focus(),100);},[]);
+  const cats=["Todas",...new Set(lancs.map(l=>l.cat).filter(Boolean))].sort();
+  const results=lancs.filter(l=>{
+    const sq=q.toLowerCase().trim();
+    const matchQ=!sq||l.desc?.toLowerCase().includes(sq)||l.cat?.toLowerCase().includes(sq)||l.valor?.toString().includes(sq)||l.forma?.toLowerCase().includes(sq)||l.data?.includes(sq);
+    const matchT=filtroTipo==="Todos"||(filtroTipo==="Receitas"?l.tipo==="Receita":l.tipo==="Despesa");
+    const matchC=filtroCat==="Todas"||l.cat===filtroCat;
+    return matchQ&&matchT&&matchC&&isRealizado(l.data,l.agendado);
+  }).sort((a,b)=>b.data.localeCompare(a.data));
+  const totalR=results.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
+  const totalD=results.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:8000,background:G.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{background:G.card,borderBottom:`1px solid ${G.border}`,padding:`calc(env(safe-area-inset-top,0px) + 12px) 14px 12px`,flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+          <button onClick={onClose} style={{width:36,height:36,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <Ic d={ICON.x} size={18} color={G.muted}/>
+          </button>
+          <div style={{flex:1,display:"flex",alignItems:"center",gap:8,background:G.card2,border:`1px solid ${G.border}`,borderRadius:12,padding:"8px 12px"}}>
+            <Ic d={ICON.search} size={16} color={G.muted}/>
+            <input ref={inpRef} value={q} onChange={e=>setQ(e.target.value)} placeholder="Descrição, categoria, valor, data..." autoComplete="off"
+              style={{flex:1,background:"none",border:"none",outline:"none",fontSize:15,color:G.text}}/>
+            {q&&<button onClick={()=>setQ("")} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:18,lineHeight:1,padding:0}}>×</button>}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",paddingBottom:2}}>
+          {["Todos","Receitas","Despesas"].map(f=>(
+            <button key={f} onClick={()=>setFiltroTipo(f)} className="press"
+              style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${filtroTipo===f?G.accent:G.border}`,
+                background:filtroTipo===f?G.accentL:"transparent",color:filtroTipo===f?G.accent:G.muted,
+                fontSize:12,fontWeight:filtroTipo===f?700:400,cursor:"pointer",flexShrink:0,transition:"all .15s"}}>
+              {f}
+            </button>
+          ))}
+          <div style={{width:1,background:G.border,flexShrink:0,margin:"4px 2px"}}/>
+          {cats.slice(0,12).map(cat=>(
+            <button key={cat} onClick={()=>setFiltroCat(cat===filtroCat?"Todas":cat)} className="press"
+              style={{padding:"5px 12px",borderRadius:20,
+                border:`1px solid ${filtroCat===cat?(CAT_COLORS[cat]||G.accent):G.border}`,
+                background:filtroCat===cat?(CAT_COLORS[cat]||G.accent)+"22":"transparent",
+                color:filtroCat===cat?(CAT_COLORS[cat]||G.accent):G.muted,
+                fontSize:12,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .15s"}}>
+              {cat==="Todas"?"Todas":cat}
+            </button>
+          ))}
+        </div>
+      </div>
+      {results.length>0&&<div style={{display:"flex",background:G.card2,borderBottom:`1px solid ${G.border}`,flexShrink:0}}>
+        {[{l:"Encontrados",v:String(results.length),c:G.text},{l:"Receitas",v:fmt(totalR),c:G.green},{l:"Despesas",v:fmt(totalD),c:G.red}].map((s,i)=>(
+          <div key={i} style={{flex:1,padding:"8px 0",borderRight:i<2?`1px solid ${G.border}`:"none",textAlign:"center"}}>
+            <div style={{fontSize:9,color:G.muted,marginBottom:1,textTransform:"uppercase",letterSpacing:.5}}>{s.l}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:s.c}}>{s.v}</div>
+          </div>
+        ))}
+      </div>}
+      <div style={{flex:1,overflowY:"auto",padding:"10px 14px"}}>
+        {results.length===0&&(
+          <div style={{textAlign:"center",padding:"60px 20px",color:G.muted}}>
+            <div style={{fontSize:44,marginBottom:12}}>🔍</div>
+            <div style={{fontSize:16,fontWeight:700,color:G.text,marginBottom:6}}>{q?"Nenhum resultado":"Busque seus lançamentos"}</div>
+            <div style={{fontSize:13,lineHeight:1.5}}>{q?`Nada encontrado para "${q}"`:"Digite acima para buscar por descrição,\ncategoria, valor ou data"}</div>
+          </div>
+        )}
+        {results.map(l=>{
+          const isRec=l.tipo==="Receita";
+          const cor=isRec?G.green:G.red;
+          const catCor=CAT_COLORS[l.cat]||G.muted;
+          return(
+            <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:G.card,borderRadius:14,marginBottom:8,border:`1px solid ${G.border}`}}>
+              <div style={{width:40,height:40,borderRadius:12,background:cor+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+                {CAT_EMOJI[l.cat]||"💰"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,color:G.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.desc||l.cat}</div>
+                <div style={{display:"flex",alignItems:"center",gap:5,marginTop:3,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,padding:"1px 7px",borderRadius:10,background:catCor+"22",color:catCor,fontWeight:600}}>{l.cat}</span>
+                  <span style={{fontSize:10,color:G.muted}}>{fmtD(l.data)}</span>
+                  {l.forma&&<span style={{fontSize:10,color:G.muted}}>· {l.forma}</span>}
+                </div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:cor}}>{isRec?"+":"-"}{fmt(l.valor)}</div>
+                <button onClick={()=>{onDelete(l.id);}} style={{fontSize:10,color:G.muted,background:"none",border:"none",cursor:"pointer",marginTop:2,opacity:.5,display:"block",marginLeft:"auto"}}>excluir</button>
+              </div>
+            </div>
+          );
+        })}
+        <div style={{height:24}}/>
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
   const [modo,setModo]=useState(""); // ""|"login"|"cadastro"
@@ -2722,6 +2954,144 @@ function CartoesView({uid,lancs}){
   </div>);
 }
 
+
+// ─── BUSCA VIEW ──────────────────────────────────────────────────────────────
+function BuscaView({lancs,onDelete}){
+  const [q,setQ]=useState("");
+  const [filtTipo,setFiltTipo]=useState("Todos");
+  const [filtCat,setFiltCat]=useState("Todas");
+  const [filtMes,setFiltMes]=useState("Todos");
+  const [sortBy,setSortBy]=useState("data"); // data | valor
+
+  const meses=[...new Set(lancs.map(l=>getMes(l.data)))].filter(Boolean).sort().reverse();
+  const cats=[...new Set(lancs.map(l=>l.cat))].filter(Boolean).sort();
+
+  const resultado=lancs.filter(l=>{
+    const nq=q.trim().toLowerCase();
+    if(nq&&!`${l.desc||""} ${l.cat||""} ${l.forma||""} ${l.valor}`.toLowerCase().includes(nq))return false;
+    if(filtTipo!=="Todos"&&l.tipo!==filtTipo)return false;
+    if(filtCat!=="Todas"&&l.cat!==filtCat)return false;
+    if(filtMes!=="Todos"&&getMes(l.data)!==filtMes)return false;
+    return true;
+  }).sort((a,b)=>{
+    if(sortBy==="valor")return b.valor-a.valor;
+    return b.data.localeCompare(a.data);
+  });
+
+  const totalR=resultado.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
+  const totalD=resultado.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
+
+  return(<div style={{padding:"16px 14px 32px",display:"flex",flexDirection:"column",gap:12}}>
+
+    {/* search input */}
+    <div style={{position:"relative"}}>
+      <div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}>
+        <Ic d={ICON.search||"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"} size={16} color={G.muted}/>
+      </div>
+      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por descrição, categoria, valor..."
+        className="inp" style={{width:"100%",paddingLeft:36,fontSize:14}}/>
+      {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:18}}>×</button>}
+    </div>
+
+    {/* filtros */}
+    <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",paddingBottom:2}}>
+      {["Todos","Receita","Despesa"].map(t=>(
+        <button key={t} onClick={()=>setFiltTipo(t)} className="press"
+          style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${filtTipo===t?G.accent:G.border}`,
+            background:filtTipo===t?G.accentL:"transparent",
+            color:filtTipo===t?G.accent:G.muted,fontSize:12,cursor:"pointer",flexShrink:0,fontWeight:filtTipo===t?700:400}}>
+          {t}
+        </button>
+      ))}
+      <div style={{width:1,background:G.border,flexShrink:0,margin:"0 2px"}}/>
+      <select value={filtCat} onChange={e=>setFiltCat(e.target.value)}
+        style={{padding:"5px 10px",borderRadius:20,border:`1px solid ${filtCat!=="Todas"?G.accent:G.border}`,
+          background:filtCat!=="Todas"?G.accentL:G.card2,color:filtCat!=="Todas"?G.accent:G.muted,
+          fontSize:12,cursor:"pointer",flexShrink:0,outline:"none"}}>
+        <option value="Todas">Categoria</option>
+        {cats.map(c=><option key={c} value={c}>{c}</option>)}
+      </select>
+      <select value={filtMes} onChange={e=>setFiltMes(e.target.value)}
+        style={{padding:"5px 10px",borderRadius:20,border:`1px solid ${filtMes!=="Todos"?G.accent:G.border}`,
+          background:filtMes!=="Todos"?G.accentL:G.card2,color:filtMes!=="Todos"?G.accent:G.muted,
+          fontSize:12,cursor:"pointer",flexShrink:0,outline:"none"}}>
+        <option value="Todos">Mês</option>
+        {meses.map(m=>{const[y,mm]=m.split("-");return<option key={m} value={m}>{MESES[parseInt(mm)-1]} {y}</option>;})}
+      </select>
+    </div>
+
+    {/* sort + summary */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{fontSize:12,color:G.muted}}>{resultado.length} resultado{resultado.length!==1?"s":""}</div>
+      <div style={{display:"flex",gap:6}}>
+        {[["data","📅 Data"],["valor","💰 Valor"]].map(([k,l])=>(
+          <button key={k} onClick={()=>setSortBy(k)} className="press"
+            style={{padding:"4px 10px",borderRadius:12,border:`1px solid ${sortBy===k?G.accent:G.border}`,
+              background:sortBy===k?G.accentL:"transparent",color:sortBy===k?G.accent:G.muted,
+              fontSize:11,cursor:"pointer",fontWeight:sortBy===k?700:400}}>
+            {l}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* totais */}
+    {resultado.length>0&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      {totalR>0&&<div style={{background:G.green+"12",border:`1px solid ${G.green}33`,borderRadius:12,padding:"10px 12px"}}>
+        <div style={{fontSize:10,color:G.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8}}>Receitas</div>
+        <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.green,marginTop:2}}>{fmt(totalR)}</div>
+      </div>}
+      {totalD>0&&<div style={{background:G.red+"12",border:`1px solid ${G.red}33`,borderRadius:12,padding:"10px 12px"}}>
+        <div style={{fontSize:10,color:G.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8}}>Despesas</div>
+        <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.red,marginTop:2}}>{fmt(totalD)}</div>
+      </div>}
+    </div>}
+
+    {/* lista */}
+    {resultado.length===0?(
+      <div style={{textAlign:"center",padding:"40px 0",color:G.muted}}>
+        <div style={{fontSize:36,marginBottom:8}}>🔍</div>
+        <div style={{fontSize:14}}>{q||filtTipo!=="Todos"||filtCat!=="Todas"||filtMes!=="Todos"?"Nenhum resultado encontrado":"Nenhum lançamento ainda"}</div>
+        {(q||filtTipo!=="Todos"||filtCat!=="Todas"||filtMes!=="Todos")&&<button onClick={()=>{setQ("");setFiltTipo("Todos");setFiltCat("Todas");setFiltMes("Todos");}}
+          style={{marginTop:12,padding:"8px 16px",borderRadius:12,border:`1px solid ${G.border}`,background:"none",color:G.accent,cursor:"pointer",fontSize:13}}>
+          Limpar filtros
+        </button>}
+      </div>
+    ):(
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {resultado.map(l=>{
+          const cor=l.tipo==="Receita"?G.green:G.red;
+          const catCor=CAT_COLORS[l.cat]||G.muted;
+          const hl=q.trim().toLowerCase();
+          function highlight(text){
+            if(!hl||!text)return text;
+            const idx=text.toLowerCase().indexOf(hl);
+            if(idx<0)return text;
+            return<>{text.slice(0,idx)}<mark style={{background:G.accent+"44",color:G.accent,borderRadius:3,padding:"0 2px"}}>{text.slice(idx,idx+hl.length)}</mark>{text.slice(idx+hl.length)}</>;
+          }
+          return(
+            <div key={l.id} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:38,height:38,borderRadius:12,background:catCor+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+                {CAT_EMOJI[l.cat]||"💰"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,color:G.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{highlight(l.desc||l.cat)}</div>
+                <div style={{display:"flex",gap:6,alignItems:"center",marginTop:3,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:catCor+"20",color:catCor,fontWeight:600}}>{highlight(l.cat)}</span>
+                  <span style={{fontSize:10,color:G.muted}}>{fmtD(l.data)}</span>
+                  {l.forma&&<span style={{fontSize:10,color:G.muted}}>· {l.forma}</span>}
+                </div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:cor}}>{l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>);
+}
 
 // ─── IMPORTAR VIEW ────────────────────────────────────────────────────────────
 function ImportarView({uid,lancs,showT}){
@@ -3430,6 +3800,7 @@ export default function App(){
   const [dataLoading,setDataLoading]=useState(false);
   const [view,setView]=useState("dashboard");
   const [drawerOpen,setDrawerOpen]=useState(false);
+  const [searchOpen,setSearchOpen]=useState(false);
   const [cartoesList,setCartoesList]=useState([]);
   const [divPendCount,setDivPendCount]=useState(0);
   const [profilePhoto,setProfilePhoto]=useState("");
@@ -3515,7 +3886,8 @@ export default function App(){
   return(<>
     <style>{CSS}</style>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:G.bg}}>
-      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} profilePhoto={profilePhoto} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
+      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} profilePhoto={profilePhoto} onSearch={()=>setSearchOpen(true)} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
+      {searchOpen&&<BuscaView lancs={lancs} onClose={()=>setSearchOpen(false)} onDelete={deletar}/>}
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
@@ -3532,6 +3904,7 @@ export default function App(){
           {view==="contatos"&&<ContatosView uid={user.uid} user={user}/>}
           {view==="compartilhados-casal"&&<CasalView uid={user.uid} lancs={lancs} user={user}/>}
           {view==="compartilhados-divisoes"&&<DivisoesView uid={user.uid}/>}
+          {view==="busca"&&<BuscaView lancs={lancs} onDelete={deletar}/>}
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
           {view.startsWith("financas")&&<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>}
         </main></ErrorBoundary>
