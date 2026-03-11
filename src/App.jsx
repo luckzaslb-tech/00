@@ -2156,7 +2156,7 @@ function FinancasView({uid,lancs,secao}){
 // ─── CHAT VIEW ────────────────────────────────────────────────────────────────
 function ChatView({lancs,onAddLanc}){
   const SUGS=["Gastei 45 no Uber","Paguei 380 no mercado","Recebi salário de 5000","Quanto gastei esse mês?"];
-  const [msgs,setMsgs]=useState([]);
+  const [msgs,setMsgs]=useState([{id:0,from:"ai",ts:new Date(),text:"Oi! Me fale qualquer gasto ou receita!\n\n• \"Gastei 50 no mercado\"\n• \"Recebi 3000 de salário\"\n• \"Quanto gastei esse mês?\""}]);
   const [input,setInput]=useState("");
   const [busy,setBusy]=useState(false);
   const [pending,setPending]=useState(null);
@@ -2341,80 +2341,7 @@ function ChatView({lancs,onAddLanc}){
     </div>}
 
     {recErr&&<div style={{margin:"0 14px 8px",padding:"10px 14px",borderRadius:12,background:G.redL,border:`1px solid ${G.red}44`,fontSize:12,color:G.red}}>{recErr}</div>}
-    {!isRec&&msgs.length===0&&<div style={{flex:1,overflowY:"auto",padding:"16px 14px"}}>
-      {/* ── TUTORIAL PANEL ── */}
-      <div style={{marginBottom:16,textAlign:"center"}}>
-        <div style={{fontSize:28,marginBottom:6}}>🤖</div>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.text,marginBottom:4}}>IA Financeira</div>
-        <div style={{fontSize:13,color:G.muted,lineHeight:1.5}}>Fale naturalmente sobre seus gastos e receitas.<br/>Toque em qualquer exemplo para usar.</div>
-      </div>
-
-      {(()=>{
-        const tabs=[
-          {id:"gastos",label:"💸 Gastos",cor:G.red,exemplos:[
-            {t:"Gastei 50 no mercado","sub":"detecta Alimentação automaticamente"},
-            {t:"Paguei 380 no Uber esta semana","sub":"detecta Transporte + data"},
-            {t:"30 lanche, 20 uber, 15 aluguel","sub":"múltiplos gastos de uma vez"},
-            {t:"Paguei 120 de farmácia ontem","sub":"detecta data como ontem"},
-            {t:"Gastei 2500 no cartão de crédito","sub":"detecta forma de pagamento"},
-          ]},
-          {id:"receitas",label:"💰 Receitas",cor:G.green,exemplos:[
-            {t:"Recebi 5000 de salário","sub":"detecta categoria Salário"},
-            {t:"Ganhei 800 de freela","sub":"detecta Freelance"},
-            {t:"Caiu 200 de reembolso","sub":"detecta Reembolso"},
-            {t:"Recebi dividendos de 150","sub":"detecta Investimentos"},
-          ]},
-          {id:"consultas",label:"📊 Consultas",cor:G.accent,exemplos:[
-            {t:"Quanto gastei esse mês?","sub":"resumo completo do mês"},
-            {t:"Qual meu saldo?","sub":"receitas menos despesas"},
-            {t:"Quanto tenho de receitas?","sub":"total de entradas"},
-          ]},
-          {id:"dicas",label:"💡 Dicas",cor:G.yellow,exemplos:[
-            {t:"Pode registrar vários gastos de uma vez","sub":"ex: 30 uber, 50 mercado, 20 café"},
-            {t:"Fale o dia para registrar no passado","sub":"ex: gastei 40 no dia 5"},
-            {t:"Diga 'ontem' para registrar ontem","sub":"ex: paguei 90 de academia ontem"},
-            {t:"Você pode editar valor e categoria","sub":"antes de confirmar o lançamento"},
-          ],dica:true},
-        ];
-        const [tab,setTab]=React.useState("gastos");
-        const cur=tabs.find(t=>t.id===tab);
-        return(
-          <div>
-            {/* tab bar */}
-            <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
-              {tabs.map(tb=>(
-                <button key={tb.id} onClick={()=>setTab(tb.id)} className="press"
-                  style={{padding:"7px 14px",borderRadius:20,border:`1px solid ${tab===tb.id?tb.cor:G.border}`,
-                    background:tab===tb.id?tb.cor+"22":"transparent",
-                    color:tab===tb.id?tb.cor:G.muted,
-                    fontSize:12,fontWeight:tab===tb.id?700:400,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .2s"}}>
-                  {tb.label}
-                </button>
-              ))}
-            </div>
-
-            {/* exemplos */}
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {cur.exemplos.map((ex,i)=>(
-                <div key={i} onClick={()=>!ex.dica&&send(ex.t)} className={ex.dica?"":"press"}
-                  style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:14,
-                    background:G.card,border:`1px solid ${cur.cor}33`,
-                    cursor:ex.dica?"default":"pointer",transition:"all .15s"}}>
-                  <div style={{width:32,height:32,borderRadius:10,background:cur.cor+"18",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>
-                    {cur.id==="gastos"?"💸":cur.id==="receitas"?"💰":cur.id==="consultas"?"📊":"💡"}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:600,color:ex.dica?G.muted:G.text,lineHeight:1.3}}>{ex.t}</div>
-                    <div style={{fontSize:11,color:G.muted,marginTop:2}}>{ex.sub}</div>
-                  </div>
-                  {!ex.dica&&<div style={{fontSize:14,color:cur.cor,opacity:.6,flexShrink:0}}>→</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-    </div>}
+    {msgs.length<=2&&!isRec&&<div style={{display:"flex",gap:8,overflowX:"auto",padding:"4px 14px 8px",flexShrink:0}}>{SUGS.map(s=><div key={s} onClick={()=>send(s)} className="press" style={{whiteSpace:"nowrap",padding:"8px 14px",borderRadius:20,background:G.card2,border:`1px solid ${G.border}`,fontSize:12,color:G.text,cursor:"pointer",flexShrink:0}}>{s}</div>)}</div>}
     <div style={{padding:"10px 12px",background:G.card,borderTop:`1px solid ${G.border}`,flexShrink:0}}>
       {isRec?(<div style={{display:"flex",alignItems:"center",gap:12}}>
         <div style={{width:44,height:44,borderRadius:"50%",flexShrink:0,background:G.redL,border:`2px solid ${G.red}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🎙</div>
