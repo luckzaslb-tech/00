@@ -761,7 +761,7 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({lancs,onDelete}){
+function Dashboard({lancs,onDelete,user}){
   const [mes,setMes]=useState(curMes());
   const [hide,setHide]=useState(false);
   const [selCat,setSelCat]=useState(null);
@@ -835,25 +835,33 @@ function Dashboard({lancs,onDelete}){
       <div style={{position:"absolute",bottom:-50,right:-30,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle,rgba(46,204,142,.14),transparent 65%)",pointerEvents:"none"}}/>
       <div style={{position:"absolute",top:"30%",right:"20%",width:80,height:80,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,.1),transparent 65%)",pointerEvents:"none"}}/>
 
-      {/* top row: label + hide + mes */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-          {md.map(m=>{
-            const [my,mm]=m.split("-");
-            const lbl=MESES[parseInt(mm)-1]+" '"+my.slice(2);
-            const on=m===mes;
-            return(<button key={m} onClick={()=>setMes(m)} className="press"
-              style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${on?"rgba(255,255,255,.35)":"rgba(255,255,255,.1)"}`,
-                background:on?"rgba(255,255,255,.12)":"transparent",
-                color:on?"rgba(255,255,255,.9)":"rgba(255,255,255,.35)",
-                fontSize:11,fontWeight:on?700:400,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .2s"}}>
-              {lbl}
-            </button>);
-          })}
+      {/* top row: greeting + hide */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"rgba(255,255,255,.35)",marginBottom:2}}>Olá,</div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"rgba(255,255,255,.9)",lineHeight:1}}>
+            {(user?.displayName||user?.email||"").split(" ")[0]||"bem-vindo"} 👋
+          </div>
         </div>
         <button onClick={()=>setHide(h=>!h)} style={{background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.4)",flexShrink:0,marginLeft:8}}>
           {hide?"👁 Ver":"👁 Ocultar"}
         </button>
+      </div>
+
+      {/* mes pills */}
+      <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:14}}>
+        {md.map(m=>{
+          const [my,mm]=m.split("-");
+          const lbl=MESES[parseInt(mm)-1]+" '"+my.slice(2);
+          const on=m===mes;
+          return(<button key={m} onClick={()=>setMes(m)} className="press"
+            style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${on?"rgba(255,255,255,.35)":"rgba(255,255,255,.1)"}`,
+              background:on?"rgba(255,255,255,.12)":"transparent",
+              color:on?"rgba(255,255,255,.9)":"rgba(255,255,255,.35)",
+              fontSize:11,fontWeight:on?700:400,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .2s"}}>
+            {lbl}
+          </button>);
+        })}
       </div>
 
       {/* saldo grande */}
@@ -3825,7 +3833,7 @@ export default function App(){
         </div>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
-          {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar}/>}
+          {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="carreira"&&<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)} lancs={lancs}/>}
