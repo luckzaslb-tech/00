@@ -2287,6 +2287,7 @@ function ChatView({lancs,onAddLanc}){
   const [pending,setPending]=useState(null);
   const [editVal,setEditVal]=useState("");
   const [showCatPicker,setShowCatPicker]=useState(false);
+  const [catPickerIdx,setCatPickerIdx]=useState(null); // null = single, number = multiplos index
   const [recSt,setRecSt]=useState("idle");
   const [recSec,setRecSec]=useState(0);
   const [recErr,setRecErr]=useState("");
@@ -2356,8 +2357,14 @@ function ChatView({lancs,onAddLanc}){
 
   function escolherCat(cat){
     if(!pending)return;
-    setPending(p=>({...p,cat}));
+    if(catPickerIdx!==null){
+      // multiplos: update specific item
+      setPending(p=>({...p,itens:p.itens.map((it,i)=>i===catPickerIdx?{...it,cat}:it)}));
+    } else {
+      setPending(p=>({...p,cat}));
+    }
     setShowCatPicker(false);
+    setCatPickerIdx(null);
   }
 
   const fmtS=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
@@ -2414,11 +2421,30 @@ function ChatView({lancs,onAddLanc}){
         </div>
         {m.lanc&&<LancCard lanc={m.lanc}/>}
         {m.multi&&<div style={{marginTop:6,maxWidth:"84%",display:"flex",flexDirection:"column",gap:6}}>
-          {m.multi.map((i,idx)=><div key={idx} style={{background:G.card,border:`1px solid ${i.tipo==="Receita"?G.green:G.red}44`,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:18,color:i.tipo==="Receita"?G.green:G.red}}>{i.tipo==="Receita"?"↑":"↓"}</span>
-            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500}}>{i.desc||i.cat}</div><div style={{fontSize:11,color:G.muted}}>{i.cat}</div></div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:i.tipo==="Receita"?G.green:G.red}}>R${i.valor.toFixed(2)}</div>
-          </div>)}
+          {m.multi.map((item,idx)=>{
+            const liveItem=pending?.action==="multiplos"&&pending.itens?.[idx]?pending.itens[idx]:item;
+            const cor=liveItem.tipo==="Receita"?G.green:G.red;
+            const catCor=CAT_COLORS[liveItem.cat]||G.muted;
+            const isPend=pending?.action==="multiplos";
+            return(
+              <div key={idx} style={{background:G.card,border:`1px solid ${cor}44`,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:18,color:cor}}>{liveItem.tipo==="Receita"?"↑":"↓"}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:500,color:G.text}}>{liveItem.desc||liveItem.cat}</div>
+                  {isPend
+                    ?<button onClick={()=>{setCatPickerIdx(idx);setShowCatPicker(true);}} className="press"
+                        style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:3,padding:"2px 8px",borderRadius:10,
+                          border:`1px solid ${catCor}55`,background:catCor+"18",cursor:"pointer"}}>
+                        <span style={{fontSize:11,fontWeight:600,color:catCor}}>{liveItem.cat}</span>
+                        <Ic d={ICON.repeat} size={10} color={catCor}/>
+                      </button>
+                    :<div style={{fontSize:11,color:G.muted,marginTop:2}}>{liveItem.cat}</div>
+                  }
+                </div>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:cor}}>R${liveItem.valor.toFixed(2)}</div>
+              </div>
+            );
+          })}
           {pending?.action==="multiplos"&&<div style={{display:"flex",gap:8,marginTop:4}}>
             <button onClick={confirmar} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",cursor:"pointer",background:G.accent,color:"#fff",fontSize:13,fontWeight:700}}>✓ Confirmar tudo</button>
             <button onClick={cancelar} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer"}}>✕</button>
@@ -2447,9 +2473,13 @@ function ChatView({lancs,onAddLanc}){
           </button>
         </div>
         <div style={{overflowY:"auto",padding:"0 16px 16px"}}>
-          {(pending?.tipo==="Receita"?CATS_REC:CATS_DEP).map(cat=>{
+          {((()=>{
+            if(catPickerIdx!==null&&pending?.itens) return pending.itens[catPickerIdx]?.tipo==="Receita"?CATS_REC:CATS_DEP;
+            return pending?.tipo==="Receita"?CATS_REC:CATS_DEP;
+          })()).map(cat=>{
             const cor=CAT_COLORS[cat]||G.muted;
-            const sel=pending?.cat===cat;
+            const curCat=catPickerIdx!==null?pending?.itens?.[catPickerIdx]?.cat:pending?.cat;
+            const sel=curCat===cat;
             return(
               <div key={cat} onClick={()=>escolherCat(cat)} className="press"
                 style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",borderRadius:14,marginBottom:6,cursor:"pointer",
