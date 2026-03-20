@@ -252,6 +252,61 @@ async function callAI(msg,lancs){
   }
   return r;
 }
+
+// ─── TRANSCRIÇÃO DE ÁUDIO ─────────────────────────────────────────────────────
+// Usa Web Speech API nativa (sem custo, funciona no Chrome/Safari mobile)
+function createSpeechRecognizer(onResult, onError){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return null;
+  const sr=new SR();
+  sr.lang="pt-BR";sr.continuous=false;sr.interimResults=false;
+  sr.onresult=e=>onResult(e.results[0][0].transcript);
+  sr.onerror=e=>onError(e.error);
+  return sr;
+}
+
+// ─── ANÁLISE DE FOTO/COMPROVANTE ──────────────────────────────────────────────
+async function analyzePhoto(base64,mimeType="image/jpeg"){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:400,
+      messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64",media_type:mimeType,data:base64}},
+        {type:"text",text:`Você é um assistente financeiro. Analise esta imagem (comprovante, recibo, nota fiscal ou print de pagamento) e extraia as informações financeiras.
+Responda SOMENTE em JSON com este formato exato (sem markdown, sem explicação):
+{"desc":"descrição curta","valor":0.00,"tipo":"Despesa","cat":"Categoria","forma":"forma de pagamento"}
+Categorias válidas: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Vestuário, Assinaturas, Outros
+Se for receita use tipo "Receita" e categorias: Salário, Freelance, Investimentos, Bônus, Outros
+Se não conseguir identificar retorne: {"erro":"não identificado"}`}
+      ]}]
+    })
+  });
+  const d=await r.json();
+  const txt=d.content?.[0]?.text||"{}";
+  try{
+    const clean=txt.replace(/```json|```/g,"").trim();
+    return JSON.parse(clean);
+  }catch{return{erro:"parse error"};}
+}
+
+// ─── HOOK DE PLANO ────────────────────────────────────────────────────────────
+function usePlano(uid){
+  const [plano,setPlano]=useState("free");
+  const [loadingPlano,setLoadingPlano]=useState(true);
+  useEffect(()=>{
+    if(!uid){setLoadingPlano(false);return;}
+    const unsub=onSnapshot(doc(db,"users",uid,"perfil","dados"),snap=>{
+      setPlano(snap.data()?.plano||"free");
+      setLoadingPlano(false);
+    });
+    return()=>unsub();
+  },[uid]);
+  return{plano,loadingPlano,isPremium:plano==="premium"};
+}
+
 // ─── DESIGN ────────────────────────────────────────────────────────────────────
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const DARK ={bg:"#0A0A0F",card:"#111118",card2:"#16161F",border:"#1E1E2A",border2:"#2A2A3A",text:"#F0EEF8",muted:"#6B6880",accent:"#7C6AF7",accentL:"#7C6AF720",green:"#2ECC8E",greenL:"#2ECC8E18",red:"#FF5C6A",redL:"#FF5C6A18",yellow:"#F5C842",blue:"#4A9EFF",orange:"#FB923C"};
@@ -495,6 +550,9 @@ function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,o
 
         {/* Footer */}
         <div style={{padding:"10px 10px 24px",borderTop:`1px solid ${G2.border}`}}>
+          <button onClick={()=>{setView("planos");onClose();}} className="press" style={btnStyle(view==="planos")}>
+            <span style={{width:24,display:"flex",justifyContent:"center"}}>✨</span>Planos & Premium
+          </button>
           <button onClick={()=>setShowDuvidas(true)} className="press" style={btnStyle(false)}>
             <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.help||"M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm2-1.645A3.502 3.502 0 0012 8.5a3.501 3.501 0 00-3.433 2.813l1.963.382A1.5 1.5 0 1113.5 13H12v1.355z"} size={18}/></span>Dúvidas
           </button>
@@ -2421,7 +2479,7 @@ function FinancasView({uid,lancs,secao}){
 }
 
 // ─── CHAT VIEW ────────────────────────────────────────────────────────────────
-function ChatView({lancs,onAddLanc}){
+function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
   const SUGS=["Gastei 45 no Uber","Paguei 380 no mercado","Recebi salário de 5000","Quanto gastei esse mês?"];
   const [msgs,setMsgs]=useState([]);
   const [input,setInput]=useState("");
@@ -2433,12 +2491,38 @@ function ChatView({lancs,onAddLanc}){
   const [recSt,setRecSt]=useState("idle");
   const [recSec,setRecSec]=useState(0);
   const [recErr,setRecErr]=useState("");
-  const botRef=useRef(),inpRef=useRef(),mrRef=useRef(null),chkRef=useRef([]),tmrRef=useRef(null);
+  const botRef=useRef(),inpRef=useRef(),mrRef=useRef(null),chkRef=useRef([]),tmrRef=useRef(null),srRef=useRef(null),photoRef=useRef(null);
   useEffect(()=>{botRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   const push=(from,text,ex={})=>setMsgs(p=>[...p,{id:Date.now()+Math.random(),from,text,ts:new Date(),...ex}]);
+  const [photoLoading,setPhotoLoading]=useState(false);
 
   async function startRec(){
     setRecErr("");
+    // Tenta Web Speech API primeiro (nativa, sem custo)
+    const sr=createSpeechRecognizer(
+      txt=>{
+        if(txt.trim()){
+          setInput(txt.trim());
+          push("ai",`🎤 Transcrevi: *"${txt.trim()}"*\nRevise e toque enviar! ✉️`);
+        } else push("ai","🎤 Não entendi. Fale mais alto e tente de novo 😊");
+        setRecSt("idle");setRecSec(0);clearInterval(tmrRef.current);
+      },
+      err=>{
+        setRecSt("idle");setRecSec(0);clearInterval(tmrRef.current);
+        if(err==="not-allowed")setRecErr("Microfone bloqueado — libere nas configurações.");
+        else push("ai","🎤 Erro na transcrição. Pode digitar? 😊");
+      }
+    );
+    if(sr){
+      try{
+        setRecSt("rec");setRecSec(0);
+        tmrRef.current=setInterval(()=>setRecSec(s=>s+1),1000);
+        srRef.current=sr;
+        sr.start();
+        return;
+      }catch(e){/* fallback para MediaRecorder */}
+    }
+    // Fallback: MediaRecorder (envia blob para Anthropic vision como áudio)
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
       chkRef.current=[];
@@ -2449,21 +2533,20 @@ function ChatView({lancs,onAddLanc}){
         stream.getTracks().forEach(t=>t.stop());
         if(!chkRef.current.length){setRecSt("idle");return;}
         setRecSt("proc");
-        const blob=new Blob(chkRef.current,{type:mr.mimeType||"audio/webm"});
         try{
-          try{
-            const txt=await transcribeAudio(blob);
-            if(txt.trim()){setInput(txt.trim());push("ai",`🎤 Transcrevi: *"${txt.trim()}"*\nRevise e toque enviar! ✉️`);}
-            else push("ai","🎤 Não entendi o áudio. Pode falar de novo? 😊");
-          }catch{push("ai","🎤 Erro na transcrição. Pode tentar de novo? 😊");}
-        }catch{push("ai","Erro ao transcrever. Pode digitar? 😊");}
+          push("ai","🎤 Áudio recebido! Infelizmente a transcrição automática requer conexão com API externa. Digite o que falou? 😊");
+        }catch{push("ai","🎤 Erro na transcrição. Pode digitar? 😊");}
         setRecSt("idle");setRecSec(0);
       };
       mr.start(200);mrRef.current=mr;setRecSt("rec");setRecSec(0);
       tmrRef.current=setInterval(()=>setRecSec(s=>s+1),1000);
     }catch(e){setRecSt("idle");setRecErr(e.name==="NotAllowedError"?"Microfone bloqueado — libere nas configurações.":"Erro ao gravar.");}
   }
-  function stopRec(){clearInterval(tmrRef.current);if(mrRef.current?.state==="recording")mrRef.current.stop();}
+  function stopRec(){
+    clearInterval(tmrRef.current);
+    if(srRef.current){try{srRef.current.stop();}catch{}srRef.current=null;return;}
+    if(mrRef.current?.state==="recording")mrRef.current.stop();
+  }
   function cancelRec(){clearInterval(tmrRef.current);if(mrRef.current?.state==="recording"){mrRef.current.onstop=null;mrRef.current.stop();}setRecSt("idle");setRecSec(0);}
 
   async function send(txt){
@@ -2495,6 +2578,41 @@ function ChatView({lancs,onAddLanc}){
   function cancelar(){
     push("ai","Cancelei! 😊");
     setPending(null);setEditVal("");setShowCatPicker(false);
+  }
+
+  async function sendPhoto(file){
+    if(!file)return;
+    setPhotoLoading(true);
+    push("user","📷 Enviando comprovante...");
+    try{
+      const base64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=x=>res(x.target.result.split(",")[1]);
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
+      const mime=file.type||"image/jpeg";
+      push("ai","🔍 Analisando comprovante...");
+      const result=await analyzePhoto(base64,mime);
+      if(result.erro){
+        push("ai","😕 Não consegui identificar os dados. Pode digitar o valor e descrição?");
+      } else {
+        const r={
+          action:"lancamento",
+          tipo:result.tipo||"Despesa",
+          desc:result.desc||"Comprovante",
+          cat:result.cat||"Outros",
+          forma:result.forma||"PIX",
+          valor:parseFloat(result.valor)||0,
+          data:today(),
+        };
+        r.confirmacao=`📄 Identifiquei:\n*${r.desc}* — ${fmt(r.valor)}\nCategoria: ${r.cat} · ${r.forma}\n\nConfirma?`;
+        push("ai",r.confirmacao,{lanc:r});
+        setPending(r);
+        setEditVal(r.valor.toFixed(2));
+      }
+    }catch(e){push("ai","❌ Erro ao analisar foto. Tente novamente ou digite manualmente.");}
+    setPhotoLoading(false);
   }
 
   function escolherCat(cat){
@@ -2648,9 +2766,23 @@ function ChatView({lancs,onAddLanc}){
           <Ic d={ICON.x} size={16}/>
         </button>
       </div>):(<div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-        <button onClick={startRec} disabled={busy||isProc} className="press" style={{width:44,height:44,borderRadius:"50%",border:`1px solid ${G.border}`,background:G.card2,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🎙</button>
-        <textarea ref={inpRef} value={input} onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,120)+"px";}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Ex: Gastei 50 no mercado..." className="inp" style={{flex:1,borderRadius:22,padding:"11px 14px",fontSize:14,resize:"none",overflow:"hidden",minHeight:44,lineHeight:1.4}}/>
-        <button onClick={()=>send()} disabled={!input.trim()||busy} className="press" style={{width:44,height:44,borderRadius:"50%",border:"none",cursor:"pointer",background:input.trim()&&!busy?G.accent:G.card2,color:input.trim()&&!busy?"#fff":G.muted,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+        <button onClick={()=>{if(!isPremium&&onUpgrade){onUpgrade();return;}startRec();}} disabled={busy||isProc||photoLoading} className="press"
+          style={{width:44,height:44,borderRadius:"50%",border:`1px solid ${isPremium?G.border:G.accent+"44"}`,background:isPremium?"none":G.accent+"11",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:isPremium?G.muted:G.accent,position:"relative"}}>
+          <Ic d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" size={20}/>
+          {!isPremium&&<span style={{position:"absolute",top:-4,right:-4,fontSize:9,background:G.accent,color:"#fff",borderRadius:8,padding:"1px 4px",fontWeight:700}}>PRO</span>}
+        </button>
+        <button onClick={()=>{if(!isPremium&&onUpgrade){onUpgrade();return;}photoRef.current?.click();}} disabled={busy||isProc||photoLoading} className="press"
+          style={{width:44,height:44,borderRadius:"50%",border:`1px solid ${isPremium?G.border:G.accent+"44"}`,background:isPremium?"none":G.accent+"11",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:isPremium?G.muted:G.accent,position:"relative"}}>
+          <Ic d={ICON.camera} size={20}/>
+          {!isPremium&&<span style={{position:"absolute",top:-4,right:-4,fontSize:9,background:G.accent,color:"#fff",borderRadius:8,padding:"1px 4px",fontWeight:700}}>PRO</span>}
+        </button>
+        <input ref={photoRef} type="file" accept="image/*" capture="environment" style={{display:"none"}}
+          onChange={e=>{const f=e.target.files?.[0];if(f)sendPhoto(f);e.target.value="";}}/>
+        <textarea ref={inpRef} value={input} onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,120)+"px";}}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+          placeholder="Ex: Gastei 50 no mercado..." rows={1}
+          style={{flex:1,resize:"none",padding:"12px 14px",borderRadius:22,border:`1px solid ${G.border}`,background:G.card2,color:G.text,fontSize:14,outline:"none",lineHeight:1.4,fontFamily:"'Figtree',sans-serif",overflowY:"hidden"}}/>
+        <button onClick={()=>send()} disabled={!input.trim()||busy||photoLoading} className="press" style={{width:44,height:44,borderRadius:"50%",border:"none",cursor:"pointer",background:G.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <Ic d={ICON.arrow_up} size={20}/>
         </button>
       </div>)}
@@ -3041,6 +3173,105 @@ function CartoesView({uid,lancs}){
         </div>
       );
     })}
+  </div>);
+}
+
+// ─── UPGRADE VIEW ────────────────────────────────────────────────────────────
+function UpgradeView({uid,plano}){
+  const isPrem=plano==="premium";
+
+  const FREE_FEATURES=[
+    {icon:"📊",txt:"Dashboard completo do mês atual"},
+    {icon:"✍️",txt:"Lançamentos manuais ilimitados"},
+    {icon:"💬",txt:"IA por texto — 30 msgs/mês"},
+    {icon:"💳",txt:"1 cartão de crédito"},
+    {icon:"📅",txt:"Histórico de 3 meses"},
+  ];
+  const PREMIUM_FEATURES=[
+    {icon:"♾️",txt:"Tudo do gratuito sem limites"},
+    {icon:"🎤",txt:"IA por voz — transcrição automática"},
+    {icon:"📷",txt:"IA por foto — leia comprovantes"},
+    {icon:"💳",txt:"Cartões ilimitados"},
+    {icon:"📅",txt:"Histórico completo"},
+    {icon:"📤",txt:"Exportar dados (CSV/PDF)"},
+    {icon:"📲",txt:"Relatórios via WhatsApp (em breve)"},
+    {icon:"🏦",txt:"Open Finance — conexão bancária (em breve)"},
+  ];
+
+  async function ativarTeste(){
+    if(!uid)return;
+    try{
+      await setDoc(doc(db,"users",uid,"perfil","dados"),{plano:"premium"},{merge:true});
+      alert("✅ Premium ativado! Aproveite 🎉");
+    }catch(e){alert("Erro: "+e.message);}
+  }
+
+  return(<div style={{padding:"16px 14px 40px",display:"flex",flexDirection:"column",gap:16}}>
+
+    {/* Header */}
+    <div style={{textAlign:"center",padding:"8px 0 4px"}}>
+      <div style={{fontSize:36,marginBottom:6}}>✨</div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:G.text}}>Planos</div>
+      <div style={{fontSize:13,color:G.muted,marginTop:4}}>Escolha o melhor para você</div>
+    </div>
+
+    {/* Status atual */}
+    {isPrem&&<div style={{background:`linear-gradient(135deg,${G.accent}22,${G.accent}11)`,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{fontSize:22}}>👑</span>
+      <div>
+        <div style={{fontSize:13,fontWeight:700,color:G.accent}}>Você é Premium!</div>
+        <div style={{fontSize:12,color:G.muted}}>Aproveite todos os recursos</div>
+      </div>
+    </div>}
+
+    {/* Card Gratuito */}
+    <div style={{background:G.card,border:`1px solid ${!isPrem?G.accent:G.border}`,borderRadius:20,padding:"18px 16px",position:"relative"}}>
+      {!isPrem&&<div style={{position:"absolute",top:-10,left:20,background:G.accent,color:"#fff",fontSize:10,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:.8}}>PLANO ATUAL</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:G.text}}>Gratuito</div>
+          <div style={{fontSize:22,fontWeight:700,color:G.text,marginTop:2}}>R$ 0<span style={{fontSize:13,color:G.muted,fontWeight:400}}>/mês</span></div>
+        </div>
+        <span style={{fontSize:28}}>🌱</span>
+      </div>
+      {FREE_FEATURES.map((f,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+          <span style={{fontSize:16,width:22,textAlign:"center"}}>{f.icon}</span>
+          <span style={{fontSize:13,color:G.muted}}>{f.txt}</span>
+        </div>
+      ))}
+    </div>
+
+    {/* Card Premium */}
+    <div style={{background:`linear-gradient(145deg,${G.accent}18,${G.card})`,border:`1px solid ${G.accent}55`,borderRadius:20,padding:"18px 16px",position:"relative"}}>
+      {isPrem&&<div style={{position:"absolute",top:-10,left:20,background:G.accent,color:"#fff",fontSize:10,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:.8}}>PLANO ATUAL</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:G.text}}>Premium</div>
+          <div style={{fontSize:22,fontWeight:700,color:G.accent,marginTop:2}}>R$ 19,90<span style={{fontSize:13,color:G.muted,fontWeight:400}}>/mês</span></div>
+        </div>
+        <span style={{fontSize:28}}>👑</span>
+      </div>
+      {PREMIUM_FEATURES.map((f,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+          <span style={{fontSize:16,width:22,textAlign:"center"}}>{f.icon}</span>
+          <span style={{fontSize:13,color:G.text}}>{f.txt}</span>
+          {f.txt.includes("em breve")&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:G.yellow+"22",color:G.yellow,fontWeight:600,marginLeft:"auto",flexShrink:0}}>em breve</span>}
+        </div>
+      ))}
+      {!isPrem&&<button onClick={ativarTeste} className="press"
+        style={{width:"100%",marginTop:14,padding:"14px",borderRadius:14,border:"none",
+          background:`linear-gradient(135deg,${G.accent},#9C6AF7)`,
+          color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",
+          boxShadow:`0 4px 20px ${G.accent}44`}}>
+        ✨ Ativar Premium (teste grátis)
+      </button>}
+    </div>
+
+    <div style={{fontSize:11,color:G.muted,textAlign:"center",lineHeight:1.6}}>
+      Pagamentos em breve via Stripe / Mercado Pago.<br/>
+      Por ora, use o botão acima para testar gratuitamente.
+    </div>
   </div>);
 }
 
@@ -3734,6 +3965,7 @@ export default function App(){
   const [authLoading,setAuthLoading]=useState(true);
   const [loginLoading,setLoginLoading]=useState("");
   const [loginError,setLoginError]=useState("");
+  const {plano,isPremium}=usePlano(user?.uid||null);
   const [lancs,setLancs]=useState([]);
   const [recorrentes,setRecorrentes]=useState([]);
   const [dataLoading,setDataLoading]=useState(false);
@@ -3831,7 +4063,7 @@ export default function App(){
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
         <div style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,display:"flex",flexDirection:"column"}}>
-          <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
+          <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>
         </div>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
@@ -3845,6 +4077,7 @@ export default function App(){
           {view==="compartilhados-divisoes"&&<DivisoesView uid={user.uid}/>}
           {view==="busca"&&<BuscaView lancs={lancs} onDelete={deletar}/>}
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
+          {view==="planos"&&<UpgradeView uid={user.uid} plano={plano}/>}
           {view.startsWith("financas")&&<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>}
         </main></ErrorBoundary>
       )}
