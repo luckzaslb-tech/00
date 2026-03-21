@@ -307,6 +307,37 @@ function usePlano(uid){
   return{plano,loadingPlano,isPremium:plano==="premium"};
 }
 
+
+// ─── LIMITES FREE ─────────────────────────────────────────────────────────────
+const FREE_LIMITS = {
+  cartoes: 1,       // máx 1 cartão
+  meses_historico: 3, // últimos 3 meses
+};
+
+// ─── PREMIUM GATE COMPONENT ───────────────────────────────────────────────────
+function PremiumGate({isPremium,onUpgrade,children,label="Este recurso é Premium",sublabel=""}){
+  if(isPremium)return children;
+  return(
+    <div style={{position:"relative",borderRadius:18,overflow:"hidden"}}>
+      <div style={{filter:"blur(3px)",pointerEvents:"none",userSelect:"none",opacity:.5}}>
+        {children}
+      </div>
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        background:"rgba(10,10,15,.75)",backdropFilter:"blur(2px)",borderRadius:18,padding:24,textAlign:"center"}}>
+        <div style={{fontSize:32,marginBottom:8}}>✨</div>
+        <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:"#fff",marginBottom:4}}>{label}</div>
+        {sublabel&&<div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginBottom:14}}>{sublabel}</div>}
+        <button onClick={onUpgrade} className="press"
+          style={{padding:"10px 24px",borderRadius:20,border:"none",background:"#7C6AF7",
+            color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",
+            boxShadow:"0 4px 16px rgba(124,106,247,.5)"}}>
+          Ver planos
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── DESIGN ────────────────────────────────────────────────────────────────────
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const DARK ={bg:"#0A0A0F",card:"#111118",card2:"#16161F",border:"#1E1E2A",border2:"#2A2A3A",text:"#F0EEF8",muted:"#6B6880",accent:"#7C6AF7",accentL:"#7C6AF720",green:"#2ECC8E",greenL:"#2ECC8E18",red:"#FF5C6A",redL:"#FF5C6A18",yellow:"#F5C842",blue:"#4A9EFF",orange:"#FB923C"};
@@ -1128,7 +1159,7 @@ function Dashboard({lancs,onDelete,user}){
   </div>);
 }
 // ─── LANCS VIEW ───────────────────────────────────────────────────────────────
-function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
+function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPremium=false,onUpgrade}){
   const [mf,setMf]=useState(curMes());
   const [cf,setCf]=useState("");
   const [showCats,setShowCats]=useState(false);
@@ -1136,8 +1167,9 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
   const cats=isR?CATS_REC:CATS_DEP;
 
   const todos=lancs.filter(l=>l.tipo===tipo);
-  const meses=[...new Set(todos.map(l=>getMes(l.data)))].sort().reverse();
-  if(!meses.includes(curMes()))meses.unshift(curMes());
+  const allMeses=[...new Set(todos.map(l=>getMes(l.data)))].sort().reverse();
+  if(!allMeses.includes(curMes()))allMeses.unshift(curMes());
+  const meses=isPremium?allMeses:allMeses.slice(0,3);
 
   let data=todos;
   if(mf) data=data.filter(l=>getMes(l.data)===mf);
@@ -1245,6 +1277,15 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
           </button>);
         })}
       </div>
+      {/* banner histórico limitado */}
+      {!isPremium&&<div onClick={onUpgrade} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderRadius:12,
+        background:G.accent+"15",border:`1px solid ${G.accent}33`,marginBottom:8,cursor:"pointer"}}>
+        <span style={{fontSize:16}}>✨</span>
+        <div style={{flex:1}}>
+          <span style={{fontSize:12,color:G.accent,fontWeight:600}}>Histórico limitado a 3 meses </span>
+          <span style={{fontSize:11,color:G.muted}}>— Toque para ver planos</span>
+        </div>
+      </div>}
       {/* categoria */}
       <button onClick={()=>setShowCats(v=>!v)} className="press"
         style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:20,
@@ -1315,12 +1356,25 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec}){
   </div>);
 }
 // ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
-function CarreiraView({uid,user,onPhotoSave,lancs=[]}){
+function CarreiraView({uid,user,onPhotoSave,lancs=[],isPremium=false,onUpgrade}){
   const [secao,setSecao]=useState(null); // which card is expanded
   const [saving,setSaving]=useState(false);
 
   // ── perfil ──────────────────────────────────────────
   const [perfil,setPerfil]=useState(null);
+
+  if(!isPremium) return(
+    <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16}}>
+      <div style={{fontSize:52,marginBottom:4}}>🚀</div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:G.text}}>Perfil & Carreira</div>
+      <div style={{fontSize:14,color:G.muted,lineHeight:1.7,maxWidth:280}}>Humor, metas, rotinas e histórico de carreira. Recurso exclusivo do plano Premium.</div>
+      <button onClick={onUpgrade} className="press"
+        style={{marginTop:8,padding:"13px 32px",borderRadius:20,border:"none",background:G.accent,
+          color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 20px ${G.accent}44`}}>
+        ✨ Ver planos
+      </button>
+    </div>
+  );
   const [editando,setEditando]=useState(false);
   const [fp,setFp]=useState({
     nome:"",bio:"",frase:"",fotoUrl:"",humor:"",
@@ -2793,17 +2847,21 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
 
 
 // ─── BUSCA VIEW ──────────────────────────────────────────────────────────────
-function BuscaView({lancs,onDelete}){
+function BuscaView({lancs,onDelete,isPremium=false,onUpgrade}){
   const [q,setQ]=useState("");
   const [filtTipo,setFiltTipo]=useState("Todos");
   const [filtCat,setFiltCat]=useState("Todas");
   const [filtMes,setFiltMes]=useState("Todos");
   const [sortBy,setSortBy]=useState("data"); // data | valor
 
-  const meses=[...new Set(lancs.map(l=>getMes(l.data)))].filter(Boolean).sort().reverse();
-  const cats=[...new Set(lancs.map(l=>l.cat))].filter(Boolean).sort();
+  const lancsVisiveis=isPremium?lancs:(()=>{
+    const limite=new Date();limite.setMonth(limite.getMonth()-3);
+    return lancs.filter(l=>new Date(l.data)>=limite);
+  })();
+  const meses=[...new Set(lancsVisiveis.map(l=>getMes(l.data)))].filter(Boolean).sort().reverse();
+  const cats=[...new Set(lancsVisiveis.map(l=>l.cat))].filter(Boolean).sort();
 
-  const resultado=lancs.filter(l=>{
+  const resultado=lancsVisiveis.filter(l=>{
     const nq=q.trim().toLowerCase();
     if(nq&&!`${l.desc||""} ${l.cat||""} ${l.forma||""} ${l.valor}`.toLowerCase().includes(nq))return false;
     if(filtTipo!=="Todos"&&l.tipo!==filtTipo)return false;
@@ -3022,7 +3080,7 @@ function ImportarView({uid,lancs,showT}){
 
 // ─── FAMÍLIA / CASAL VIEW ──────────────────────────────────────────────────────
 // ─── CARTÕES VIEW ────────────────────────────────────────────────────────────
-function CartoesView({uid,lancs}){
+function CartoesView({uid,lancs,isPremium=false,onUpgrade}){
   const [cartoes,setCartoes]=useState([]);
   const [adding,setAdding]=useState(false);
   const [form,setForm]=useState({nome:"",limite:"",vencimento:"",cor:"#7C6AF7"});
@@ -3039,6 +3097,7 @@ function CartoesView({uid,lancs}){
 
   async function salvarCartao(){
     if(!form.nome.trim())return;
+    if(!isPremium&&cartoes.length>=1){onUpgrade&&onUpgrade();return;}
     setSaving(true);
     try{
       await addDoc(collection(db,"users",uid,"cartoes"),{
@@ -3065,8 +3124,8 @@ function CartoesView({uid,lancs}){
     {/* Header */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.text}}>Cartões de Crédito</div>
-      <button onClick={()=>setAdding(v=>!v)} className="press"
-        style={{width:36,height:36,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <button onClick={()=>{if(!isPremium&&cartoes.length>=1){onUpgrade&&onUpgrade();return;}setAdding(v=>!v);}} className="press"
+        style={{width:36,height:36,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
         <Ic d={adding?ICON.x:ICON.plus} size={18}/>
       </button>
     </div>
@@ -3190,7 +3249,7 @@ function CartoesView({uid,lancs}){
 }
 
 // ─── UPGRADE VIEW ────────────────────────────────────────────────────────────
-function UpgradeView({uid,plano}){
+function UpgradeView({uid,plano,destaque=""}){
   const isPrem=plano==="premium";
 
   const FREE_FEATURES=[
@@ -3222,6 +3281,18 @@ function UpgradeView({uid,plano}){
   return(<div style={{padding:"16px 14px 40px",display:"flex",flexDirection:"column",gap:16}}>
 
     {/* Header */}
+    {destaque&&(()=>{
+      const info={carreira:["🚀","Perfil & Carreira","Acompanhe seu crescimento profissional"],cartoes:["💳","Cartões de Crédito","Gerencie todos os seus cartões"],contatos:["👥","Contatos","Divida gastos com seus contatos"],casal:["💑","Modo Casal","Finanças compartilhadas"],divisoes:["🤝","Divisão de Contas","Divida contas com amigos"],busca:["🔍","Busca Avançada","Encontre qualquer lançamento"],importar:["📥","Importar Extrato","Importe seus extratos CSV"],financas:["📊","Relatórios","Orçamentos e análises"]}[destaque];
+      if(!info)return null;
+      return(<div style={{background:`linear-gradient(135deg,${G.accent}22,${G.accent}08)`,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+        <span style={{fontSize:28}}>{info[0]}</span>
+        <div>
+          <div style={{fontSize:11,color:G.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,marginBottom:2}}>Recurso Premium</div>
+          <div style={{fontSize:14,fontWeight:700,color:G.text}}>{info[1]}</div>
+          <div style={{fontSize:12,color:G.muted}}>{info[2]}</div>
+        </div>
+      </div>);
+    })()}
     <div style={{textAlign:"center",padding:"8px 0 4px"}}>
       <div style={{fontSize:36,marginBottom:6}}>✨</div>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:G.text}}>Planos</div>
@@ -3368,7 +3439,7 @@ function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
 }
 
 // ─── CONTATOS VIEW ────────────────────────────────────────────────────────────
-function ContatosView({uid,user}){
+function ContatosView({uid,user,isPremium=false,onUpgrade}){
   const [contatos,setContatos]=useState([]);
   const [codInput,setCodInput]=useState("");
   const [buscando,setBuscando]=useState(false);
@@ -3376,6 +3447,19 @@ function ContatosView({uid,user}){
   const [sheetAdd,setSheetAdd]=useState(false);
   const [formAdd,setFormAdd]=useState({nome:"",categoria:"Amigos"});
   const [editando,setEditando]=useState(null);
+
+  if(!isPremium) return(
+    <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16}}>
+      <div style={{fontSize:52,marginBottom:4}}>👥</div>
+      <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:G.text}}>Contatos & Divisões</div>
+      <div style={{fontSize:14,color:G.muted,lineHeight:1.7,maxWidth:280}}>Divida contas com amigos e familiares. Recurso exclusivo do plano Premium.</div>
+      <button onClick={onUpgrade} className="press"
+        style={{marginTop:8,padding:"13px 32px",borderRadius:20,border:"none",background:G.accent,
+          color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 20px ${G.accent}44`}}>
+        ✨ Ver planos
+      </button>
+    </div>
+  );
   const [formEdit,setFormEdit]=useState({nome:"",categoria:"Amigos",apelido:"",notas:""});
   const CATS=["Família","Amigos","Trabalho","Casal","Outros"];
 
@@ -4084,18 +4168,37 @@ export default function App(){
         </div>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
+          {/* ── VIEWS GRATUITAS ── */}
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
-          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
-          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
-          {view==="carreira"&&<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)} lancs={lancs}/>}
-          {view==="cartoes"&&<CartoesView uid={user.uid} lancs={lancs}/>}
-          {view==="contatos"&&<ContatosView uid={user.uid} user={user}/>}
-          {view==="compartilhados-casal"&&<CasalView uid={user.uid} lancs={lancs} user={user}/>}
-          {view==="compartilhados-divisoes"&&<DivisoesView uid={user.uid}/>}
-          {view==="busca"&&<BuscaView lancs={lancs} onDelete={deletar}/>}
-          {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
+          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deletarRec}/>}
+          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deletarRec}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano}/>}
-          {view.startsWith("financas")&&<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>}
+
+          {/* ── VIEWS PREMIUM ── */}
+          {view==="carreira"&&(isPremium
+            ?<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)} lancs={lancs}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="carreira"/>)}
+          {view==="cartoes"&&(isPremium
+            ?<CartoesView uid={user.uid} lancs={lancs}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="cartoes"/>)}
+          {view==="contatos"&&(isPremium
+            ?<ContatosView uid={user.uid} user={user}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="contatos"/>)}
+          {view==="compartilhados-casal"&&(isPremium
+            ?<CasalView uid={user.uid} lancs={lancs} user={user}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="casal"/>)}
+          {view==="compartilhados-divisoes"&&(isPremium
+            ?<DivisoesView uid={user.uid}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="divisoes"/>)}
+          {view==="busca"&&(isPremium
+            ?<BuscaView lancs={lancs} onDelete={deletar}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="busca"/>)}
+          {view==="importar"&&(isPremium
+            ?<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="importar"/>)}
+          {view.startsWith("financas")&&(isPremium
+            ?<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>
+            :<UpgradeView uid={user.uid} plano={plano} destaque="financas"/>)}
         </main></ErrorBoundary>
       )}
       <Nav view={view} setView={setView}/>
