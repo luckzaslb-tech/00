@@ -4062,7 +4062,7 @@ export default function App(){
   const [authLoading,setAuthLoading]=useState(true);
   const [loginLoading,setLoginLoading]=useState("");
   const [loginError,setLoginError]=useState("");
-  const {plano,isPremium}=usePlano(user?.uid||null);
+  const {plano,isPremium,loadingPlano}=usePlano(user?.uid||null);
   const [lancs,setLancs]=useState([]);
   const [recorrentes,setRecorrentes]=useState([]);
   const [dataLoading,setDataLoading]=useState(false);
@@ -4152,7 +4152,7 @@ export default function App(){
   }
   async function handleLogout(){if(window.confirm("Sair da conta?"))await signOut(auth);}
 
-  if(authLoading)return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:G.bg,gap:14}}><style>{CSS}</style><div style={{fontFamily:"'Fraunces',serif",fontSize:30,fontWeight:700}}>fin<span style={{color:G.accent}}>ance</span></div><Spinner size={24}/></div>);
+  if(authLoading||loadingPlano)return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0A0A0F"}}><Spinner size={32}/></div>);
   if(!user)return <LoginScreen onGoogle={handleGoogle} onApple={handleApple} onEmail={handleEmail} loading={loginLoading} error={loginError}/>;
 
   return(<>
@@ -4170,8 +4170,8 @@ export default function App(){
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {/* ── VIEWS GRATUITAS ── */}
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
-          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deletarRec}/>}
-          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deletarRec}/>}
+          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deletarRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
+          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deletarRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano}/>}
 
           {/* ── VIEWS PREMIUM ── */}
