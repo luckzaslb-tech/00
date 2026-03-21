@@ -404,7 +404,8 @@ const ICON={
   target:"M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z",
   briefcase:"M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2",
   ai:"M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 010 2h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 010-2h1a7 7 0 017-7h1V5.73A2 2 0 0110 4a2 2 0 012-2zM9 11a1 1 0 000 2 1 1 0 000-2zm6 0a1 1 0 000 2 1 1 0 000-2z",
-  search:"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+  search:"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
+  help:"M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm2-1.645V13h-2v-1.5a1 1 0 011-1 1.5 1.5 0 10-1.471-1.794l-1.962-.393A3.5 3.5 0 1113 13.355z"
 };
 
 const Tag=({children,color=G.muted})=>(
@@ -3026,6 +3027,7 @@ function CartoesView({uid,lancs}){
   const [adding,setAdding]=useState(false);
   const [form,setForm]=useState({nome:"",limite:"",vencimento:"",cor:"#7C6AF7"});
   const [saving,setSaving]=useState(false);
+  const [confirmDel,setConfirmDel]=useState(null); // id do cartão a deletar
 
   useEffect(()=>{
     if(!uid)return;
@@ -3053,8 +3055,7 @@ function CartoesView({uid,lancs}){
   }
 
   async function deletarCartao(id){
-    if(!confirm("Deletar cartão?"))return;
-    try{await deleteDoc(doc(db,"users",uid,"cartoes",id));}catch(e){}
+    try{await deleteDoc(doc(db,"users",uid,"cartoes",id));setConfirmDel(null);}catch(e){setConfirmDel(null);}
   }
 
   const CORES=["#7C6AF7","#2ECC8E","#FF5C6A","#4A9EFF","#F5C842","#FF8C42","#E040FB","#00BCD4"];
@@ -3148,10 +3149,22 @@ function CartoesView({uid,lancs}){
           {/* vencimento + delete */}
           <div style={{padding:"0 18px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             {k.vencimento&&<div style={{fontSize:12,color:G.muted}}>📅 Vence dia {k.vencimento}</div>}
-            <button onClick={()=>deletarCartao(k.id)} className="press"
-              style={{padding:"6px 12px",borderRadius:10,border:`1px solid ${G.red}44`,background:G.red+"11",color:G.red,fontSize:12,cursor:"pointer",marginLeft:"auto"}}>
-              Deletar
-            </button>
+            {confirmDel===k.id
+              ?<div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+                <button onClick={()=>deletarCartao(k.id)} className="press"
+                  style={{padding:"6px 12px",borderRadius:10,border:`1px solid ${G.red}`,background:G.red,color:"#fff",fontSize:12,cursor:"pointer",fontWeight:700}}>
+                  Confirmar
+                </button>
+                <button onClick={()=>setConfirmDel(null)} className="press"
+                  style={{padding:"6px 12px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:12,cursor:"pointer"}}>
+                  Cancelar
+                </button>
+              </div>
+              :<button onClick={()=>setConfirmDel(k.id)} className="press"
+                style={{padding:"6px 12px",borderRadius:10,border:`1px solid ${G.red}44`,background:G.red+"11",color:G.red,fontSize:12,cursor:"pointer",marginLeft:"auto"}}>
+                🗑 Deletar
+              </button>
+            }
           </div>
           {/* últimas transações */}
           {(()=>{
@@ -3287,7 +3300,7 @@ function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
     if(!email.includes("@")){setEmailErr("Email inválido");return;}
     if(senha.length<6){setEmailErr("Senha mínimo 6 caracteres");return;}
     setEmailErr("");
-    onEmail(email,senha,modo==="cadastro"?nome:"");
+    onEmail(email,senha,modo==="cadastro"?nome:null);
   }
 
   return(
@@ -4033,10 +4046,14 @@ export default function App(){
   async function handleEmail(email,senha,nome){
     setLoginLoading("email");setLoginError("");
     try{
-      if(nome!==null){
+      if(nome){// cadastro: nome é string não-vazia
         const cred=await createUserWithEmailAndPassword(auth,email,senha);
-        if(nome)await updateProfile(cred.user,{displayName:nome});
-      }else{await signInWithEmailAndPassword(auth,email,senha);}
+        await updateProfile(cred.user,{displayName:nome});
+      }else if(nome===""){// login: nome é string vazia
+        await signInWithEmailAndPassword(auth,email,senha);
+      }else{// fallback null/undefined → login
+        await signInWithEmailAndPassword(auth,email,senha);
+      }
     }catch(e){
       const msgs={
         "auth/email-already-in-use":"Email já cadastrado.",
