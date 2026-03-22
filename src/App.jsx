@@ -298,13 +298,30 @@ function usePlano(uid){
   const [loadingPlano,setLoadingPlano]=useState(true);
   useEffect(()=>{
     if(!uid){setLoadingPlano(false);return;}
-    const unsub=onSnapshot(doc(db,"users",uid,"perfil","dados"),snap=>{
-      setPlano(snap.data()?.plano||"free");
-      setLoadingPlano(false);
-    });
+    const ref=doc(db,"users",uid,"perfil","dados");
+    const unsub=onSnapshot(ref,
+      snap=>{
+        const p=snap.data()?.plano||"free";
+        console.log("[usePlano] plano lido:",p, "data:",snap.data());
+        setPlano(p);
+        setLoadingPlano(false);
+      },
+      err=>{
+        console.error("[usePlano] erro onSnapshot:",err);
+        // fallback: tenta getDoc
+        getDoc(ref).then(snap=>{
+          const p=snap.data()?.plano||"free";
+          console.log("[usePlano] fallback getDoc plano:",p);
+          setPlano(p);
+        }).catch(e=>console.error("[usePlano] fallback falhou:",e))
+        .finally(()=>setLoadingPlano(false));
+      }
+    );
     return()=>unsub();
   },[uid]);
-  return{plano,loadingPlano,isPremium:plano==="premium"};
+  const [planoOverride,setPlanoOverride]=useState(null);
+  const effectivePlano=planoOverride||plano;
+  return{plano:effectivePlano,loadingPlano,isPremium:effectivePlano==="premium",forceSetPlano:setPlanoOverride};
 }
 
 
@@ -3249,7 +3266,7 @@ function CartoesView({uid,lancs,isPremium=false,onUpgrade}){
 }
 
 // ─── UPGRADE VIEW ────────────────────────────────────────────────────────────
-function UpgradeView({uid,plano,destaque=""}){
+function UpgradeView({uid,plano,destaque="",onActivate}){
   const isPrem=plano==="premium";
 
   const FREE_FEATURES=[
@@ -3270,12 +3287,22 @@ function UpgradeView({uid,plano,destaque=""}){
     {icon:"🏦",txt:"Open Finance — conexão bancária (em breve)"},
   ];
 
+  const [ativando,setAtivando]=useState(false);
+  const [ativErr,setAtivErr]=useState("");
   async function ativarTeste(){
-    if(!uid)return;
+    if(!uid){setAtivErr("Usuário não identificado.");return;}
+    setAtivando(true);setAtivErr("");
     try{
-      await setDoc(doc(db,"users",uid,"perfil","dados"),{plano:"premium"},{merge:true});
-      alert("✅ Premium ativado! Aproveite 🎉");
-    }catch(e){alert("Erro: "+e.message);}
+      const ref=doc(db,"users",uid,"perfil","dados");
+      await setDoc(ref,{plano:"premium",ativadoEm:new Date().toISOString()},{merge:true});
+      const snap=await getDoc(ref);
+      console.log("[UpgradeView] plano salvo:",snap.data());
+      if(onActivate)onActivate("premium");
+    }catch(e){
+      console.error("[UpgradeView] Erro ao ativar:",e);
+      setAtivErr("Erro ao salvar: "+e.message);
+    }
+    setAtivando(false);
   }
 
   return(<div style={{padding:"16px 14px 40px",display:"flex",flexDirection:"column",gap:16}}>
@@ -3343,13 +3370,16 @@ function UpgradeView({uid,plano,destaque=""}){
           {f.txt.includes("em breve")&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:G.yellow+"22",color:G.yellow,fontWeight:600,marginLeft:"auto",flexShrink:0}}>em breve</span>}
         </div>
       ))}
-      {!isPrem&&<button onClick={ativarTeste} className="press"
-        style={{width:"100%",marginTop:14,padding:"14px",borderRadius:14,border:"none",
-          background:`linear-gradient(135deg,${G.accent},#9C6AF7)`,
-          color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",
-          boxShadow:`0 4px 20px ${G.accent}44`}}>
-        ✨ Ativar Premium (teste grátis)
-      </button>}
+      {!isPrem&&<>
+        {ativErr&&<div style={{fontSize:12,color:G.red,textAlign:"center",padding:"6px 0"}}>{ativErr}</div>}
+        <button onClick={ativarTeste} disabled={ativando} className="press"
+          style={{width:"100%",marginTop:14,padding:"14px",borderRadius:14,border:"none",
+            background:ativando?"#555":`linear-gradient(135deg,${G.accent},#9C6AF7)`,
+            color:"#fff",fontSize:15,fontWeight:700,cursor:ativando?"not-allowed":"pointer",
+            boxShadow:`0 4px 20px ${G.accent}44`}}>
+          {ativando?"Ativando...":"✨ Ativar Premium (teste grátis)"}
+        </button>
+      </>}
     </div>
 
     <div style={{fontSize:11,color:G.muted,textAlign:"center",lineHeight:1.6}}>
@@ -4063,7 +4093,7 @@ export default function App(){
   const [authLoading,setAuthLoading]=useState(true);
   const [loginLoading,setLoginLoading]=useState("");
   const [loginError,setLoginError]=useState("");
-  const {plano,isPremium,loadingPlano}=usePlano(user?.uid||null);
+  const {plano,isPremium,loadingPlano,forceSetPlano}=usePlano(user?.uid||null);
   const [lancs,setLancs]=useState([]);
   const [recorrentes,setRecorrentes]=useState([]);
   const [dataLoading,setDataLoading]=useState(false);
@@ -4174,33 +4204,33 @@ export default function App(){
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
-          {view==="planos"&&<UpgradeView uid={user.uid} plano={plano}/>}
+          {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}
 
           {/* ── VIEWS PREMIUM ── */}
           {view==="carreira"&&(isPremium
             ?<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)} lancs={lancs}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="carreira"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="carreira" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="cartoes"&&(isPremium
             ?<CartoesView uid={user.uid} lancs={lancs}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="cartoes"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="cartoes" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="contatos"&&(isPremium
             ?<ContatosView uid={user.uid} user={user}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="contatos"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="contatos" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="compartilhados-casal"&&(isPremium
             ?<CasalView uid={user.uid} lancs={lancs} user={user}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="casal"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="casal" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="compartilhados-divisoes"&&(isPremium
             ?<DivisoesView uid={user.uid}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="divisoes"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="divisoes" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="busca"&&(isPremium
             ?<BuscaView lancs={lancs} onDelete={deletar}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="busca"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="busca" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="importar"&&(isPremium
             ?<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="importar"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="importar" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view.startsWith("financas")&&(isPremium
             ?<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="financas"/>)}
+            :<UpgradeView uid={user.uid} plano={plano} destaque="financas" onActivate={p=>{forceSetPlano(p);}}/>)}
         </main></ErrorBoundary>
       )}
       <Nav view={view} setView={setView}/>
