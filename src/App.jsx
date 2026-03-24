@@ -1295,14 +1295,16 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
         })}
       </div>
       {/* banner histórico limitado */}
-      {!isPremium&&<div onClick={onUpgrade} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderRadius:12,
-        background:G.accent+"15",border:`1px solid ${G.accent}33`,marginBottom:8,cursor:"pointer"}}>
+      {/* banner histórico limitado */}
+      {!isPremium&&<button onClick={()=>onUpgrade&&onUpgrade()} className="press"
+        style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderRadius:12,
+          background:G.accent+"15",border:`1px solid ${G.accent}33`,marginBottom:8,cursor:"pointer",width:"100%",textAlign:"left"}}>
         <span style={{fontSize:16}}>✨</span>
         <div style={{flex:1}}>
           <span style={{fontSize:12,color:G.accent,fontWeight:600}}>Histórico limitado a 3 meses </span>
           <span style={{fontSize:11,color:G.muted}}>— Toque para ver planos</span>
         </div>
-      </div>}
+      </button>}
       {/* categoria */}
       <button onClick={()=>setShowCats(v=>!v)} className="press"
         style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:20,
