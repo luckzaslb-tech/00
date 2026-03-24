@@ -296,22 +296,22 @@ Se não conseguir identificar retorne: {"erro":"não identificado"}`}
 function usePlano(uid){
   const [plano,setPlano]=useState("free");
   const [loadingPlano,setLoadingPlano]=useState(true);
+  const [planoOverride,setPlanoOverride]=useState(null);
   useEffect(()=>{
     if(!uid){setLoadingPlano(false);return;}
     const ref=doc(db,"users",uid,"perfil","dados");
     const unsub=onSnapshot(ref,
       snap=>{
         const p=snap.data()?.plano||"free";
-        console.log("[usePlano] plano lido:",p, "data:",snap.data());
+        console.log("[usePlano] plano lido:",p,"data:",snap.data());
         setPlano(p);
+        setPlanoOverride(null); // clear override, use real value
         setLoadingPlano(false);
       },
       err=>{
         console.error("[usePlano] erro onSnapshot:",err);
-        // fallback: tenta getDoc
         getDoc(ref).then(snap=>{
           const p=snap.data()?.plano||"free";
-          console.log("[usePlano] fallback getDoc plano:",p);
           setPlano(p);
         }).catch(e=>console.error("[usePlano] fallback falhou:",e))
         .finally(()=>setLoadingPlano(false));
@@ -319,7 +319,6 @@ function usePlano(uid){
     );
     return()=>unsub();
   },[uid]);
-  const [planoOverride,setPlanoOverride]=useState(null);
   const effectivePlano=planoOverride||plano;
   return{plano:effectivePlano,loadingPlano,isPremium:effectivePlano==="premium",forceSetPlano:setPlanoOverride};
 }
@@ -1382,19 +1381,6 @@ function CarreiraView({uid,user,onPhotoSave,lancs=[],isPremium=false,onUpgrade})
   // ── perfil ──────────────────────────────────────────
   const [perfil,setPerfil]=useState(null);
 
-  if(!isPremium) return(
-    <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16}}>
-      <div style={{fontSize:52,marginBottom:4}}>🚀</div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:G.text}}>Perfil & Carreira</div>
-      <div style={{fontSize:14,color:G.muted,lineHeight:1.7,maxWidth:280}}>Humor, metas, rotinas e histórico de carreira. Recurso exclusivo do plano Premium.</div>
-      <button onClick={onUpgrade} className="press"
-        style={{marginTop:8,padding:"13px 32px",borderRadius:20,border:"none",background:G.accent,
-          color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 20px ${G.accent}44`}}>
-        ✨ Ver planos
-      </button>
-    </div>
-  );
-  const [editando,setEditando]=useState(false);
   const [fp,setFp]=useState({
     nome:"",bio:"",frase:"",fotoUrl:"",humor:"",
     instagram:"",site:"",cidade:"",aniversario:"",
@@ -3481,19 +3467,6 @@ function ContatosView({uid,user,isPremium=false,onUpgrade}){
   const [formAdd,setFormAdd]=useState({nome:"",categoria:"Amigos"});
   const [editando,setEditando]=useState(null);
 
-  if(!isPremium) return(
-    <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16}}>
-      <div style={{fontSize:52,marginBottom:4}}>👥</div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:G.text}}>Contatos & Divisões</div>
-      <div style={{fontSize:14,color:G.muted,lineHeight:1.7,maxWidth:280}}>Divida contas com amigos e familiares. Recurso exclusivo do plano Premium.</div>
-      <button onClick={onUpgrade} className="press"
-        style={{marginTop:8,padding:"13px 32px",borderRadius:20,border:"none",background:G.accent,
-          color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 20px ${G.accent}44`}}>
-        ✨ Ver planos
-      </button>
-    </div>
-  );
-  const [formEdit,setFormEdit]=useState({nome:"",categoria:"Amigos",apelido:"",notas:""});
   const CATS=["Família","Amigos","Trabalho","Casal","Outros"];
 
   useEffect(()=>{
