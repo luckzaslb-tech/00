@@ -1374,7 +1374,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
   </div>);
 }
 // ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
-function CarreiraView({uid,user,onPhotoSave,lancs=[],isPremium=false,onUpgrade}){
+function CarreiraView({uid,user,onPhotoSave,lancs=[]}){
   const [secao,setSecao]=useState(null); // which card is expanded
   const [saving,setSaving]=useState(false);
 
@@ -2852,7 +2852,7 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
 
 
 // ─── BUSCA VIEW ──────────────────────────────────────────────────────────────
-function BuscaView({lancs,onDelete,isPremium=false,onUpgrade}){
+function BuscaView({lancs,onDelete}){
   const [q,setQ]=useState("");
   const [filtTipo,setFiltTipo]=useState("Todos");
   const [filtCat,setFiltCat]=useState("Todas");
@@ -3085,7 +3085,7 @@ function ImportarView({uid,lancs,showT}){
 
 // ─── FAMÍLIA / CASAL VIEW ──────────────────────────────────────────────────────
 // ─── CARTÕES VIEW ────────────────────────────────────────────────────────────
-function CartoesView({uid,lancs,isPremium=false,onUpgrade}){
+function CartoesView({uid,lancs}){
   const [cartoes,setCartoes]=useState([]);
   const [adding,setAdding]=useState(false);
   const [form,setForm]=useState({nome:"",limite:"",vencimento:"",cor:"#7C6AF7"});
@@ -3102,7 +3102,7 @@ function CartoesView({uid,lancs,isPremium=false,onUpgrade}){
 
   async function salvarCartao(){
     if(!form.nome.trim())return;
-    if(!isPremium&&cartoes.length>=1){onUpgrade&&onUpgrade();return;}
+    
     setSaving(true);
     try{
       await addDoc(collection(db,"users",uid,"cartoes"),{
@@ -3129,7 +3129,7 @@ function CartoesView({uid,lancs,isPremium=false,onUpgrade}){
     {/* Header */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.text}}>Cartões de Crédito</div>
-      <button onClick={()=>{if(!isPremium&&cartoes.length>=1){onUpgrade&&onUpgrade();return;}setAdding(v=>!v);}} className="press"
+      <button onClick={()=>setAdding(v=>!v)} className="press"
         style={{width:36,height:36,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
         <Ic d={adding?ICON.x:ICON.plus} size={18}/>
       </button>
@@ -3458,7 +3458,7 @@ function LoginScreen({onGoogle,onApple,onEmail,loading,error}){
 }
 
 // ─── CONTATOS VIEW ────────────────────────────────────────────────────────────
-function ContatosView({uid,user,isPremium=false,onUpgrade}){
+function ContatosView({uid,user}){
   const [contatos,setContatos]=useState([]);
   const [codInput,setCodInput]=useState("");
   const [buscando,setBuscando]=useState(false);
@@ -3466,6 +3466,7 @@ function ContatosView({uid,user,isPremium=false,onUpgrade}){
   const [sheetAdd,setSheetAdd]=useState(false);
   const [formAdd,setFormAdd]=useState({nome:"",categoria:"Amigos"});
   const [editando,setEditando]=useState(null);
+  const [formEdit,setFormEdit]=useState({nome:"",categoria:"Amigos",apelido:"",notas:""});
 
   const CATS=["Família","Amigos","Trabalho","Casal","Outros"];
 
@@ -4171,14 +4172,14 @@ export default function App(){
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
         <div style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,display:"flex",flexDirection:"column"}}>
-          <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>
+          <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {/* ── VIEWS GRATUITAS ── */}
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
-          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
-          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
+          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
+          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}
 
           {/* ── VIEWS PREMIUM ── */}
