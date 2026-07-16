@@ -485,7 +485,7 @@ function Nav({view,setView}){
 }
 
 // ─── DRAWER ───────────────────────────────────────────────────────────────────
-function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,onLogout,theme,onToggleTheme}){
+function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,onToggleTheme}){
   const [finOpen,setFinOpen]=useState(true);
   const [compOpen,setCompOpen]=useState(false);
   const [showDuvidas,setShowDuvidas]=useState(false);
@@ -495,7 +495,6 @@ function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,o
   const compActive=["compartilhados-casal","compartilhados-divisoes"].includes(view);
 
   const items=[
-    {id:"carreira",icon:<Ic d={ICON.user} size={18}/>,l:"Perfil"},
     {id:"dashboard",icon:<Ic d={ICON.home} size={18}/>,l:"Dashboard"},
     {id:"busca",icon:<Ic d={ICON.search||"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"} size={18}/>,l:"Buscar Lançamentos"},
     {id:"cartoes",icon:<Ic d={ICON.card} size={18}/>,l:"Cartões de Crédito"},
@@ -529,7 +528,7 @@ function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,o
           </div>
           {user&&<div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:38,height:38,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`2px solid ${G2.border2}`}}>
-              {(profilePhoto||user.photoURL)?<img src={profilePhoto||user.photoURL} style={{width:"100%",height:"100%",objectFit:"cover"}} referrerPolicy="no-referrer"/>
+              {user.photoURL?<img src={user.photoURL} style={{width:"100%",height:"100%",objectFit:"cover"}} referrerPolicy="no-referrer"/>
                 :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:G2.accent,background:G2.accentL}}>{(user.displayName||user.email||"U")[0].toUpperCase()}</div>}
             </div>
             <div>
@@ -719,8 +718,8 @@ function Drawer({open,onClose,view,setView,user,profilePhoto="",divPendCount=0,o
 }
 
 
-function Head({view,onRec,onDep,user,profilePhoto="",onDrawer,divPendCount=0,onSearch}){
-  const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",carreira:"Meu Perfil",chat:"IA",
+function Head({view,onRec,onDep,user,onDrawer,divPendCount=0,onSearch}){
+  const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",chat:"IA",
     cartoes:"Cartões",familia:"Família / Casal",divisao:"Divisão de Contas",importar:"Importar Extrato",
     "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
   const showAdd=["dashboard","receitas","despesas"].includes(view);
@@ -1356,610 +1355,6 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
         :<div style={{padding:"0 16px"}}>{data.map(l=><TxRow key={l.id} l={l} onDelete={onDelete} full/>)}</div>
       }
     </div>
-
-  </div>);
-}
-// ─── PERFIL VIEW ─────────────────────────────────────────────────────────────
-function CarreiraView({uid,user,onPhotoSave,lancs=[]}){
-  const [secao,setSecao]=useState(null); // which card is expanded
-  const [saving,setSaving]=useState(false);
-
-  // ── perfil ──────────────────────────────────────────
-  const [perfil,setPerfil]=useState(null);
-
-  const [fp,setFp]=useState({
-    nome:"",bio:"",frase:"",fotoUrl:"",humor:"",
-    instagram:"",site:"",cidade:"",aniversario:"",
-  });
-
-  // ── humor histórico ──────────────────────────────────
-  const [humores,setHumores]=useState([]); // {data,humor,energia,nota}
-  const [addingHumor,setAddingHumor]=useState(false);
-  const [novoHumor,setNovoHumor]=useState({humor:"😊",energia:3,nota:""});
-
-  // ── rotinas + streaks ────────────────────────────────
-  const [rotinas,setRotinas]=useState([]);
-  const [novaRotina,setNovaRotina]=useState("");
-  const [addingRotina,setAddingRotina]=useState(false);
-  const [roRenaming,setRoRenaming]=useState(null);
-  const [roRenameVal,setRoRenameVal]=useState("");
-
-  // ── metas pessoais ───────────────────────────────────
-  const [metas,setMetas]=useState([]);
-  const [addingMeta,setAddingMeta]=useState(false);
-  const [novaMeta,setNovaMeta]=useState({titulo:"",emoji:"🎯",prazo:"",progresso:0,total:100});
-
-  // ── load ─────────────────────────────────────────────
-  useEffect(()=>{
-    if(!uid)return;
-    getDoc(doc(db,"users",uid,"carreira","perfil")).then(s=>{
-      if(s.exists()){const d=s.data();setPerfil(d);setFp(f=>({...f,...d}));}
-    }).catch(()=>{});
-    getDocs(collection(db,"users",uid,"rotinas")).then(s=>{
-      setRotinas(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ordem||0)-(b.ordem||0)));
-    }).catch(()=>{});
-    getDocs(collection(db,"users",uid,"metas_pessoais")).then(s=>{
-      setMetas(s.docs.map(d=>({id:d.id,...d.data()})));
-    }).catch(()=>{});
-    getDocs(collection(db,"users",uid,"humores")).then(s=>{
-      setHumores(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.data.localeCompare(a.data)));
-    }).catch(()=>{});
-  },[uid]);
-
-  // ── save perfil ──────────────────────────────────────
-  async function salvarPerfil(){
-    setSaving(true);
-    let fotoFinal=fp.fotoUrl||"";
-    if(fotoFinal.startsWith("data:image")&&fotoFinal.length>200000){
-      try{
-        fotoFinal=await new Promise((res,rej)=>{
-          const img=new Image();
-          img.onload=()=>{
-            const canvas=document.createElement("canvas");
-            const MAX=400;let w=img.width,h=img.height;
-            if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
-            else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
-            canvas.width=w;canvas.height=h;
-            canvas.getContext("2d").drawImage(img,0,0,w,h);
-            res(canvas.toDataURL("image/jpeg",0.7));
-          };
-          img.onerror=rej;img.src=fotoFinal;
-        });
-      }catch(_){fotoFinal="";}
-    }
-    const v={...fp,fotoUrl:fotoFinal,updatedAt:today()};
-    try{
-      await setDoc(doc(db,"users",uid,"carreira","perfil"),v);
-      setPerfil(v);setEditando(false);
-      if(v.fotoUrl&&onPhotoSave)onPhotoSave(v.fotoUrl);
-    }catch(e){alert("Erro: "+e.message);}
-    setSaving(false);
-  }
-
-  // ── humor CRUD ───────────────────────────────────────
-  async function salvarHumor(){
-    const v={...novoHumor,data:today(),hora:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})};
-    try{
-      const ref=await addDoc(collection(db,"users",uid,"humores"),v);
-      setHumores(p=>[{id:ref.id,...v},...p]);
-      setNovoHumor({humor:"😊",energia:3,nota:""});setAddingHumor(false);
-    }catch(e){console.error(e);}
-  }
-  async function deleteHumor(id){
-    setHumores(p=>p.filter(x=>x.id!==id));
-    try{await deleteDoc(doc(db,"users",uid,"humores",id));}catch(e){}
-  }
-
-  // ── rotinas CRUD ─────────────────────────────────────
-  async function addRotina(){
-    if(!novaRotina.trim())return;
-    const r={texto:novaRotina.trim(),feita:false,ordem:rotinas.length,streak:0,ultimaFeita:"",criadoEm:today()};
-    try{
-      const ref=await addDoc(collection(db,"users",uid,"rotinas"),r);
-      setRotinas(p=>[...p,{id:ref.id,...r}]);
-      setNovaRotina("");setAddingRotina(false);
-    }catch(e){console.error(e);}
-  }
-  async function toggleRotina(id){
-    const r=rotinas.find(r=>r.id===id);if(!r)return;
-    const nova=!r.feita;
-    // streak logic
-    const ultimaFeita=r.ultimaFeita||"";
-    const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
-    let streak=r.streak||0;
-    if(nova){
-      if(ultimaFeita===yesterday||ultimaFeita===today()) streak=streak+(ultimaFeita===today()?0:1);
-      else streak=1;
-    }
-    const up={feita:nova,ultimaFeita:nova?today():ultimaFeita,streak};
-    setRotinas(p=>p.map(x=>x.id===id?{...x,...up}:x));
-    try{await updateDoc(doc(db,"users",uid,"rotinas",id),up);}catch(e){}
-  }
-  async function deleteRotina(id){
-    setRotinas(p=>p.filter(x=>x.id!==id));
-    try{await deleteDoc(doc(db,"users",uid,"rotinas",id));}catch(e){}
-  }
-  async function renameRotina(id){
-    if(!roRenameVal.trim())return;
-    setRotinas(p=>p.map(x=>x.id===id?{...x,texto:roRenameVal.trim()}:x));
-    setRoRenaming(null);
-    try{await updateDoc(doc(db,"users",uid,"rotinas",id),{texto:roRenameVal.trim()});}catch(e){}
-  }
-  async function resetRotinas(){
-    const updated=rotinas.map(r=>({...r,feita:false}));
-    setRotinas(updated);
-    try{await Promise.all(updated.map(r=>updateDoc(doc(db,"users",uid,"rotinas",r.id),{feita:false})));}catch(e){}
-  }
-
-  // ── metas CRUD ───────────────────────────────────────
-  async function addMeta(){
-    if(!novaMeta.titulo.trim())return;
-    const v={...novaMeta,progresso:0,criadoEm:today()};
-    try{
-      const ref=await addDoc(collection(db,"users",uid,"metas_pessoais"),v);
-      setMetas(p=>[...p,{id:ref.id,...v}]);
-      setNovaMeta({titulo:"",emoji:"🎯",prazo:"",progresso:0,total:100});setAddingMeta(false);
-    }catch(e){console.error(e);}
-  }
-  async function updateMetaProgress(id,delta){
-    const m=metas.find(x=>x.id===id);if(!m)return;
-    const np=Math.max(0,Math.min(m.total||100,(m.progresso||0)+delta));
-    setMetas(p=>p.map(x=>x.id===id?{...x,progresso:np}:x));
-    try{await updateDoc(doc(db,"users",uid,"metas_pessoais",id),{progresso:np});}catch(e){}
-  }
-  async function deleteMeta(id){
-    setMetas(p=>p.filter(x=>x.id!==id));
-    try{await deleteDoc(doc(db,"users",uid,"metas_pessoais",id));}catch(e){}
-  }
-
-  // ── stats financeiros ────────────────────────────────
-  const anoAtual=new Date().getFullYear();
-  const lancsAno=lancs.filter(l=>l.data.startsWith(anoAtual)&&isRealizado(l.data,l.agendado));
-  const recAno=lancsAno.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-  const depAno=lancsAno.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-  const saldoAno=recAno-depAno;
-  const mesMaisGasto=(()=>{
-    const por={};
-    lancsAno.filter(l=>l.tipo==="Despesa").forEach(l=>{const m=getMes(l.data);por[m]=(por[m]||0)+l.valor;});
-    const sorted=Object.entries(por).sort((a,b)=>b[1]-a[1]);
-    if(!sorted.length)return null;
-    const [m,v]=sorted[0];
-    const [,mm]=m.split("-");
-    return{mes:MESES[parseInt(mm)-1],v};
-  })();
-  const catMaisGasta=(()=>{
-    const por={};
-    lancsAno.filter(l=>l.tipo==="Despesa").forEach(l=>{por[l.cat]=(por[l.cat]||0)+l.valor;});
-    const sorted=Object.entries(por).sort((a,b)=>b[1]-a[1]);
-    return sorted[0]?{cat:sorted[0][0],v:sorted[0][1]}:null;
-  })();
-  const taxaPoupanca=recAno>0?Math.round(saldoAno/recAno*100):0;
-
-  // ── helpers ──────────────────────────────────────────
-  const HUMORES_LIST=["😄","😊","😐","😔","😤","😴","🤩","😰","🥰","😎"];
-  const ENERGIA_LABELS=["","Baixa","Razoável","Boa","Alta","Máxima"];
-  const feitas=rotinas.filter(r=>r.feita).length;
-  const totalRot=rotinas.length;
-  const progRot=totalRot>0?feitas/totalRot:0;
-  const melhorStreak=rotinas.length>0?Math.max(...rotinas.map(r=>r.streak||0)):0;
-  const ultimoHumor=humores[0];
-
-  // ── expandable card helper ───────────────────────────
-  function Card({id,icon,title,badge,children,headerExtra}){
-    const open=secao===id;
-    return(
-      <div style={{background:G.card,border:`1px solid ${open?G.accent:G.border}`,borderRadius:20,overflow:"hidden",transition:"border-color .2s",marginBottom:12}}>
-        <div onClick={()=>setSecao(open?null:id)} style={{display:"flex",alignItems:"center",gap:12,padding:"16px",cursor:"pointer"}}>
-          <div style={{width:36,height:36,borderRadius:12,background:G.accentL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{icon}</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:14,fontWeight:700,color:G.text}}>{title}</div>
-            {badge&&<div style={{fontSize:11,color:G.muted,marginTop:1}}>{badge}</div>}
-          </div>
-          {headerExtra&&<div onClick={e=>e.stopPropagation()}>{headerExtra}</div>}
-          <div style={{fontSize:12,color:G.muted,transform:open?"rotate(180deg)":"none",transition:"transform .2s",flexShrink:0}}>▼</div>
-        </div>
-        {open&&<div style={{borderTop:`1px solid ${G.border}`,padding:"16px"}}>{children}</div>}
-      </div>
-    );
-  }
-
-  return(<div style={{paddingBottom:32}}>
-
-    {/* ══ HERO IDENTIDADE ══════════════════════════════ */}
-    <div style={{
-      borderRadius:24,padding:"24px 20px",marginBottom:16,
-      background:"linear-gradient(145deg,#0e0c1e 0%,#160f30 45%,#0a1628 100%)",
-      position:"relative",overflow:"hidden",
-      boxShadow:"0 20px 48px rgba(0,0,0,.4)",
-    }}>
-      <div style={{position:"absolute",top:-50,right:-40,width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,106,247,.2),transparent 65%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",bottom:-40,left:-20,width:150,height:150,borderRadius:"50%",background:"radial-gradient(circle,rgba(46,204,142,.12),transparent 65%)",pointerEvents:"none"}}/>
-
-      {!editando?(
-        <div>
-          <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:14}}>
-            {/* avatar */}
-            <div style={{width:76,height:76,borderRadius:"50%",flexShrink:0,border:"2px solid rgba(124,106,247,.5)",overflow:"hidden",background:"rgba(255,255,255,.08)",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-              {perfil?.fotoUrl
-                ?<img src={perfil.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-                :<Ic d={ICON.user} size={30} color="rgba(255,255,255,.4)"/>
-              }
-              {ultimoHumor&&<div style={{position:"absolute",bottom:-2,right:-2,fontSize:18,lineHeight:1}}>{ultimoHumor.humor}</div>}
-            </div>
-            <div style={{flex:1,minWidth:0,paddingTop:4}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"#fff",lineHeight:1.1,marginBottom:4}}>
-                {perfil?.nome||user?.displayName||"Seu nome"}
-              </div>
-              {perfil?.cidade&&<div style={{fontSize:12,color:"rgba(255,255,255,.45)",marginBottom:4}}>📍 {perfil.cidade}</div>}
-              {perfil?.frase&&<div style={{fontSize:12,color:"rgba(255,255,255,.55)",fontStyle:"italic",lineHeight:1.5}}>"{perfil.frase}"</div>}
-            </div>
-            <button onClick={()=>setEditando(true)} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <Ic d={ICON.edit} size={15} color="rgba(255,255,255,.6)"/>
-            </button>
-          </div>
-
-          {/* bio */}
-          {perfil?.bio&&<p style={{fontSize:13,color:"rgba(255,255,255,.55)",lineHeight:1.6,margin:"0 0 14px",borderLeft:"2px solid rgba(124,106,247,.5)",paddingLeft:10}}>{perfil.bio}</p>}
-
-          {/* links + aniversário */}
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {perfil?.aniversario&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",fontSize:11,color:"rgba(255,255,255,.55)"}}>
-              🎂 {perfil.aniversario}
-            </div>}
-            {perfil?.instagram&&<a href={`https://instagram.com/${perfil.instagram.replace("@","")}`} target="_blank" rel="noreferrer"
-              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.55)"}}>
-              📸 @{perfil.instagram.replace("@","")}
-            </a>}
-            {perfil?.site&&<a href={perfil.site} target="_blank" rel="noreferrer"
-              style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",textDecoration:"none",fontSize:11,color:"rgba(255,255,255,.55)"}}>
-              🌐 Site
-            </a>}
-          </div>
-        </div>
-      ):(
-        /* ── FORM EDITAR ─────────────────────────────── */
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:"#fff",marginBottom:4}}>Editar perfil</div>
-
-          {/* foto */}
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:60,height:60,borderRadius:"50%",overflow:"hidden",background:"rgba(255,255,255,.08)",flexShrink:0,border:"2px solid rgba(124,106,247,.4)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {fp.fotoUrl?<img src={fp.fotoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<Ic d={ICON.user} size={22} color="rgba(255,255,255,.4)"/>}
-            </div>
-            <div style={{flex:1}}>
-              <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:"rgba(124,106,247,.9)",fontWeight:600}}>
-                <Ic d={ICON.camera} size={13} color="rgba(124,106,247,.9)"/> Câmera / Galeria
-                <input type="file" accept="image/*" style={{display:"none"}}
-                  onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=x=>setFp(p=>({...p,fotoUrl:x.target.result}));r.readAsDataURL(f);}}/>
-              </label>
-              <input value={fp.fotoUrl||""} onChange={e=>setFp(f=>({...f,fotoUrl:e.target.value}))}
-                placeholder="ou cole uma URL..." className="inp" style={{width:"100%",fontSize:12,marginTop:6}}/>
-            </div>
-          </div>
-
-          {/* campos */}
-          {[
-            {l:"Nome",k:"nome",ph:"Seu nome completo"},
-            {l:"Cidade",k:"cidade",ph:"São Paulo, SP"},
-            {l:"Aniversário",k:"aniversario",ph:"DD/MM"},
-            {l:"Instagram",k:"instagram",ph:"@usuario"},
-            {l:"Site",k:"site",ph:"https://..."},
-            {l:"Frase pessoal",k:"frase",ph:"Uma frase que te define..."},
-          ].map(({l,k,ph})=>(
-            <div key={k}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>{l}</div>
-              <input value={fp[k]||""} onChange={e=>setFp(f=>({...f,[k]:e.target.value}))} placeholder={ph} className="inp" style={{width:"100%"}}/>
-            </div>
-          ))}
-
-          {/* bio */}
-          <div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>Bio</div>
-            <textarea value={fp.bio||""} onChange={e=>setFp(f=>({...f,bio:e.target.value}))} placeholder="Conte um pouco sobre você..." rows={3}
-              className="inp" style={{width:"100%",resize:"vertical",lineHeight:1.5}}/>
-          </div>
-
-          <div style={{display:"flex",gap:8,marginTop:4}}>
-            <button onClick={salvarPerfil} disabled={saving} className="press"
-              style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:G.accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-              {saving?"Salvando...":"Salvar"}
-            </button>
-            <button onClick={()=>setEditando(false)} className="press"
-              style={{padding:"12px 16px",borderRadius:12,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.06)",color:"rgba(255,255,255,.5)",cursor:"pointer"}}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-
-    {/* ══ STATS FINANCEIROS ════════════════════════════ */}
-    <Card id="stats" icon="📊" title="Resumo financeiro" badge={`${anoAtual} · ${fmt(saldoAno)} economizados`}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-        {[
-          {l:"Receitas no ano",v:fmt(recAno),c:G.green,e:"💰"},
-          {l:"Despesas no ano",v:fmt(depAno),c:G.red,e:"💸"},
-          {l:"Taxa de poupança",v:taxaPoupanca+"%",c:taxaPoupanca>=20?G.green:taxaPoupanca>=10?G.yellow:G.red,e:"🏦"},
-          {l:"Lançamentos",v:String(lancsAno.length),c:G.accent,e:"📋"},
-        ].map((s,i)=>(
-          <div key={i} style={{background:G.card2,borderRadius:14,padding:"12px 14px",border:`1px solid ${G.border}`}}>
-            <div style={{fontSize:16,marginBottom:4}}>{s.e}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:s.c,lineHeight:1}}>{s.v}</div>
-            <div style={{fontSize:10,color:G.muted,marginTop:3}}>{s.l}</div>
-          </div>
-        ))}
-      </div>
-      {/* barra poupança */}
-      <div style={{marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-          <span style={{fontSize:11,color:G.muted}}>Meta de poupança (20%)</span>
-          <span style={{fontSize:11,fontWeight:700,color:taxaPoupanca>=20?G.green:G.yellow}}>{taxaPoupanca}%</span>
-        </div>
-        <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${Math.min(taxaPoupanca/20*100,100)}%`,background:taxaPoupanca>=20?G.green:G.yellow,borderRadius:6,transition:"width .4s"}}/>
-        </div>
-      </div>
-      <div style={{display:"flex",gap:8}}>
-        {mesMaisGasto&&<div style={{flex:1,background:G.card2,borderRadius:12,padding:"10px 12px",border:`1px solid ${G.border}`}}>
-          <div style={{fontSize:9,color:G.muted,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Mês com mais gastos</div>
-          <div style={{fontSize:13,fontWeight:700,color:G.red}}>{mesMaisGasto.mes}</div>
-          <div style={{fontSize:11,color:G.muted}}>{fmt(mesMaisGasto.v)}</div>
-        </div>}
-        {catMaisGasta&&<div style={{flex:1,background:G.card2,borderRadius:12,padding:"10px 12px",border:`1px solid ${G.border}`}}>
-          <div style={{fontSize:9,color:G.muted,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Categoria top</div>
-          <div style={{fontSize:13,fontWeight:700,color:CAT_COLORS[catMaisGasta.cat]||G.accent}}>{catMaisGasta.cat}</div>
-          <div style={{fontSize:11,color:G.muted}}>{fmt(catMaisGasta.v)}</div>
-        </div>}
-      </div>
-    </Card>
-
-    {/* ══ HUMOR & ENERGIA ══════════════════════════════ */}
-    <Card id="humor" icon="🧠" title="Humor & energia"
-      badge={ultimoHumor?`Último registro: ${ultimoHumor.humor} · ${ultimoHumor.data}`:"Nenhum registro ainda"}
-      headerExtra={
-        <button onClick={()=>setAddingHumor(true)} className="press"
-          style={{width:30,height:30,borderRadius:9,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <Ic d={ICON.plus} size={14}/>
-        </button>
-      }>
-
-      {/* add humor */}
-      {addingHumor&&<div style={{background:G.card2,borderRadius:14,padding:"14px",marginBottom:14,border:`1px solid ${G.border}`}}>
-        <div style={{fontSize:12,fontWeight:700,color:G.text,marginBottom:10}}>Como você está agora?</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-          {HUMORES_LIST.map(h=>(
-            <button key={h} onClick={()=>setNovoHumor(m=>({...m,humor:h}))}
-              style={{fontSize:22,padding:"6px 8px",borderRadius:10,border:`2px solid ${novoHumor.humor===h?G.accent:"transparent"}`,background:novoHumor.humor===h?G.accentL:"transparent",cursor:"pointer",transition:"all .15s"}}>
-              {h}
-            </button>
-          ))}
-        </div>
-        <div style={{marginBottom:10}}>
-          <div style={{fontSize:11,color:G.muted,marginBottom:6}}>Energia: <span style={{fontWeight:700,color:G.accent}}>{ENERGIA_LABELS[novoHumor.energia]}</span></div>
-          <input type="range" min={1} max={5} value={novoHumor.energia} onChange={e=>setNovoHumor(m=>({...m,energia:parseInt(e.target.value)}))}
-            style={{width:"100%",accentColor:G.accent}}/>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.muted,marginTop:2}}>
-            <span>Baixa</span><span>Máxima</span>
-          </div>
-        </div>
-        <input value={novoHumor.nota} onChange={e=>setNovoHumor(m=>({...m,nota:e.target.value}))}
-          placeholder="Nota rápida (opcional)..." className="inp" style={{width:"100%",marginBottom:10,fontSize:13}}/>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={salvarHumor} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Registrar</button>
-          <button onClick={()=>setAddingHumor(false)} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>✕</button>
-        </div>
-      </div>}
-
-      {/* histórico */}
-      {humores.length===0&&!addingHumor&&<div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
-        <div style={{fontSize:28,marginBottom:6}}>🧠</div>Nenhum registro ainda
-      </div>}
-
-      {/* últimos 7 dias como barra visual */}
-      {humores.length>0&&(()=>{
-        const dias=Array.from({length:7},(_,i)=>{
-          const d=new Date(Date.now()-i*86400000).toISOString().slice(0,10);
-          const h=humores.find(x=>x.data===d);
-          return{d,h};
-        }).reverse();
-        return(
-          <div style={{marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:G.muted,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Últimos 7 dias</div>
-            <div style={{display:"flex",gap:4,alignItems:"flex-end",height:56}}>
-              {dias.map(({d,h},i)=>{
-                const energia=h?h.energia:0;
-                const barH=energia?(energia/5)*44:4;
-                const isToday=d===today();
-                return(
-                  <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                    <div style={{fontSize:11,lineHeight:1}}>{h?h.humor:"·"}</div>
-                    <div style={{width:"100%",height:barH,borderRadius:"4px 4px 0 0",
-                      background:energia?`linear-gradient(180deg,${G.accent},${G.accent}66)`:G.border,
-                      border:isToday?`1px solid ${G.accent}`:"none",transition:"height .3s"}}/>
-                    <div style={{fontSize:8,color:isToday?G.accent:G.muted,fontWeight:isToday?700:400}}>
-                      {new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"narrow"})}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* lista registros */}
-      <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
-        {humores.slice(0,10).map(h=>(
-          <div key={h.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:G.card2,borderRadius:12,border:`1px solid ${G.border}`}}>
-            <div style={{fontSize:22,flexShrink:0}}>{h.humor}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:12,fontWeight:600,color:G.text}}>Energia {ENERGIA_LABELS[h.energia]}</span>
-                <div style={{display:"flex",gap:2}}>
-                  {Array.from({length:5},(_,i)=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:i<h.energia?G.accent:G.border}}/>)}
-                </div>
-              </div>
-              {h.nota&&<div style={{fontSize:11,color:G.muted,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.nota}</div>}
-              <div style={{fontSize:10,color:G.muted,marginTop:2}}>{fmtD(h.data)} {h.hora&&`· ${h.hora}`}</div>
-            </div>
-            <button onClick={()=>deleteHumor(h.id)} style={{background:"none",border:"none",color:G.muted,cursor:"pointer",opacity:.5,fontSize:16}}>×</button>
-          </div>
-        ))}
-      </div>
-    </Card>
-
-    {/* ══ ROTINAS + STREAKS ════════════════════════════ */}
-    <Card id="rotinas" icon="✅" title="Rotinas do dia"
-      badge={totalRot>0?`${feitas}/${totalRot} feitas · 🔥 maior streak: ${melhorStreak} dias`:"Nenhuma rotina ainda"}
-      headerExtra={
-        <button onClick={()=>setAddingRotina(true)} className="press"
-          style={{width:30,height:30,borderRadius:9,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <Ic d={ICON.plus} size={14}/>
-        </button>
-      }>
-
-      {/* barra progresso */}
-      {totalRot>0&&<div style={{marginBottom:14}}>
-        <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${progRot*100}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6,transition:"width .4s"}}/>
-        </div>
-        {progRot===1&&<div style={{fontSize:12,color:G.green,marginTop:6,textAlign:"center",fontWeight:700}}>🎉 Todas concluídas hoje!</div>}
-      </div>}
-
-      {rotinas.length===0&&!addingRotina&&<div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
-        <div style={{fontSize:28,marginBottom:6}}>✅</div>Nenhuma rotina ainda
-      </div>}
-
-      <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:addingRotina?12:0}}>
-        {rotinas.map(r=>(
-          <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:12,
-            background:r.feita?G.green+"0a":"transparent",
-            border:`1px solid ${r.feita?G.green+"33":G.border}`,transition:"all .2s"}}>
-            <button onClick={()=>toggleRotina(r.id)} className="press"
-              style={{width:22,height:22,borderRadius:6,border:`2px solid ${r.feita?G.green:G.border}`,
-                background:r.feita?G.green:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s"}}>
-              {r.feita&&<Ic d={ICON.check} size={12} color="#fff"/>}
-            </button>
-            {roRenaming===r.id
-              ?<input autoFocus value={roRenameVal} onChange={e=>setRoRenameVal(e.target.value)}
-                  onKeyDown={e=>{if(e.key==="Enter")renameRotina(r.id);if(e.key==="Escape")setRoRenaming(null);}}
-                  onBlur={()=>renameRotina(r.id)} className="inp" style={{flex:1,fontSize:13,padding:"2px 8px"}}/>
-              :<span onClick={()=>{setRoRenaming(r.id);setRoRenameVal(r.texto);}}
-                  style={{flex:1,fontSize:13,color:r.feita?G.muted:G.text,textDecoration:r.feita?"line-through":"none",cursor:"text",transition:"all .2s"}}>
-                {r.texto}
-              </span>
-            }
-            {/* streak badge */}
-            {(r.streak||0)>0&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 8px",borderRadius:20,
-              background:r.streak>=7?G.yellow+"20":G.accent+"15",border:`1px solid ${r.streak>=7?G.yellow:G.accent}33`,flexShrink:0}}>
-              <span style={{fontSize:10}}>🔥</span>
-              <span style={{fontSize:10,fontWeight:700,color:r.streak>=7?G.yellow:G.accent}}>{r.streak}d</span>
-            </div>}
-            <button onClick={()=>deleteRotina(r.id)} className="press"
-              style={{width:22,height:22,borderRadius:6,border:"none",background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:.5}}>
-              <Ic d={ICON.x} size={11}/>
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {addingRotina&&<div style={{display:"flex",gap:8,marginBottom:8}}>
-        <input autoFocus value={novaRotina} onChange={e=>setNovaRotina(e.target.value)}
-          onKeyDown={e=>{if(e.key==="Enter")addRotina();if(e.key==="Escape"){setAddingRotina(false);setNovaRotina("");}}}
-          placeholder="Ex: Meditar 10min, Beber água..." className="inp" style={{flex:1,fontSize:13}}/>
-        <button onClick={addRotina} className="press" style={{padding:"8px 14px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,cursor:"pointer",fontWeight:700}}>+</button>
-        <button onClick={()=>{setAddingRotina(false);setNovaRotina("");}} className="press" style={{padding:"8px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>✕</button>
-      </div>}
-
-      {totalRot>0&&feitas>0&&<button onClick={resetRotinas} className="press"
-        style={{width:"100%",padding:"8px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",fontSize:12,color:G.muted,cursor:"pointer",marginTop:4}}>
-        Resetar dia
-      </button>}
-    </Card>
-
-    {/* ══ METAS PESSOAIS ═══════════════════════════════ */}
-    <Card id="metas" icon="🎯" title="Metas pessoais"
-      badge={metas.length>0?`${metas.filter(m=>(m.progresso||0)>=(m.total||100)).length}/${metas.length} concluídas`:"Nenhuma meta ainda"}
-      headerExtra={
-        <button onClick={()=>setAddingMeta(true)} className="press"
-          style={{width:30,height:30,borderRadius:9,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <Ic d={ICON.plus} size={14}/>
-        </button>
-      }>
-
-      {metas.length===0&&!addingMeta&&<div style={{textAlign:"center",padding:"20px 0",color:G.muted,fontSize:13}}>
-        <div style={{fontSize:28,marginBottom:6}}>🎯</div>Nenhuma meta ainda
-      </div>}
-
-      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:addingMeta?12:0}}>
-        {metas.map(m=>{
-          const p=Math.min((m.progresso||0)/(m.total||100),1);
-          const done=p>=1;
-          return(<div key={m.id} style={{background:G.card2,borderRadius:14,padding:"12px 14px",border:`1px solid ${done?G.green+"44":G.border}`}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:20}}>{m.emoji||"🎯"}</span>
-                <div>
-                  <div style={{fontSize:13,fontWeight:600,color:done?G.green:G.text}}>{m.titulo}</div>
-                  {m.prazo&&<div style={{fontSize:10,color:G.muted}}>até {fmtD(m.prazo)}</div>}
-                </div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:12,fontFamily:"'Fraunces',serif",fontWeight:700,color:done?G.green:G.accent}}>{Math.round(p*100)}%</span>
-                <button onClick={()=>deleteMeta(m.id)} style={{background:"none",border:"none",cursor:"pointer",color:G.muted,opacity:.5}}>×</button>
-              </div>
-            </div>
-            <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden",marginBottom:8}}>
-              <div style={{height:"100%",width:`${p*100}%`,background:done?G.green:`linear-gradient(90deg,${G.accent},${G.accent}99)`,borderRadius:6,transition:"width .4s"}}/>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:G.muted,flex:1}}>{m.progresso||0} / {m.total||100}</span>
-              {!done&&<>
-                <button onClick={()=>updateMetaProgress(m.id,-10)} className="press"
-                  style={{width:28,height:28,borderRadius:8,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <Ic d={ICON.minus} size={12}/>
-                </button>
-                <button onClick={()=>updateMetaProgress(m.id,10)} className="press"
-                  style={{width:28,height:28,borderRadius:8,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <Ic d={ICON.plus} size={12}/>
-                </button>
-              </>}
-              {done&&<span style={{fontSize:11,color:G.green,fontWeight:700}}>🎉 Concluída!</span>}
-            </div>
-          </div>);
-        })}
-      </div>
-
-      {addingMeta&&<div style={{background:G.card2,borderRadius:14,padding:"14px",border:`1px solid ${G.border}`}}>
-        <div style={{fontSize:12,fontWeight:700,color:G.text,marginBottom:10}}>Nova meta</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-          {["🎯","💪","📚","✈️","🏃","🎸","💰","🧘","🏋️","🌱","❤️","⭐","🎓","🏠","🎨"].map(e=>(
-            <button key={e} onClick={()=>setNovaMeta(m=>({...m,emoji:e}))}
-              style={{fontSize:18,padding:"4px 6px",borderRadius:8,border:`1px solid ${novaMeta.emoji===e?G.accent:"transparent"}`,background:novaMeta.emoji===e?G.accentL:"transparent",cursor:"pointer"}}>
-              {e}
-            </button>
-          ))}
-        </div>
-        <input value={novaMeta.titulo} onChange={e=>setNovaMeta(m=>({...m,titulo:e.target.value}))}
-          placeholder="Título da meta" className="inp" style={{fontSize:13,width:"100%",marginBottom:8}}/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-          <div>
-            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Meta total</div>
-            <input type="number" value={novaMeta.total} onChange={e=>setNovaMeta(m=>({...m,total:parseInt(e.target.value)||100}))}
-              className="inp" style={{fontSize:13,width:"100%"}}/>
-          </div>
-          <div>
-            <div style={{fontSize:10,color:G.muted,marginBottom:4}}>Prazo</div>
-            <input type="date" value={novaMeta.prazo} onChange={e=>setNovaMeta(m=>({...m,prazo:e.target.value}))}
-              className="inp" style={{fontSize:13,width:"100%"}}/>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={addMeta} className="press" style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:G.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Criar</button>
-          <button onClick={()=>setAddingMeta(false)} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,cursor:"pointer"}}>Cancelar</button>
-        </div>
-      </div>}
-    </Card>
 
   </div>);
 }
@@ -3226,21 +2621,22 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
   const isPrem=plano==="premium";
 
   const FREE_FEATURES=[
-    {icon:"📊",txt:"Dashboard completo do mês atual"},
-    {icon:"✍️",txt:"Lançamentos manuais ilimitados"},
-    {icon:"💬",txt:"IA por texto — 30 msgs/mês"},
-    {icon:"💳",txt:"1 cartão de crédito"},
+    {icon:"📊",txt:"Dashboard completo"},
+    {icon:"✍️",txt:"Lançamentos ilimitados (com recorrências e agendados)"},
+    {icon:"💬",txt:"IA por texto — ilimitada"},
+    {icon:"🔍",txt:"Busca de lançamentos"},
+    {icon:"📥",txt:"Importar extrato CSV"},
     {icon:"📅",txt:"Histórico de 3 meses"},
   ];
   const PREMIUM_FEATURES=[
-    {icon:"♾️",txt:"Tudo do gratuito sem limites"},
+    {icon:"📅",txt:"Histórico completo"},
     {icon:"🎤",txt:"IA por voz — transcrição automática"},
     {icon:"📷",txt:"IA por foto — leia comprovantes"},
-    {icon:"💳",txt:"Cartões ilimitados"},
-    {icon:"📅",txt:"Histórico completo"},
-    {icon:"📤",txt:"Exportar dados (CSV/PDF)"},
-    {icon:"📲",txt:"Relatórios via WhatsApp (em breve)"},
-    {icon:"🏦",txt:"Open Finance — conexão bancária (em breve)"},
+    {icon:"💳",txt:"Cartões de crédito com fatura do mês"},
+    {icon:"📊",txt:"Finanças: orçamentos, relatórios e alertas"},
+    {icon:"📤",txt:"Exportar dados (Excel/PDF/imagem)"},
+    {icon:"💑",txt:"Modo Casal — finanças compartilhadas"},
+    {icon:"🤝",txt:"Divisão de contas com contatos"},
   ];
 
   const [ativando,setAtivando]=useState(false);
@@ -3265,7 +2661,7 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
 
     {/* Header */}
     {destaque&&(()=>{
-      const info={carreira:["🚀","Perfil & Carreira","Acompanhe seu crescimento profissional"],cartoes:["💳","Cartões de Crédito","Gerencie todos os seus cartões"],contatos:["👥","Contatos","Divida gastos com seus contatos"],casal:["💑","Modo Casal","Finanças compartilhadas"],divisoes:["🤝","Divisão de Contas","Divida contas com amigos"],busca:["🔍","Busca Avançada","Encontre qualquer lançamento"],importar:["📥","Importar Extrato","Importe seus extratos CSV"],financas:["📊","Relatórios","Orçamentos e análises"]}[destaque];
+      const info={cartoes:["💳","Cartões de Crédito","Gerencie todos os seus cartões"],contatos:["👥","Contatos","Divida gastos com seus contatos"],casal:["💑","Modo Casal","Finanças compartilhadas"],divisoes:["🤝","Divisão de Contas","Divida contas com amigos"],financas:["📊","Relatórios","Orçamentos e análises"]}[destaque];
       if(!info)return null;
       return(<div style={{background:`linear-gradient(135deg,${G.accent}22,${G.accent}08)`,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
         <span style={{fontSize:28}}>{info[0]}</span>
@@ -4049,7 +3445,6 @@ export default function App(){
   const [searchOpen,setSearchOpen]=useState(false);
   const [cartoesList,setCartoesList]=useState([]);
   const [divPendCount,setDivPendCount]=useState(0);
-  const [profilePhoto,setProfilePhoto]=useState("");
   const [modal,setModal]=useState(false);
   const [tipo,setTipo]=useState("Despesa");
   const [form,setForm]=useState({data:today(),desc:"",cat:CATS_DEP[0],forma:FORMAS_DEP[0],valor:"",recorrente:false,freq:"mensal",dia:1});
@@ -4144,7 +3539,7 @@ export default function App(){
   return(<>
     <style>{CSS}</style>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:G.bg}}>
-      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} profilePhoto={profilePhoto} onSearch={()=>setView("busca")} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
+      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} onSearch={()=>setView("busca")} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
       
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
@@ -4159,11 +3554,10 @@ export default function App(){
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}
+          {view==="busca"&&<BuscaView lancs={lancs} onDelete={deletar}/>}
+          {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
 
           {/* ── VIEWS PREMIUM ── */}
-          {view==="carreira"&&(isPremium
-            ?<CarreiraView uid={user.uid} user={user} onPhotoSave={p=>setProfilePhoto(p)} lancs={lancs}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="carreira" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="cartoes"&&(isPremium
             ?<CartoesView uid={user.uid} lancs={lancs}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="cartoes" onActivate={p=>{forceSetPlano(p);}}/>)}
@@ -4176,19 +3570,13 @@ export default function App(){
           {view==="compartilhados-divisoes"&&(isPremium
             ?<DivisoesView uid={user.uid}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="divisoes" onActivate={p=>{forceSetPlano(p);}}/>)}
-          {view==="busca"&&(isPremium
-            ?<BuscaView lancs={lancs} onDelete={deletar}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="busca" onActivate={p=>{forceSetPlano(p);}}/>)}
-          {view==="importar"&&(isPremium
-            ?<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>
-            :<UpgradeView uid={user.uid} plano={plano} destaque="importar" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view.startsWith("financas")&&(isPremium
             ?<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="financas" onActivate={p=>{forceSetPlano(p);}}/>)}
         </main></ErrorBoundary>
       )}
       <Nav view={view} setView={setView}/>
-      <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} profilePhoto={profilePhoto} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
+      <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
     </div>
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">
       <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoesList}/>
