@@ -42,11 +42,18 @@ const fmt    = v => "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigit
 const fmtK   = v => v>=10000?`R$${(v/1000).toFixed(0)}k`:v>=1000?`R$${(v/1000).toFixed(1).replace(".",",")}k`:`R$${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:0})}`;
 const getMes = d => d?d.slice(0,7):"";
 const fmtD   = d => { try{const[y,m,dd]=d.split("-");return`${dd}/${m}/${y}`;}catch{return d;} };
-const today  = () => new Date().toISOString().slice(0,10);
+// Data em hora LOCAL (toISOString é UTC e vira o dia mais cedo à noite no Brasil)
+const toISO  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const today  = () => toISO(new Date());
+const round2 = v => Math.round((Number(v)||0)*100)/100;
 
 // Garante que partes seja sempre um array (Firestore pode retornar como objeto)
 const toPartes = p => Array.isArray(p)?p:Object.values(p||{});
 const curMes = () => { const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; };
+// Mês-calendário anterior a um "YYYY-MM"
+const prevMes = ma => { const[y,m]=ma.split("-").map(Number);const d=new Date(y,m-2,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+// Lançamentos pessoais: exclui os do modo casal (senão contam em dobro no saldo)
+const soPessoais = lancs => lancs.filter(l=>l.escopo!=="casal");
 // Só contabiliza lançamentos cuja data já chegou (ou é passada)
 // Lançamento conta no saldo se: data já chegou E não está marcado como agendado futuro
 const isRealizado = (d, agendado) => {
@@ -80,13 +87,13 @@ function gerarRecorrentesDoMes(recorrentes, lancs) {
         }
       }
     }
-    // Semanal: só lança se o dia da semana bate com hoje
+    // Semanal: gera TODAS as ocorrências do mês até hoje no dia da semana escolhido
     if (rec.freq==="semanal") {
-      // dia = dia da semana (0=dom..6=sab) ou dia do mês — usar dia da semana
-      const dow=hoje.getDay();
-      const recDow=(rec.dia||1)%7;
-      if (dow===recDow) {
-        const dt=`${mes}-${String(diaHoje).padStart(2,"0")}`;
+      // diaSemana (0=dom..6=sab) é o campo novo; recorrentes antigas usavam dia%7
+      const recDow=rec.diaSemana!=null?rec.diaSemana:(rec.dia||1)%7;
+      for(let d=1;d<=diaHoje;d++){
+        if(new Date(hoje.getFullYear(),hoje.getMonth(),d).getDay()!==recDow)continue;
+        const dt=`${mes}-${String(d).padStart(2,"0")}`;
         if (!lancs.some(l=>l.recId===rec.id&&l.data===dt))
           novos.push({recId:rec.id,tipo:rec.tipo,desc:rec.desc,cat:rec.cat,forma:rec.forma,valor:rec.valor,data:dt,auto:true});
       }
@@ -156,8 +163,11 @@ function localAI(msg,lancs){
     return "PIX";
   }
   function parseValor(str){
-    const valorStr=str.replace(/\./g,"").replace(",",".");
-    return parseFloat(valorStr)||0;
+    let s=String(str).trim();
+    // "12.90" (ponto seguido de 1-2 dígitos no fim) = decimal; "1.200" = milhar
+    if(/^\d+\.\d{1,2}$/.test(s))return parseFloat(s)||0;
+    s=s.replace(/\./g,"").replace(",",".");
+    return parseFloat(s)||0;
   }
   function limpDesc(fragment,cat){
     let d=fragment
@@ -170,7 +180,7 @@ function localAI(msg,lancs){
 
   // ── data ───────────────────────────────────────────
   let data=today();
-  if(t.includes("ontem")){const d=new Date();d.setDate(d.getDate()-1);data=d.toISOString().slice(0,10);}
+  if(t.includes("ontem")){const d=new Date();d.setDate(d.getDate()-1);data=toISO(d);}
   const dm=t.match(/dia\s+(\d{1,2})/);
   if(dm){const m=curMes();data=`${m}-${String(dm[1]).padStart(2,"0")}`;}
 
@@ -196,7 +206,7 @@ function localAI(msg,lancs){
   // fallback: tenta extrair todos os pares "R$X com/no/na Y" mesmo sem verbo
   // só roda se segPattern não achou NADA (evita duplicar quando há 1 verbo + 1 valor)
   if(segments.length===0){
-    const pairPat=/r?\$?\s*(\d{1,3}(?:[.]\d{3})*(?:[,]\d{1,2})?|\d+(?:[,]\d{1,2})?)\s+(?:com|no|na|nos|nas|de|em|p\/|para|num|numa)?\s*([^,;0-9]+?)(?=r?\$?\s*\d|,|;|$)/gi;
+    const pairPat=/r?\$?\s*(\d{1,3}(?:[.]\d{3})+(?:[,]\d{1,2})?|\d+[.,]\d{1,2}|\d+)\s+(?:com|no|na|nos|nas|de|em|p\/|para|num|numa)?\s*([^,;0-9]+?)(?=r?\$?\s*\d|,|;|$)/gi;
     let pm;
     while((pm=pairPat.exec(msg))!==null){
       segments.push(pm[0].trim());
@@ -206,7 +216,7 @@ function localAI(msg,lancs){
   // ── single lançamento ─────────────────────────────
   function parseSingle(fragment){
     const nt=norm(fragment);
-    const vm=nt.match(/r?\$?\s*(\d{1,3}(?:[.]\d{3})*(?:[,]\d{1,2})?|\d+(?:[,]\d{1,2})?)/);
+    const vm=nt.match(/r?\$?\s*(\d{1,3}(?:[.]\d{3})+(?:[,]\d{1,2})?|\d+[.,]\d{1,2}|\d+)/);
     if(!vm)return null;
     const valor=parseValor(vm[1]);
     if(!valor)return null;
@@ -243,10 +253,10 @@ function localAI(msg,lancs){
 async function callAI(msg,lancs){
   const r=localAI(msg,lancs);
   if(r.isSummary){
-    const mes=curMes(),dm=lancs.filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
-    const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-    const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-    const sal=tR-tD;
+    const mes=curMes(),dm=soPessoais(lancs).filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
+    const tR=round2(dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0));
+    const tD=round2(dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0));
+    const sal=round2(tR-tD);
     const mn=MESES[new Date().getMonth()];
     return{action:"conversa",resposta:`📊 ${mn}/${new Date().getFullYear()}\n\n💚 Receitas: ${fmt(tR)}\n🔴 Despesas: ${fmt(tD)}\n${sal>=0?"💰":"😬"} Saldo: ${fmt(sal)}`};
   }
@@ -267,11 +277,12 @@ function createSpeechRecognizer(onResult, onError){
 
 // ─── ANÁLISE DE FOTO/COMPROVANTE ──────────────────────────────────────────────
 async function analyzePhoto(base64,mimeType="image/jpeg"){
-  const r=await fetch("https://api.anthropic.com/v1/messages",{
+  // Passa pelo proxy serverless (/api/chat) que injeta a ANTHROPIC_KEY — nunca chamar a API direto do browser
+  const r=await fetch("/api/chat",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
-      model:"claude-sonnet-4-20250514",
+      model:"claude-haiku-4-5-20251001",
       max_tokens:400,
       messages:[{role:"user",content:[
         {type:"image",source:{type:"base64",media_type:mimeType,data:base64}},
@@ -323,36 +334,6 @@ function usePlano(uid){
   return{plano:effectivePlano,loadingPlano,isPremium:effectivePlano==="premium",forceSetPlano:setPlanoOverride};
 }
 
-
-// ─── LIMITES FREE ─────────────────────────────────────────────────────────────
-const FREE_LIMITS = {
-  cartoes: 1,       // máx 1 cartão
-  meses_historico: 3, // últimos 3 meses
-};
-
-// ─── PREMIUM GATE COMPONENT ───────────────────────────────────────────────────
-function PremiumGate({isPremium,onUpgrade,children,label="Este recurso é Premium",sublabel=""}){
-  if(isPremium)return children;
-  return(
-    <div style={{position:"relative",borderRadius:18,overflow:"hidden"}}>
-      <div style={{filter:"blur(3px)",pointerEvents:"none",userSelect:"none",opacity:.5}}>
-        {children}
-      </div>
-      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-        background:"rgba(10,10,15,.75)",backdropFilter:"blur(2px)",borderRadius:18,padding:24,textAlign:"center"}}>
-        <div style={{fontSize:32,marginBottom:8}}>✨</div>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:"#fff",marginBottom:4}}>{label}</div>
-        {sublabel&&<div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginBottom:14}}>{sublabel}</div>}
-        <button onClick={onUpgrade} className="press"
-          style={{padding:"10px 24px",borderRadius:20,border:"none",background:"#7C6AF7",
-            color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",
-            boxShadow:"0 4px 16px rgba(124,106,247,.5)"}}>
-          Ver planos
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── DESIGN ────────────────────────────────────────────────────────────────────
 // ─── THEME ────────────────────────────────────────────────────────────────────
@@ -809,7 +790,7 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
       </div>
       <div style={{textAlign:"center",marginBottom:20}}>
         <Lbl>Valor (R$)</Lbl>
-        <input type="number" inputMode="decimal" placeholder="0,00" min="0" step="0.01" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} style={{width:"100%",textAlign:"center",fontFamily:"'Fraunces',serif",fontSize:36,fontWeight:700,color:ac,background:"transparent",border:"none",borderBottom:`2px solid ${ac}`,borderRadius:0,padding:"4px 0 10px",outline:"none",color:ac}}/>
+        <input type="number" inputMode="decimal" placeholder="0,00" min="0" step="0.01" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} style={{width:"100%",textAlign:"center",fontFamily:"'Fraunces',serif",fontSize:36,fontWeight:700,color:ac,background:"transparent",border:"none",borderBottom:`2px solid ${ac}`,borderRadius:0,padding:"4px 0 10px",outline:"none"}}/>
       </div>
       <div style={{marginBottom:14}}><Lbl opt>Descrição</Lbl><input type="text" placeholder="Ex: Salário, Mercado, Uber..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} className="inp"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
@@ -853,9 +834,11 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
         {(form.modo||"normal")==="recorrente"&&<div style={{background:G.card2,borderRadius:12,padding:12,animation:"fadeUp .15s ease"}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
             <div><Lbl>Frequência</Lbl><select value={form.freq||"mensal"} onChange={e=>setForm(f=>({...f,freq:e.target.value}))} className="inp">{FREQ_OPTS.map(f=><option key={f.id} value={f.id}>{f.icon} {f.label}</option>)}</select></div>
-            <div><Lbl>Dia do mês</Lbl><input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="1–31" value={form.dia===0||form.dia===undefined?"":form.dia} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,dia:v===""?0:Math.min(31,Math.max(1,parseInt(v)||1))}));}} onBlur={()=>{if(!form.dia||form.dia<1)setForm(f=>({...f,dia:1}));}} className="inp"/></div>
+            {form.freq==="semanal"
+              ?<div><Lbl>Dia da semana</Lbl><select value={form.diaSemana??1} onChange={e=>setForm(f=>({...f,diaSemana:parseInt(e.target.value)}))} className="inp">{["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"].map((d,i)=><option key={d} value={i}>{d}</option>)}</select></div>
+              :<div><Lbl>Dia do mês</Lbl><input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="1–31" value={form.dia===0||form.dia===undefined?"":form.dia} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setForm(f=>({...f,dia:v===""?0:Math.min(31,Math.max(1,parseInt(v)||1))}));}} onBlur={()=>{if(!form.dia||form.dia<1)setForm(f=>({...f,dia:1}));}} className="inp"/></div>}
           </div>
-          <div style={{fontSize:11,color:G.muted,textAlign:"center"}}>↻ Entra automaticamente todo mês na data definida</div>
+          <div style={{fontSize:11,color:G.muted,textAlign:"center"}}>↻ {form.freq==="semanal"?"Entra automaticamente toda semana no dia escolhido":"Entra automaticamente na data definida"}</div>
         </div>}
         {(form.modo||"normal")==="agendado"&&<div style={{background:G.yellow+"12",border:`1px solid ${G.yellow}44`,borderRadius:12,padding:12,animation:"fadeUp .15s ease"}}>
           <div style={{fontSize:12,color:G.yellow,fontWeight:600,marginBottom:4}}> Agendado</div>
@@ -868,24 +851,26 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({lancs,onDelete,user}){
+function Dashboard({lancs:lancsAll,onDelete,user}){
   const [mes,setMes]=useState(curMes());
   const [hide,setHide]=useState(false);
   const [selCat,setSelCat]=useState(null);
 
+  // Saldo pessoal: lançamentos do modo casal ficam de fora (têm tela própria)
+  const lancs=soPessoais(lancsAll);
   const md=[...new Set(lancs.map(l=>getMes(l.data)))].sort().reverse().slice(0,6);
   if(!md.includes(curMes()))md.unshift(curMes());
   const dm=lancs.filter(l=>getMes(l.data)===mes&&isRealizado(l.data,l.agendado));
-  const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-  const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-  const sal=tR-tD, pct=tR>0?Math.round(sal/tR*100):0;
+  const tR=round2(dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0));
+  const tD=round2(dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0));
+  const sal=round2(tR-tD), pct=tR>0?Math.round(sal/tR*100):0;
 
   // últimos 6 meses para sparkline
-  const spark=md.slice().reverse().map(m=>{
+  const spark=md.slice().sort().map(m=>{
     const d=lancs.filter(l=>getMes(l.data)===m&&isRealizado(l.data,l.agendado));
     const r=d.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
     const dep=d.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-    return{m,sal:r-dep,dep,rec:r};
+    return{m,sal:round2(r-dep),dep:round2(dep),rec:round2(r)};
   });
 
   const cats=CATS_DEP
@@ -919,10 +904,11 @@ function Dashboard({lancs,onDelete,user}){
   const [hovWeek,setHovWeek]=useState(null);
   const hv=v=>hide?"•••":v;
 
-  // compare prev month
-  const prevM=md[1];
-  const prevSal=prevM?(()=>{const d=lancs.filter(l=>getMes(l.data)===prevM&&isRealizado(l.data,l.agendado));return d.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0)-d.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);})():null;
-  const diff=prevSal!==null?sal-prevSal:null;
+  // compara com o mês-calendário anterior de verdade (não o último mês com dados)
+  const prevM=prevMes(mes);
+  const prevLancs=lancs.filter(l=>getMes(l.data)===prevM&&isRealizado(l.data,l.agendado));
+  const prevSal=prevLancs.length?round2(prevLancs.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0)-prevLancs.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0)):null;
+  const diff=prevSal!==null?round2(sal-prevSal):null;
 
   return(
   <div style={{paddingBottom:32}}>
@@ -1182,7 +1168,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
   const isR=tipo==="Receita", ac=isR?G.green:G.red;
   const cats=isR?CATS_REC:CATS_DEP;
 
-  const todos=lancs.filter(l=>l.tipo===tipo);
+  const todos=soPessoais(lancs).filter(l=>l.tipo===tipo);
   const allMeses=[...new Set(todos.map(l=>getMes(l.data)))].sort().reverse();
   if(!allMeses.includes(curMes()))allMeses.unshift(curMes());
   const meses=isPremium?allMeses:allMeses.slice(0,3);
@@ -1981,8 +1967,9 @@ function CarreiraView({uid,user,onPhotoSave,lancs=[]}){
 const CAT_ICONS={"Moradia":"🏠","Alimentação":"🍔","Transporte":"🚗","Saúde":"❤️","Educação":"📚","Lazer":"🎮","Vestuário":"👕","Assinaturas":"📱","Pets":"🐾","Beleza e Cuidados":"💅","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Seguros":"🛡️","Academia":"💪","Farmácia":"💊","Outros":"","Salário":"","Freelance":"🖥️","Investimentos":<Ic d={ICON.chart} size={15}/>,"Aluguel Recebido":"🏡","Bônus":"⭐","Reembolso":"↩️","Renda Extra":"💡","Dividendos":"💰"};
 const ORC_CORES=["#FB923C","#A78BFA","#F472B6","#34D399","#FBBF24","#60A5FA","#818CF8","#2DD4BF","#F97316","#E879F9"];
 
-function FinancasView({uid,lancs,secao}){
+function FinancasView({uid,lancs:lancsAll,secao}){
   // secao comes from drawer nav
+  const lancs=soPessoais(lancsAll); // casal não entra nas finanças pessoais
   const [mes,setMes]=useState(curMes());
   const [orcamentos,setOrcamentos]=useState([]);
   const [alertas,setAlertas]=useState([]);
@@ -2002,9 +1989,9 @@ function FinancasView({uid,lancs,secao}){
   },[uid]);
 
   const dm=lancs.filter(l=>getMes(l.data)===mes&&isRealizado(l.data,l.agendado));
-  const tR=dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0);
-  const tD=dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0);
-  const sal=tR-tD;
+  const tR=round2(dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0));
+  const tD=round2(dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0));
+  const sal=round2(tR-tD);
   const tx=tR>0?sal/tR*100:0;
   const nlidos=alertas.filter(a=>!a.lido).length;
 
@@ -2551,7 +2538,7 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
   const [recSt,setRecSt]=useState("idle");
   const [recSec,setRecSec]=useState(0);
   const [recErr,setRecErr]=useState("");
-  const botRef=useRef(),inpRef=useRef(),mrRef=useRef(null),chkRef=useRef([]),tmrRef=useRef(null),srRef=useRef(null),photoRef=useRef(null);
+  const botRef=useRef(),inpRef=useRef(),tmrRef=useRef(null),srRef=useRef(null),photoRef=useRef(null);
   useEffect(()=>{botRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   const push=(from,text,ex={})=>setMsgs(p=>[...p,{id:Date.now()+Math.random(),from,text,ts:new Date(),...ex}]);
   const [photoLoading,setPhotoLoading]=useState(false);
@@ -2580,34 +2567,16 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
         srRef.current=sr;
         sr.start();
         return;
-      }catch(e){/* fallback para MediaRecorder */}
+      }catch(e){/* navegador sem suporte */}
     }
-    // Fallback: MediaRecorder (envia blob para Anthropic vision como áudio)
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-      chkRef.current=[];
-      const mime=["audio/webm;codecs=opus","audio/webm","audio/ogg","audio/mp4"].find(m=>MediaRecorder.isTypeSupported(m));
-      const mr=new MediaRecorder(stream,mime?{mimeType:mime}:{});
-      mr.ondataavailable=e=>{if(e.data?.size>0)chkRef.current.push(e.data);};
-      mr.onstop=async()=>{
-        stream.getTracks().forEach(t=>t.stop());
-        if(!chkRef.current.length){setRecSt("idle");return;}
-        setRecSt("proc");
-        try{
-          push("ai","🎤 Áudio recebido! Infelizmente a transcrição automática requer conexão com API externa. Digite o que falou? 😊");
-        }catch{push("ai","🎤 Erro na transcrição. Pode digitar? 😊");}
-        setRecSt("idle");setRecSec(0);
-      };
-      mr.start(200);mrRef.current=mr;setRecSt("rec");setRecSec(0);
-      tmrRef.current=setInterval(()=>setRecSec(s=>s+1),1000);
-    }catch(e){setRecSt("idle");setRecErr(e.name==="NotAllowedError"?"Microfone bloqueado — libere nas configurações.":"Erro ao gravar.");}
+    // Sem Web Speech API: não há transcrição — avisa em vez de gravar áudio sem uso
+    setRecErr("Seu navegador não suporta transcrição de voz. Use o Chrome ou digite a mensagem.");
   }
   function stopRec(){
     clearInterval(tmrRef.current);
-    if(srRef.current){try{srRef.current.stop();}catch{}srRef.current=null;return;}
-    if(mrRef.current?.state==="recording")mrRef.current.stop();
+    if(srRef.current){try{srRef.current.stop();}catch{}srRef.current=null;}
   }
-  function cancelRec(){clearInterval(tmrRef.current);if(mrRef.current?.state==="recording"){mrRef.current.onstop=null;mrRef.current.stop();}setRecSt("idle");setRecSec(0);}
+  function cancelRec(){clearInterval(tmrRef.current);if(srRef.current){try{srRef.current.stop();}catch{}srRef.current=null;}setRecSt("idle");setRecSec(0);}
 
   async function send(txt){
     const msg=(txt||input).trim();if(!msg||busy)return;
@@ -2859,10 +2828,7 @@ function BuscaView({lancs,onDelete}){
   const [filtMes,setFiltMes]=useState("Todos");
   const [sortBy,setSortBy]=useState("data"); // data | valor
 
-  const lancsVisiveis=isPremium?lancs:(()=>{
-    const limite=new Date();limite.setMonth(limite.getMonth()-3);
-    return lancs.filter(l=>new Date(l.data)>=limite);
-  })();
+  const lancsVisiveis=soPessoais(lancs);
   const meses=[...new Set(lancsVisiveis.map(l=>getMes(l.data)))].filter(Boolean).sort().reverse();
   const cats=[...new Set(lancsVisiveis.map(l=>l.cat))].filter(Boolean).sort();
 
@@ -3176,7 +3142,9 @@ function CartoesView({uid,lancs}){
     </div>}
 
     {cartoes.map(k=>{
-      const gastos=lancs.filter(l=>l.cartao===k.id||l.cartao===k.nome).reduce((s,l)=>s+l.valor,0);
+      // Fatura do mês atual: despesas vinculadas ao cartão (cartaoId é o campo atual; cartao é legado)
+      const doCartao=lancs.filter(l=>l.tipo==="Despesa"&&(l.cartaoId===k.id||l.cartao===k.id||l.cartao===k.nome));
+      const gastos=round2(doCartao.filter(l=>getMes(l.data)===curMes()).reduce((s,l)=>s+l.valor,0));
       const pct=k.limite>0?Math.min(gastos/k.limite,1):0;
       const restante=(k.limite||0)-gastos;
       const corBarra=pct>.85?G.red:pct>.6?G.yellow:G.green;
@@ -3232,7 +3200,7 @@ function CartoesView({uid,lancs}){
           </div>
           {/* últimas transações */}
           {(()=>{
-            const txs=lancs.filter(l=>l.cartao===k.id||l.cartao===k.nome).slice(0,3);
+            const txs=doCartao.slice().sort((a,b)=>(b.data||"").localeCompare(a.data||"")).slice(0,3);
             if(!txs.length)return null;
             return(<div style={{borderTop:`1px solid ${G.border}`,padding:"10px 18px 14px"}}>
               <div style={{fontSize:11,color:G.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Últimas transações</div>
@@ -3860,8 +3828,10 @@ function DivisoesView({uid}){
     const v=parseFloat(formDiv.valor);
     const pessoas=["Você",...formDiv.selecionados];
     if(!formDiv.desc||!v||formDiv.selecionados.length<1)return;
-    const valorPorPessoa=v/pessoas.length;
-    const partes=pessoas.map(p=>({nome:p,valor:valorPorPessoa,pago:false}));
+    // Divide em centavos exatos: cada um paga o valor arredondado e a sobra fica com "Você"
+    const valorPorPessoa=Math.floor(v/pessoas.length*100)/100;
+    const sobra=round2(v-valorPorPessoa*pessoas.length);
+    const partes=pessoas.map((p,i)=>({nome:p,valor:round2(valorPorPessoa+(i===0?sobra:0)),pago:false}));
     try{
     // Salva minha divisão
     const divRef=await addDoc(collection(db,"users",uid,"divisoes"),{
@@ -4071,6 +4041,7 @@ export default function App(){
   const [loginError,setLoginError]=useState("");
   const {plano,isPremium,loadingPlano,forceSetPlano}=usePlano(user?.uid||null);
   const [lancs,setLancs]=useState([]);
+  const [lancsLoaded,setLancsLoaded]=useState(false);
   const [recorrentes,setRecorrentes]=useState([]);
   const [dataLoading,setDataLoading]=useState(false);
   const [view,setView]=useState("dashboard");
@@ -4093,21 +4064,28 @@ export default function App(){
   useEffect(()=>{ return onAuthStateChanged(auth,u=>{setUser(u);setAuthLoading(false);}); },[]);
 
   useEffect(()=>{
-    if(!user){setLancs([]);setRecorrentes([]);return;}
+    if(!user){setLancs([]);setLancsLoaded(false);setRecorrentes([]);return;}
     setDataLoading(true);
     const uid=user.uid;
-    const unsubL=onSnapshot(collection(db,"users",uid,"lancamentos"),snap=>{setLancs(snap.docs.map(d=>({id:d.id,...d.data()})));setDataLoading(false);});
+    const unsubL=onSnapshot(collection(db,"users",uid,"lancamentos"),snap=>{setLancs(snap.docs.map(d=>({id:d.id,...d.data()})));setLancsLoaded(true);setDataLoading(false);});
     const unsubR=onSnapshot(collection(db,"users",uid,"recorrentes"),snap=>{setRecorrentes(snap.docs.map(d=>({id:d.id,...d.data()})));});
     const unsubC=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{setCartoesList(snap.docs.map(d=>({id:d.id,...d.data()})));});
     const unsubDP=onSnapshot(collection(db,"inbox",uid,"divisoes_pendentes"),s=>{setDivPendCount(s.size);});
     return()=>{unsubL();unsubR();unsubC();unsubDP();};
   },[user]);
 
+  // Guarda contra dupla gravação: chaves recId+data já geradas nesta sessão
+  const geradosRef=useRef(new Set());
   useEffect(()=>{
-    if(!user||recorrentes.length===0)return;
-    const novos=gerarRecorrentesDoMes(recorrentes,lancs);
-    novos.forEach(n=>addDoc(collection(db,"users",user.uid,"lancamentos"),n).catch(()=>{}));
-  },[recorrentes,user]);
+    // Só gera depois que os lançamentos chegaram do servidor (senão duplica os já existentes)
+    if(!user||!lancsLoaded||recorrentes.length===0)return;
+    const novos=gerarRecorrentesDoMes(recorrentes,lancs)
+      .filter(n=>!geradosRef.current.has(n.recId+n.data));
+    novos.forEach(n=>{
+      geradosRef.current.add(n.recId+n.data);
+      addDoc(collection(db,"users",user.uid,"lancamentos"),n).catch(()=>{});
+    });
+  },[recorrentes,user,lancsLoaded,lancs]);
 
   const showT=useCallback((msg,type="success")=>{setToast({msg,type});clearTimeout(tRef.current);tRef.current=setTimeout(()=>setToast(null),2400);},[]);
 
@@ -4119,7 +4097,7 @@ export default function App(){
     const modo=form.modo||"normal";
     // Agendado: salva com flag agendado=true — não entra no saldo até a data
     await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado",...(form.cartaoId?{cartaoId:form.cartaoId}:{})});
-    if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,ativo:true});
+    if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,...(form.freq==="semanal"?{diaSemana:form.diaSemana??1}:{}),ativo:true});
     const label=modo==="recorrente"?" ↻":modo==="agendado"?" ":"";
     showT(`${tipo} adicionada!${label}`);setModal(false);
   }
@@ -4172,14 +4150,14 @@ export default function App(){
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
         <div style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,display:"flex",flexDirection:"column"}}>
-          <ChatView lancs={lancs} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
+          <ChatView lancs={lancs} isPremium={isPremium} onUpgrade={()=>setView("planos")} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {/* ── VIEWS GRATUITAS ── */}
           {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
-          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
-          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec}/>}
+          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
+          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}
 
           {/* ── VIEWS PREMIUM ── */}
