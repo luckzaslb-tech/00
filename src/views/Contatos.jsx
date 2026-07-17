@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase.js";
 import { collection, doc, deleteDoc, updateDoc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
-import { today } from "../lib/utils.js";
+import { today, round2, toPartes, fmt, fmtD } from "../lib/utils.js";
 import { G } from "../theme.jsx";
 import { ICON, Ic, Lbl } from "../components/ui.jsx";
 import { Sheet } from "../components/Sheet.jsx";
 
 // ─── CONTATOS VIEW ────────────────────────────────────────────────────────────
-function ContatosView({uid,user,onVoltar}){
+function ContatosView({uid,user,onVoltar,onNovaDivisao}){
   const [contatos,setContatos]=useState([]);
+  const [divisoes,setDivisoes]=useState([]);
   const [codInput,setCodInput]=useState("");
   const [buscando,setBuscando]=useState(false);
   const [erro,setErro]=useState("");
@@ -24,6 +25,9 @@ function ContatosView({uid,user,onVoltar}){
     const unsub=onSnapshot(collection(db,"users",uid,"contatos"),snap=>{
       setContatos(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
+    const unsubDiv=onSnapshot(collection(db,"users",uid,"divisoes"),snap=>{
+      setDivisoes(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
     // Ouve inbox de contatos novos (pessoas que digitaram meu codigo)
     const unsubInbox=onSnapshot(collection(db,"inbox",uid,"contatos"),snap=>{
       snap.docs.forEach(d=>{
@@ -36,8 +40,23 @@ function ContatosView({uid,user,onVoltar}){
           .catch(e=>console.warn("inbox contato:",e.message));
       });
     });
-    return()=>{unsub();unsubInbox();};
+    return()=>{unsub();unsubDiv();unsubInbox();};
   },[uid]);
+
+  // Resumo financeiro por nome de contato: cruza com as divisões
+  function resumoContato(nome){
+    let total=0,aberto=0,ultima=null;
+    for(const d of divisoes){
+      if(d.recebida)continue;
+      const partes=toPartes(d.partes);
+      const p=partes.find(x=>x.nome===nome);
+      if(!p)continue;
+      total=round2(total+p.valor);
+      if(!p.pago)aberto=round2(aberto+p.valor);
+      if(!ultima||(d.data||"")>(ultima.data||""))ultima=d;
+    }
+    return{total,aberto,ultima,n:divisoes.filter(d=>!d.recebida&&toPartes(d.partes).some(x=>x.nome===nome)).length};
+  }
 
   async function adicionarPorCodigo(){
     setErro("");setBuscando(true);
@@ -192,26 +211,41 @@ function ContatosView({uid,user,onVoltar}){
         <div style={{fontSize:11,fontWeight:700,color:catColors[grupo]||G.muted,letterSpacing:.8,marginBottom:8}}>
           {grupo.toUpperCase()}
         </div>
-        {lista.map(ct=>(
-          <div key={ct.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:G.card,border:"1px solid "+G.border,borderRadius:12,marginBottom:8}}>
-            <div style={{width:38,height:38,borderRadius:"50%",background:(catColors[ct.categoria]||G.muted)+"33",
-              color:catColors[ct.categoria]||G.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0}}>
-              {(ct.apelido||ct.nome)[0]?.toUpperCase()}
+        {lista.map(ct=>{
+          const rc=resumoContato(ct.nome);
+          return(
+          <div key={ct.id} style={{background:G.card,border:"1px solid "+G.border,borderRadius:12,marginBottom:8,overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px"}}>
+              <div style={{width:38,height:38,borderRadius:"50%",background:(catColors[ct.categoria]||G.muted)+"33",
+                color:catColors[ct.categoria]||G.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0}}>
+                {(ct.apelido||ct.nome)[0]?.toUpperCase()}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:600}}>{ct.apelido||ct.nome}</div>
+                {ct.apelido&&<div style={{fontSize:11,color:G.muted}}>{ct.nome}</div>}
+                <div style={{fontSize:11,color:G.muted}}>{ct.vinculado?"Vinculado":"Manual"} · {ct.categoria||"Outros"}</div>
+                {ct.notas&&<div style={{fontSize:11,color:G.muted,fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ct.notas}</div>}
+              </div>
+              <button onClick={()=>abrirEdicao(ct)} aria-label="Editar"
+                style={{background:"none",border:"none",color:G.muted,cursor:"pointer",padding:"4px 6px",display:"flex",alignItems:"center"}}><Ic d={ICON.edit} size={14} color={G.muted}/></button>
+              <button onClick={()=>deletarContato(ct.id)} aria-label="Excluir"
+                style={{background:"none",border:"none",color:G.border2,cursor:"pointer",padding:"2px 6px",display:"flex"}}
+                onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}><Ic d={ICON.x} size={14}/></button>
             </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:600}}>{ct.apelido||ct.nome}</div>
-              {ct.apelido&&<div style={{fontSize:11,color:G.muted}}>{ct.nome}</div>}
-              <div style={{fontSize:11,color:G.muted}}>{ct.vinculado?"🔗 Vinculado":"Manual"} · {ct.categoria||"Outros"}</div>
-              {ct.notas&&<div style={{fontSize:11,color:G.muted,fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ct.notas}</div>}
+            {/* resumo financeiro + ação */}
+            <div style={{borderTop:`1px solid ${G.border}`,padding:"8px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{flex:1,fontSize:11,color:G.muted}}>
+                {rc.n>0
+                  ?<>{rc.n} divisã{rc.n>1?"o":"o"} · {rc.aberto>0?<span style={{color:G.green,fontWeight:600}}>te deve {fmt(rc.aberto)}</span>:<span style={{color:G.muted}}>tudo quitado</span>}{rc.ultima?` · última ${fmtD(rc.ultima.data)}`:""}</>
+                  :"Nenhuma divisão ainda"}
+              </div>
+              {onNovaDivisao&&<button onClick={()=>onNovaDivisao(ct.nome)} className="press"
+                style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                <Ic d={ICON.divide} size={12} color={G.accent}/> Dividir
+              </button>}
             </div>
-            <button onClick={()=>abrirEdicao(ct)}
-              style={{background:"none",border:"none",color:G.muted,cursor:"pointer",padding:"4px 6px",display:"flex",alignItems:"center"}}><Ic d={ICON.repeat} size={11} color={G.muted}/></button>
-            <button onClick={()=>deletarContato(ct.id)}
-              style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:20,padding:"2px 6px",lineHeight:1}}
-              onMouseEnter={e=>e.currentTarget.style.color=G.red}
-              onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
           </div>
-        ))}
+        );})}
       </div>);
     })}
 

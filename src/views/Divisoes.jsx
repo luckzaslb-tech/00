@@ -7,12 +7,21 @@ import { Lbl, Ic, ICON } from "../components/ui.jsx";
 import { Sheet } from "../components/Sheet.jsx";
 
 // ─── DIVISOES VIEW ─────────────────────────────────────────────────────────────
-function DivisoesView({uid,onContatos}){
+function DivisoesView({uid,onContatos,preselect,onPreselectDone}){
   const [divisoes,setDivisoes]=useState([]);
   const [pendentes,setPendentes]=useState([]); // divisoes que outros enviaram pra mim
   const [contatos,setContatos]=useState([]);
   const [sheetDiv,setSheetDiv]=useState(false);
-  const [formDiv,setFormDiv]=useState({desc:"",valor:"",selecionados:[],data:today()});
+  const [formDiv,setFormDiv]=useState({desc:"",valor:"",selecionados:[],data:today(),modo:"igual",valores:{}});
+
+  // Abre o sheet já com um contato selecionado (vindo da tela de Contatos)
+  useEffect(()=>{
+    if(preselect){
+      setFormDiv({desc:"",valor:"",selecionados:[preselect],data:today(),modo:"igual",valores:{}});
+      setSheetDiv(true);
+      onPreselectDone&&onPreselectDone();
+    }
+  },[preselect]);
 
   useEffect(()=>{
     if(!uid)return;
@@ -62,13 +71,24 @@ function DivisoesView({uid,onContatos}){
   }
 
   async function salvarDiv(){
-    const v=parseFloat(formDiv.valor);
     const pessoas=["Você",...formDiv.selecionados];
-    if(!formDiv.desc||!v||formDiv.selecionados.length<1)return;
-    // Divide em centavos exatos: cada um paga o valor arredondado e a sobra fica com "Você"
-    const valorPorPessoa=Math.floor(v/pessoas.length*100)/100;
-    const sobra=round2(v-valorPorPessoa*pessoas.length);
-    const partes=pessoas.map((p,i)=>({nome:p,valor:round2(valorPorPessoa+(i===0?sobra:0)),pago:false}));
+    if(!formDiv.desc||formDiv.selecionados.length<1)return;
+    let partes,total;
+    if(formDiv.modo==="custom"){
+      // Cada um paga o valor que você definir
+      partes=pessoas.map(p=>({nome:p,valor:round2(parseFloat(formDiv.valores[p])||0),pago:false}));
+      total=round2(partes.reduce((s,p)=>s+p.valor,0));
+      if(total<=0)return;
+    }else{
+      const v=parseFloat(formDiv.valor);
+      if(!v)return;
+      // Divide em centavos exatos: cada um paga o valor arredondado e a sobra fica com "Você"
+      const valorPorPessoa=Math.floor(v/pessoas.length*100)/100;
+      const sobra=round2(v-valorPorPessoa*pessoas.length);
+      partes=pessoas.map((p,i)=>({nome:p,valor:round2(valorPorPessoa+(i===0?sobra:0)),pago:false}));
+      total=v;
+    }
+    const v=total;
     try{
     // Salva minha divisão
     const divRef=await addDoc(collection(db,"users",uid,"divisoes"),{
@@ -85,7 +105,7 @@ function DivisoesView({uid,onContatos}){
       }catch(e){console.warn("Erro ao notificar",ct.nome,e.message);}
     }
     setSheetDiv(false);
-    setFormDiv({desc:"",valor:"",selecionados:[],data:today()});
+    setFormDiv({desc:"",valor:"",selecionados:[],data:today(),modo:"igual",valores:{}});
     }catch(e){console.error("salvarDiv:",e.message);}
   }
 
@@ -132,7 +152,34 @@ function DivisoesView({uid,onContatos}){
   const abertas=divisoes.filter(d=>toPartes(d.partes).some(p=>!p.pago));
   const concluidas=divisoes.filter(d=>toPartes(d.partes).every(p=>p.pago));
 
+  // Saldo consolidado: quanto cada pessoa te deve (divisões que você criou, partes não pagas)
+  const meDevem={};
+  for(const d of divisoes.filter(d=>!d.recebida)){
+    for(const p of toPartes(d.partes)){
+      if(p.nome!=="Você"&&!p.pago)meDevem[p.nome]=round2((meDevem[p.nome]||0)+p.valor);
+    }
+  }
+  const devedores=Object.entries(meDevem).filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]);
+  const totalReceber=round2(devedores.reduce((s,[,v])=>s+v,0));
+
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    {/* Saldo consolidado a receber */}
+    {totalReceber>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:12}}>
+        <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>A receber</span>
+        <span className="num" style={{fontSize:20,fontWeight:800,color:G.green}}>{fmt(totalReceber)}</span>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {devedores.map(([nome,val])=>(
+          <div key={nome} style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:G.blue,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{nome[0]?.toUpperCase()}</div>
+            <span style={{fontSize:13,color:G.text,flex:1}}><b>{nome}</b> te deve</span>
+            <span className="num" style={{fontSize:13,fontWeight:700,color:G.green}}>{fmt(val)}</span>
+          </div>
+        ))}
+      </div>
+    </div>}
+
     {/* Gerenciar contatos */}
     {onContatos&&<button onClick={onContatos} className="press"
       style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:14,border:`1px solid ${G.border}`,background:G.card,cursor:"pointer",width:"100%",textAlign:"left"}}>
@@ -240,8 +287,17 @@ function DivisoesView({uid,onContatos}){
     <Sheet open={sheetDiv} onClose={()=>setSheetDiv(false)} title="Nova Divisão">
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div><Lbl>Descrição</Lbl><input value={formDiv.desc} onChange={e=>setFormDiv(f=>({...f,desc:e.target.value}))} placeholder="Ex: Jantar, Airbnb..." className="inp"/></div>
+        {/* modo de divisão */}
+        <div style={{display:"flex",background:G.card2,borderRadius:12,padding:4}}>
+          {[["igual","Dividir igual"],["custom","Valores personalizados"]].map(([val,lbl])=>{
+            const on=formDiv.modo===val;
+            return(<button key={val} onClick={()=>setFormDiv(f=>({...f,modo:val}))} style={{flex:1,padding:"9px",borderRadius:9,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:on?700:500,background:on?G.card:"transparent",color:on?G.accent:G.muted}}>{lbl}</button>);
+          })}
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl>Valor total (R$)</Lbl><input type="number" value={formDiv.valor} onChange={e=>setFormDiv(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
+          {formDiv.modo==="igual"
+            ?<div><Lbl>Valor total (R$)</Lbl><input type="number" value={formDiv.valor} onChange={e=>setFormDiv(f=>({...f,valor:e.target.value}))} placeholder="0,00" className="inp"/></div>
+            :<div><Lbl>Total</Lbl><div className="inp num" style={{color:G.text}}>{fmt(["Você",...formDiv.selecionados].reduce((s,p)=>s+(parseFloat(formDiv.valores[p])||0),0))}</div></div>}
           <div><Lbl>Data</Lbl><input type="date" value={formDiv.data} onChange={e=>setFormDiv(f=>({...f,data:e.target.value}))} className="inp"/></div>
         </div>
         <div>
@@ -267,11 +323,23 @@ function DivisoesView({uid,onContatos}){
           </div>}
           {formDiv.selecionados.length<1&&<div style={{fontSize:11,color:G.yellow,marginTop:6}}>Selecione pelo menos 1 pessoa</div>}
         </div>
-        {formDiv.valor&&formDiv.selecionados.length>=1&&(
+        {formDiv.modo==="igual"&&formDiv.valor&&formDiv.selecionados.length>=1&&(
           <div style={{background:G.accentL,border:"1px solid "+G.accent+"33",borderRadius:12,padding:12,textAlign:"center"}}>
             <div style={{fontSize:12,color:G.muted}}>Cada pessoa paga</div>
-            <div style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/(formDiv.selecionados.length+1))}</div>
+            <div className="num" style={{fontSize:22,fontWeight:700,color:G.accent}}>{fmt(parseFloat(formDiv.valor||0)/(formDiv.selecionados.length+1))}</div>
             <div style={{fontSize:11,color:G.muted,marginTop:2}}>({formDiv.selecionados.length+1} pessoas incluindo você)</div>
+          </div>
+        )}
+        {formDiv.modo==="custom"&&formDiv.selecionados.length>=1&&(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <Lbl>Quanto cada um paga</Lbl>
+            {["Você",...formDiv.selecionados].map(nome=>(
+              <div key={nome} style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:nome==="Você"?G.accent:G.blue,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{nome[0]?.toUpperCase()}</div>
+                <span style={{fontSize:13,color:G.text,flex:1}}>{nome}</span>
+                <input type="number" value={formDiv.valores[nome]||""} onChange={e=>setFormDiv(f=>({...f,valores:{...f.valores,[nome]:e.target.value}}))} placeholder="0,00" className="inp" style={{width:110,textAlign:"right"}}/>
+              </div>
+            ))}
           </div>
         )}
         <button onClick={salvarDiv} className="press" style={{width:"100%",padding:14,borderRadius:14,border:"none",background:G.accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>

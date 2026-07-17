@@ -43,6 +43,7 @@ export default function App(){
   const [view,setView]=useState("dashboard");
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [searchOpen,setSearchOpen]=useState(false);
+  const [divPreselect,setDivPreselect]=useState(null); // contato p/ pré-selecionar ao criar divisão
   const [cartoesList,setCartoesList]=useState([]);
   const [divPendCount,setDivPendCount]=useState(0);
   const [modal,setModal]=useState(false);
@@ -188,13 +189,13 @@ export default function App(){
             ?<CartoesView uid={user.uid} lancs={lancs}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="cartoes" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="contatos"&&(isPremium
-            ?<ContatosView uid={user.uid} user={user} onVoltar={()=>setView("compartilhados-divisoes")}/>
+            ?<ContatosView uid={user.uid} user={user} onVoltar={()=>setView("compartilhados-divisoes")} onNovaDivisao={nome=>{setDivPreselect(nome);setView("compartilhados-divisoes");}}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="contatos" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="compartilhados-casal"&&(isPremium
             ?<CasalView uid={user.uid} lancs={lancs} user={user}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="casal" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="compartilhados-divisoes"&&(isPremium
-            ?<DivisoesView uid={user.uid} onContatos={()=>setView("contatos")}/>
+            ?<DivisoesView uid={user.uid} onContatos={()=>setView("contatos")} preselect={divPreselect} onPreselectDone={()=>setDivPreselect(null)}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="divisoes" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view.startsWith("financas")&&(isPremium
             ?<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"orcamentos":view.replace("financas-","")}/>
