@@ -44,6 +44,20 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
           ))}
         </div>
       </div>}
+      {/* ── Parcelamento (só despesa no crédito, modo normal) ── */}
+      {tipo==="Despesa"&&form.forma==="Cartão Crédito"&&(form.modo||"normal")==="normal"&&<div style={{marginBottom:16}}>
+        <Lbl opt>Parcelas</Lbl>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",paddingBottom:2}}>
+          {[1,2,3,4,5,6,10,12].map(n=>{
+            const sel=(form.parcelas||1)===n;
+            return(<button key={n} onClick={()=>setForm(f=>({...f,parcelas:n}))} className="press"
+              style={{padding:"7px 14px",borderRadius:20,border:`1px solid ${sel?G.accent:G.border}`,background:sel?G.accentL:"transparent",color:sel?G.accent:G.muted,fontSize:12,fontWeight:sel?700:500,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}>
+              {n===1?"À vista":`${n}x`}
+            </button>);
+          })}
+        </div>
+        {(form.parcelas||1)>1&&form.valor>0&&<div style={{fontSize:11,color:G.muted,marginTop:6}}>{form.parcelas}x de {(parseFloat(form.valor)/form.parcelas).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})} — total {parseFloat(form.valor).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</div>}
+      </div>}
       {/* ── Modo: Normal / Recorrente / Agendado ── */}
       <div style={{marginBottom:16}}>
         <div style={{display:"flex",gap:8,marginBottom:form.modo&&form.modo!=="normal"?10:0}}>

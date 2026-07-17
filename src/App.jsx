@@ -7,7 +7,7 @@ import {
 import { collection, doc, addDoc, deleteDoc, updateDoc, getDocs, onSnapshot } from "firebase/firestore";
 import { G, NH, HH, getCSS, setThemeVar } from "./theme.jsx";
 import { CATS_REC, CATS_DEP, FORMAS_REC, FORMAS_DEP } from "./lib/constants.js";
-import { today } from "./lib/utils.js";
+import { today, round2 } from "./lib/utils.js";
 import { gerarRecorrentesDoMes } from "./lib/recorrentes.js";
 import { usePlano } from "./lib/usePlano.js";
 import { Spinner } from "./components/ui.jsx";
@@ -90,8 +90,31 @@ export default function App(){
     const v=parseFloat(form.valor);
     if(!form.data||!v||v<=0){showT("Informe o valor e a data.","error");return;}
     const modo=form.modo||"normal";
+    const cat=tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat;
+    const base={tipo,desc:form.desc,cat,forma:form.forma,...(form.cartaoId?{cartaoId:form.cartaoId}:{})};
+    const parcelas=tipo==="Despesa"&&form.forma==="Cartão Crédito"&&modo==="normal"?(form.parcelas||1):1;
+
+    if(parcelas>1){
+      // Parcela: uma por mês, mesma diária; centavos residuais na 1ª parcela
+      const valParc=Math.floor(v/parcelas*100)/100;
+      const primeira=round2(v-valParc*(parcelas-1));
+      const grupo=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      const [y,mo,d]=form.data.split("-").map(Number);
+      for(let i=0;i<parcelas;i++){
+        const dt=new Date(y,mo-1+i,1);
+        const dim=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate();
+        const dataP=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(Math.min(d,dim)).padStart(2,"0")}`;
+        await addDoc(collection(db,"users",user.uid,"lancamentos"),{
+          ...base,desc:`${form.desc||cat} (${i+1}/${parcelas})`,
+          valor:i===0?primeira:valParc,data:dataP,agendado:false,
+          parcelaGrupo:grupo,parcelaN:i+1,parcelaTotal:parcelas,
+        });
+      }
+      showT(`Compra parcelada em ${parcelas}x!`);setModal(false);return;
+    }
+
     // Agendado: salva com flag agendado=true — não entra no saldo até a data
-    await addDoc(collection(db,"users",user.uid,"lancamentos"),{tipo,desc:form.desc,cat:tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat,forma:form.forma,valor:v,data:form.data,agendado:modo==="agendado",...(form.cartaoId?{cartaoId:form.cartaoId}:{})});
+    await addDoc(collection(db,"users",user.uid,"lancamentos"),{...base,valor:v,data:form.data,agendado:modo==="agendado"});
     if(modo==="recorrente")await addDoc(collection(db,"users",user.uid,"recorrentes"),{tipo,desc:form.desc,cat:form.cat,forma:form.forma,valor:v,freq:form.freq,dia:form.dia,...(form.freq==="semanal"?{diaSemana:form.diaSemana??1}:{}),ativo:true});
     const label=modo==="recorrente"?" ↻":modo==="agendado"?" ":"";
     showT(`${tipo} adicionada!${label}`);setModal(false);
