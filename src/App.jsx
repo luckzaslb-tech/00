@@ -156,7 +156,7 @@ export default function App(){
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {/* ── VIEWS GRATUITAS ── */}
-          {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user}/>}
+          {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user} onNovaDespesa={()=>openModal("Despesa")} onNovaReceita={()=>openModal("Receita")} onIrCartoes={()=>setView("cartoes")} onIrRelatorio={()=>setView("financas-visao")}/>}
           {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}

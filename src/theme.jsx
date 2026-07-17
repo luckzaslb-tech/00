@@ -1,7 +1,8 @@
-// ─── THEME — "banco limpo": neutros sem tinta azulada, roxo único de marca ─────
-// Escala de radius: 8 (chips) / 12 (inputs/botões) / 16 (cards) / 20 (hero/sheet)
-const DARK ={bg:"#0B0B0E",card:"#15151A",card2:"#1C1C22",border:"#26262E",border2:"#33333D",text:"#F4F4F6",muted:"#8E8E99",accent:"#A78BFA",accentL:"#A78BFA1F",green:"#34D399",greenL:"#34D39918",red:"#F87171",redL:"#F8717118",yellow:"#FBBF24",blue:"#60A5FA",orange:"#FB923C"};
-const LIGHT={bg:"#F6F6F8",card:"#FFFFFF",card2:"#F0F0F3",border:"#E4E4E9",border2:"#D1D1D9",text:"#18181D",muted:"#6E6E78",accent:"#7C3AED",accentL:"#7C3AED14",green:"#0E9F6E",greenL:"#0E9F6E14",red:"#DC2626",redL:"#DC262612",yellow:"#B45309",blue:"#2563EB",orange:"#C2570C"};
+// ─── THEME — "verde dinheiro": esmeralda de marca, neutros limpos ──────────────
+// Escala de radius: 8 (chips) / 12 (inputs/botões) / 16 (cards) / 20 (cartão/sheet)
+// accent = verde de MARCA (esmeralda); green = verde de RECEITA (mais claro, p/ distinguir no extrato)
+const DARK ={bg:"#0B0E0C",card:"#141815",card2:"#1B211D",border:"#262E28",border2:"#333D36",text:"#F2F5F3",muted:"#8B948E",accent:"#10B981",accentL:"#10B9811F",green:"#4ADE80",greenL:"#4ADE8018",red:"#F87171",redL:"#F8717118",yellow:"#FBBF24",blue:"#60A5FA",orange:"#FB923C",cardGrad1:"#047857",cardGrad2:"#0F766E",onCard:"#FFFFFF"};
+const LIGHT={bg:"#F4F7F5",card:"#FFFFFF",card2:"#EDF2EF",border:"#E1E8E3",border2:"#CDD6D0",text:"#121814",muted:"#67716B",accent:"#059669",accentL:"#05966914",green:"#16A34A",greenL:"#16A34A14",red:"#DC2626",redL:"#DC262612",yellow:"#B45309",blue:"#2563EB",orange:"#C2570C",cardGrad1:"#047857",cardGrad2:"#0F766E",onCard:"#FFFFFF"};
 let _theme="dark";
 const setThemeVar=t=>{_theme=t;};
 const getTheme=()=>_theme;
