@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { db } from "../firebase.js";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { CATS_DEP, CATS_REC, CAT_COLORS, CAT_EMOJI } from "../lib/constants.js";
 import { fmt, fmtD, today } from "../lib/utils.js";
 import { analyzePhoto, callAI, createSpeechRecognizer } from "../lib/ai.js";
@@ -6,9 +8,10 @@ import { G } from "../theme.jsx";
 import { ICON, Ic } from "../components/ui.jsx";
 
 // ─── CHAT VIEW ────────────────────────────────────────────────────────────────
-function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
-  const SUGS=["Gastei 45 no Uber","Paguei 380 no mercado","Recebi salário de 5000","Quanto gastei esse mês?"];
+function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade,uid,cartoes=[],orcamentos=[]}){
+  const SUGS=["Gastei 45 no Uber","Meu maior gasto","Gasto por cartão","Tô dentro do orçamento?"];
   const [msgs,setMsgs]=useState([]);
+  const [histLoaded,setHistLoaded]=useState(false);
   const [input,setInput]=useState("");
   const [busy,setBusy]=useState(false);
   const [pending,setPending]=useState(null);
@@ -22,6 +25,22 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
   useEffect(()=>{botRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   const push=(from,text,ex={})=>setMsgs(p=>[...p,{id:Date.now()+Math.random(),from,text,ts:new Date(),...ex}]);
   const [photoLoading,setPhotoLoading]=useState(false);
+
+  // Carrega histórico salvo (últimas mensagens de texto)
+  useEffect(()=>{
+    if(!uid){setHistLoaded(true);return;}
+    getDoc(doc(db,"users",uid,"chat","historico")).then(s=>{
+      if(s.exists()&&Array.isArray(s.data().msgs))setMsgs(s.data().msgs);
+      setHistLoaded(true);
+    }).catch(()=>setHistLoaded(true));
+  },[uid]);
+
+  // Persiste histórico (só texto; sem cards de confirmação pendentes) — máx 40 msgs
+  useEffect(()=>{
+    if(!uid||!histLoaded)return;
+    const salvar=msgs.filter(m=>m.text&&!m.lanc&&!m.multi).slice(-40).map(m=>({id:m.id,from:m.from,text:m.text}));
+    setDoc(doc(db,"users",uid,"chat","historico"),{msgs:salvar}).catch(()=>{});
+  },[msgs,uid,histLoaded]);
 
   async function startRec(){
     setRecErr("");
@@ -63,7 +82,7 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
     setInput("");if(inpRef.current)inpRef.current.style.height="auto";
     push("user",msg);setBusy(true);setPending(null);setEditVal("");setShowCatPicker(false);
     try{
-      const r=await callAI(msg,lancs);
+      const r=await callAI(msg,{lancs,cartoes,orcamentos});
       if(r.action==="lancamento"){
         push("ai",r.confirmacao||"Entendido!",{lanc:r});
         setPending(r);

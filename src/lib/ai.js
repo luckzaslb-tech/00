@@ -73,7 +73,7 @@ function localAI(msg,lancs){
   if(dm){const m=curMes();data=`${m}-${String(dm[1]).padStart(2,"0")}`;}
 
   // ── sem valor = conversa ───────────────────────────
-  const pergW=["quanto","gastei","recebi","resumo","relatorio","saldo","como estou","quanto tenho","me mostra","total","mes","esse mes"];
+  const pergW=["quanto","gastei","recebi","resumo","relatorio","saldo","como estou","quanto tenho","me mostra","total","mes","esse mes","cartao","cartoes","fatura","orcamento","limite","maior gasto","onde gastei","por categoria","categoria","dentro do","estour"];
   const hasAnyNumber=/\d/.test(t);
   if(!hasAnyNumber){
     if(pergW.some(w=>t.includes(norm(w))))return{action:"conversa",isSummary:true};
@@ -138,17 +138,58 @@ function localAI(msg,lancs){
   return{action:"conversa",resposta:'Não entendi 😕\n\nTente:\n• "Gastei 50 no mercado"\n• "Recebi 3000 de salário"'};
 }
 
-async function callAI(msg,lancs){
+const _norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+
+// ctx: {lancs, cartoes, orcamentos} — mantém compat com callAI(msg, lancsArray)
+async function callAI(msg,ctx){
+  const {lancs=[],cartoes=[],orcamentos=[]}=Array.isArray(ctx)?{lancs:ctx}:(ctx||{});
   const r=localAI(msg,lancs);
-  if(r.isSummary){
-    const mes=curMes(),dm=soPessoais(lancs).filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
-    const tR=round2(dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0));
-    const tD=round2(dm.filter(l=>l.tipo==="Despesa").reduce((s,l)=>s+l.valor,0));
-    const sal=round2(tR-tD);
-    const mn=MESES[new Date().getMonth()];
-    return{action:"conversa",resposta:`📊 ${mn}/${new Date().getFullYear()}\n\n💚 Receitas: ${fmt(tR)}\n🔴 Despesas: ${fmt(tD)}\n${sal>=0?"💰":"😬"} Saldo: ${fmt(sal)}`};
+  if(!r.isSummary)return r;
+
+  const t=_norm(msg);
+  const mes=curMes();
+  const dm=soPessoais(lancs).filter(l=>l.data?.startsWith(mes)&&isRealizado(l.data,l.agendado));
+  const desp=dm.filter(l=>l.tipo==="Despesa");
+  const mn=MESES[new Date().getMonth()];
+
+  // ── gasto por cartão ──
+  if(/carta|fatura/.test(t)&&cartoes.length){
+    const linhas=cartoes.map(k=>{
+      const g=round2(desp.filter(l=>l.cartaoId===k.id||l.cartao===k.id||l.cartao===k.nome).reduce((s,l)=>s+l.valor,0));
+      return{nome:k.nome,g};
+    }).filter(x=>x.g>0).sort((a,b)=>b.g-a.g);
+    if(!linhas.length)return{action:"conversa",resposta:`Nenhum gasto no cartão em ${mn}. 💳`};
+    const tot=round2(linhas.reduce((s,x)=>s+x.g,0));
+    return{action:"conversa",resposta:`💳 Gasto por cartão em ${mn}:\n\n`+linhas.map(x=>`• ${x.nome}: ${fmt(x.g)}`).join("\n")+`\n\nTotal no crédito: ${fmt(tot)}`};
   }
-  return r;
+
+  // ── status do orçamento ──
+  if(/orcamento|limite|dentro do|estour/.test(t)&&orcamentos.length){
+    const linhas=orcamentos.map(o=>{
+      const g=round2(desp.filter(l=>l.cat===o.cat).reduce((s,l)=>s+l.valor,0));
+      const p=o.limite>0?Math.round(g/o.limite*100):0;
+      return{cat:o.cat,g,limite:o.limite,p};
+    }).sort((a,b)=>b.p-a.p);
+    const estourou=linhas.filter(x=>x.g>x.limite);
+    const head=estourou.length?`⚠️ ${estourou.length} orçamento(s) estourado(s):`:`✅ Tudo dentro do orçamento em ${mn}!`;
+    return{action:"conversa",resposta:`${head}\n\n`+linhas.map(x=>`${x.g>x.limite?"🔴":x.p>=80?"🟡":"🟢"} ${x.cat}: ${fmt(x.g)} / ${fmt(x.limite)} (${x.p}%)`).join("\n")};
+  }
+
+  // ── maior gasto / por categoria ──
+  if(/maior gasto|onde gastei|por categoria|mais gastei|categoria/.test(t)){
+    const porCat={};
+    for(const l of desp){porCat[l.cat]=round2((porCat[l.cat]||0)+l.valor);}
+    const cats=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
+    if(!cats.length)return{action:"conversa",resposta:`Nenhuma despesa em ${mn} ainda. 🎉`};
+    const maiorLanc=[...desp].sort((a,b)=>b.valor-a.valor)[0];
+    return{action:"conversa",resposta:`📊 Onde foi o dinheiro em ${mn}:\n\n`+cats.slice(0,5).map(([c,v])=>`• ${c}: ${fmt(v)}`).join("\n")+`\n\n💥 Maior gasto: ${maiorLanc.desc||maiorLanc.cat} — ${fmt(maiorLanc.valor)}`};
+  }
+
+  // ── resumo geral (padrão) ──
+  const tR=round2(dm.filter(l=>l.tipo==="Receita").reduce((s,l)=>s+l.valor,0));
+  const tD=round2(desp.reduce((s,l)=>s+l.valor,0));
+  const sal=round2(tR-tD);
+  return{action:"conversa",resposta:`📊 ${mn}/${new Date().getFullYear()}\n\n💚 Receitas: ${fmt(tR)}\n🔴 Despesas: ${fmt(tD)}\n${sal>=0?"💰":"😬"} Saldo: ${fmt(sal)}`};
 }
 
 // ─── TRANSCRIÇÃO DE ÁUDIO ─────────────────────────────────────────────────────

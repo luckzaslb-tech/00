@@ -45,6 +45,7 @@ export default function App(){
   const [searchOpen,setSearchOpen]=useState(false);
   const [divPreselect,setDivPreselect]=useState(null); // contato p/ pré-selecionar ao criar divisão
   const [cartoesList,setCartoesList]=useState([]);
+  const [orcamentosList,setOrcamentosList]=useState([]);
   const [divPendCount,setDivPendCount]=useState(0);
   const [modal,setModal]=useState(false);
   const [tipo,setTipo]=useState("Despesa");
@@ -66,8 +67,9 @@ export default function App(){
     const unsubL=onSnapshot(collection(db,"users",uid,"lancamentos"),snap=>{setLancs(snap.docs.map(d=>({id:d.id,...d.data()})));setLancsLoaded(true);setDataLoading(false);});
     const unsubR=onSnapshot(collection(db,"users",uid,"recorrentes"),snap=>{setRecorrentes(snap.docs.map(d=>({id:d.id,...d.data()})));});
     const unsubC=onSnapshot(collection(db,"users",uid,"cartoes"),snap=>{setCartoesList(snap.docs.map(d=>({id:d.id,...d.data()})));});
+    const unsubO=onSnapshot(collection(db,"users",uid,"orcamentos"),snap=>{setOrcamentosList(snap.docs.map(d=>({id:d.id,...d.data()})));});
     const unsubDP=onSnapshot(collection(db,"inbox",uid,"divisoes_pendentes"),s=>{setDivPendCount(s.size);});
-    return()=>{unsubL();unsubR();unsubC();unsubDP();};
+    return()=>{unsubL();unsubR();unsubC();unsubO();unsubDP();};
   },[user]);
 
   // Guarda contra dupla gravação: chaves recId+data já geradas nesta sessão
@@ -174,7 +176,7 @@ export default function App(){
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
         <div style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,display:"flex",flexDirection:"column"}}>
-          <ChatView lancs={lancs} isPremium={isPremium} onUpgrade={()=>setView("planos")} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
+          <ChatView lancs={lancs} uid={user.uid} cartoes={cartoesList} orcamentos={orcamentosList} isPremium={isPremium} onUpgrade={()=>setView("planos")} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
         </div>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
