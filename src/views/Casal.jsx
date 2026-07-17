@@ -35,7 +35,7 @@ function CasalView({uid,lancs,user}){
       {[{l:"Receitas",v:tR,c:G.green},{l:"Despesas",v:tD,c:G.red},{l:"Saldo",v:tR-tD,c:tR-tD>=0?G.green:G.red}].map((k,i)=>(
         <div key={i} style={{flex:1,background:G.card,border:"1px solid "+G.border,borderRadius:14,padding:12,textAlign:"center"}}>
           <div style={{fontSize:10,color:G.muted,marginBottom:4}}>{k.l}</div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{fmt(k.v)}</div>
+          <div style={{fontVariantNumeric:"tabular-nums",fontSize:16,fontWeight:700,color:k.c}}>{fmt(k.v)}</div>
         </div>
       ))}
     </div>

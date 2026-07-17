@@ -4,7 +4,7 @@ import { collection, doc, addDoc, deleteDoc, updateDoc, getDocs } from "firebase
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { CATS_DEP, CAT_COLORS, CAT_EMOJI, MESES } from "../lib/constants.js";
 import { curMes, fmt, fmtD, getMes, isRealizado, mesLbl, pct, round2, soPessoais, today } from "../lib/utils.js";
-import { G } from "../theme.jsx";
+import { G, DARK, LIGHT, getTheme } from "../theme.jsx";
 import { ICON, Ic, Lbl } from "../components/ui.jsx";
 import { Sheet } from "../components/Sheet.jsx";
 
@@ -162,9 +162,10 @@ function FinancasView({uid,lancs:lancsAll,secao}){
     canvas.width=480*dpr; canvas.height=(120+dm.length*44+160)*dpr;
     const ctx=canvas.getContext("2d");
     ctx.scale(dpr,dpr);
-    const W=480,isDark=_theme==="dark";
-    const bg=isDark?"#0A0A0F":"#F5F5FA",cardBg=isDark?"#111118":"#ffffff",textC=isDark?"#F0EEF8":"#1A1830",mutedC=isDark?"#6B6880":"#8A87A0";
-    const greenC="#2ECC8E",redC="#E5334A",accentC="#7C6AF7";
+    const W=480,isDark=getTheme()==="dark";
+    const T=isDark?DARK:LIGHT;
+    const bg=T.bg,cardBg=T.card,textC=T.text,mutedC=T.muted;
+    const greenC=T.green,redC=T.red,accentC=T.accent;
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,canvas.height/dpr);
     // Header
     ctx.fillStyle=accentC; ctx.font="bold 22px serif"; ctx.fillText("finance",20,42);
@@ -207,21 +208,20 @@ function FinancasView({uid,lancs:lancsAll,secao}){
 
   return(<div style={{paddingBottom:8}}>
     {/* Hero */}
-    <div style={{background:"linear-gradient(145deg,#0d1a14,#0a0f1a)",border:`1px solid ${G.border}`,borderRadius:20,padding:"20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${G.green}18,transparent 70%)`,pointerEvents:"none"}}/>
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
         <div style={{fontSize:11,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Planejamento · {mesLbl(mes)}</div>
         {nlidos>0&&<div onClick={()=>void 0} style={{padding:"3px 10px",borderRadius:20,background:G.redL,border:`1px solid ${G.red}44`,color:G.red,fontSize:11,fontWeight:700,cursor:"pointer"}}>🔔 {nlidos} alerta{nlidos>1?"s":""}</div>}
       </div>
       <div style={{marginBottom:18}}>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:36,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,lineHeight:1}}>{sal>=0?"+":""}{fmt(sal)}</div>
+        <div style={{fontVariantNumeric:"tabular-nums",fontSize:36,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,lineHeight:1}}>{sal>=0?"+":""}{fmt(sal)}</div>
         <div style={{fontSize:12,color:G.muted,marginTop:4}}>Saldo livre · {tx>=0?tx.toFixed(0):0}% da renda poupado</div>
       </div>
       <div style={{display:"flex"}}>
         {[{l:"Receitas",v:fmt(tR),c:G.green},{l:"Despesas",v:fmt(tD),c:G.red},{l:"Orçamentos",v:`${orcamentos.length} ativos`,c:G.accent}].map((k,i)=>(
           <div key={i} style={{flex:1,borderRight:i<2?`1px solid ${G.border}`:"none",paddingRight:i<2?14:0,paddingLeft:i>0?14:0}}>
             <div style={{fontSize:10,color:G.muted,marginBottom:3}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:k.c}}>{k.v}</div>
+            <div style={{fontVariantNumeric:"tabular-nums",fontSize:14,fontWeight:700,color:k.c}}>{k.v}</div>
           </div>
         ))}
       </div>
@@ -282,7 +282,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
           <div key={o.id} style={{marginBottom:13}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
               <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:8,height:8,borderRadius:"50%",background:o.cor}}/><span style={{fontSize:13,fontWeight:500}}>{o.cat}</span>{g>o.limite&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`}}>Estourou</span>}</div>
-              <span style={{fontSize:12,color:G.muted}}><span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:g>o.limite?G.red:G.text}}>{fmt(g)}</span> / {fmt(o.limite)}</span>
+              <span style={{fontSize:12,color:G.muted}}><span style={{fontVariantNumeric:"tabular-nums",fontWeight:700,color:g>o.limite?G.red:G.text}}>{fmt(g)}</span> / {fmt(o.limite)}</span>
             </div>
             <div style={{height:4,background:G.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:bar,borderRadius:4}}/></div>
           </div>);})}
@@ -293,19 +293,19 @@ function FinancasView({uid,lancs:lancsAll,secao}){
           <div key={c.name} style={{marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:7,height:7,borderRadius:"50%",background:c.color}}/><span style={{fontSize:13}}>{c.name}</span></div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:G.muted}}>{p.toFixed(0)}%</span><span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:c.color}}>{ fmt(c.v)}</span></div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:G.muted}}>{p.toFixed(0)}%</span><span style={{fontVariantNumeric:"tabular-nums",fontSize:13,fontWeight:700,color:c.color}}>{ fmt(c.v)}</span></div>
             </div>
             <div style={{height:3,background:G.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c.color,borderRadius:3}}/></div>
           </div>);})}
         {tD===0&&<div style={{fontSize:13,color:G.muted}}>Sem despesas neste mês</div>}
       </div>
-      <div style={{background:"linear-gradient(145deg,#111128,#0d0d1a)",border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
+      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
         <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Projeção fim do mês</div>
         <div style={{display:"flex"}}>
           {[{l:"Gastos projetados",v:fmt(projDep),c:G.red},{l:"Saldo projetado",v:fmt(Math.abs(projSaldo)),c:projSaldo>=0?G.green:G.red}].map((k,i)=>(
             <div key={i} style={{flex:1,borderRight:i===0?`1px solid ${G.border}`:"none",paddingRight:i===0?14:0,paddingLeft:i>0?14:0}}>
               <div style={{fontSize:10,color:G.muted,marginBottom:3}}>{k.l}</div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:k.c}}>{k.v}</div>
+              <div style={{fontVariantNumeric:"tabular-nums",fontSize:16,fontWeight:700,color:k.c}}>{k.v}</div>
             </div>))}
         </div>
         <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${G.border}`,fontSize:12,color:G.muted}}>
@@ -322,8 +322,8 @@ function FinancasView({uid,lancs:lancsAll,secao}){
       </div>
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-          <div><div style={{fontSize:11,color:G.muted,marginBottom:2}}>Total gasto</div><div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.red}}>{fmt(totalGasto)}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:11,color:G.muted,marginBottom:2}}>Total limite</div><div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.accent}}>{fmt(totalLimite)}</div></div>
+          <div><div style={{fontSize:11,color:G.muted,marginBottom:2}}>Total gasto</div><div style={{fontVariantNumeric:"tabular-nums",fontSize:20,fontWeight:700,color:G.red}}>{fmt(totalGasto)}</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:11,color:G.muted,marginBottom:2}}>Total limite</div><div style={{fontVariantNumeric:"tabular-nums",fontSize:20,fontWeight:700,color:G.accent}}>{fmt(totalLimite)}</div></div>
         </div>
         <div style={{height:8,background:G.border,borderRadius:8,overflow:"hidden"}}><div style={{height:"100%",width:`${pTotal}%`,background:barTotal,borderRadius:8}}/></div>
         <div style={{fontSize:11,color:G.muted,marginTop:6}}>{pTotal.toFixed(0)}% do orçamento total utilizado</div>
@@ -339,8 +339,8 @@ function FinancasView({uid,lancs:lancsAll,secao}){
               <button onClick={()=>delOrc(o.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:2}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:12,color:G.muted}}>Gasto: <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:over?G.red:G.text}}>{fmt(g)}</span></span>
-              <span style={{fontSize:12,color:G.muted}}>{over?<span style={{color:G.red}}>Estourou {fmt(g-o.limite)}</span>:<span>Faltam <span style={{fontFamily:"'Fraunces',serif",fontWeight:700,color:G.green}}>{fmt(Math.max(0,o.limite-g))}</span></span>}</span>
+              <span style={{fontSize:12,color:G.muted}}>Gasto: <span style={{fontVariantNumeric:"tabular-nums",fontWeight:700,color:over?G.red:G.text}}>{fmt(g)}</span></span>
+              <span style={{fontSize:12,color:G.muted}}>{over?<span style={{color:G.red}}>Estourou {fmt(g-o.limite)}</span>:<span>Faltam <span style={{fontVariantNumeric:"tabular-nums",fontWeight:700,color:G.green}}>{fmt(Math.max(0,o.limite-g))}</span></span>}</span>
             </div>
             <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:bar,borderRadius:6}}/></div>
             <div style={{fontSize:11,color:G.muted,marginTop:5}}>{p.toFixed(0)}% utilizado</div>
@@ -388,7 +388,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
                     <span style={{fontSize:12,fontWeight:600,color:G.text}}>{cat}</span>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <span style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:cor}}>{fmt(v)}</span>
+                    <span style={{fontVariantNumeric:"tabular-nums",fontSize:13,fontWeight:700,color:cor}}>{fmt(v)}</span>
                     <span style={{fontSize:10,color:G.muted,marginLeft:4}}>{pct}%</span>
                   </div>
                 </div>
@@ -421,7 +421,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
                 <div style={{width:3,height:36,borderRadius:2,background:r.c,flexShrink:0}}/>
                 <div style={{flex:1}}>
                   <div style={{fontSize:11,color:G.muted}}>{r.l}</div>
-                  <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:r.c}}>{fmt(r.cur)}</div>
+                  <div style={{fontVariantNumeric:"tabular-nums",fontSize:15,fontWeight:700,color:r.c}}>{fmt(r.cur)}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   {pct!==null&&<div style={{fontSize:11,fontWeight:700,color:good?G.green:G.red}}>{up?"↑":"↓"} {pct}%</div>}
@@ -450,7 +450,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
           ].map(m=>(
             <div key={m.l} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${G.border}`}}>
               <div style={{width:3,height:36,borderRadius:2,background:m.c,flexShrink:0}}/>
-              <div style={{flex:1}}><div style={{fontSize:12,color:G.muted}}>{m.l}</div><div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:m.c}}>{m.v}</div></div>
+              <div style={{flex:1}}><div style={{fontSize:12,color:G.muted}}>{m.l}</div><div style={{fontVariantNumeric:"tabular-nums",fontSize:16,fontWeight:700,color:m.c}}>{m.v}</div></div>
               <div style={{fontSize:11,color:G.muted,textAlign:"right"}}>{m.sub}</div>
             </div>
           ));
@@ -468,7 +468,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
               <div style={{height:4,borderRadius:2,background:G.red,width:`${t.gasto>0?Math.min(100,t.gasto/8000*100):0}%`}}/>
             </div>
             <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:s>=0?G.green:G.red}}>{s>=0?"+":""}{fmt(s)}</div>
+              <div style={{fontVariantNumeric:"tabular-nums",fontSize:13,fontWeight:700,color:s>=0?G.green:G.red}}>{s>=0?"+":""}{fmt(s)}</div>
               <div style={{fontSize:10,color:G.muted}}>{fmt(t.gasto)} gastos</div>
             </div>
           </div>);})}
@@ -491,7 +491,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
                   <span style={{fontSize:11,fontWeight:700,color:G.accent}}>{Math.round(frac*100)}% concluído</span>
                 </div>
                 <div style={{height:6,background:G.border,borderRadius:6,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${frac*100}%`,background:`linear-gradient(90deg,${G.accent},${G.green})`,borderRadius:6}}/>
+                  <div style={{height:"100%",width:`${frac*100}%`,background:G.accent,borderRadius:6}}/>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.muted,marginTop:3}}>
                   <span>Dia 1</span><span>Hoje (dia {hoje.getDate()})</span><span>Dia {diasNoMes}</span>
@@ -505,7 +505,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
               ].map(r=>(
                 <div key={r.l} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:`1px solid ${G.border}`}}>
                   <div style={{width:3,height:32,borderRadius:2,background:r.c,flexShrink:0}}/>
-                  <div style={{flex:1}}><div style={{fontSize:11,color:G.muted}}>{r.l}</div><div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:r.c}}>{r.v}</div></div>
+                  <div style={{flex:1}}><div style={{fontSize:11,color:G.muted}}>{r.l}</div><div style={{fontVariantNumeric:"tabular-nums",fontSize:15,fontWeight:700,color:r.c}}>{r.v}</div></div>
                   <div style={{fontSize:10,color:G.muted,textAlign:"right",maxWidth:90}}>{r.sub}</div>
                 </div>
               ))}

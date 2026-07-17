@@ -68,45 +68,37 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
   return(
   <div style={{paddingBottom:32}}>
 
-    {/* ════ HERO CARD ════════════════════════════════ */}
+    {/* ════ HERO CARD — superfície limpa, segue o tema ═══════════ */}
     <div style={{
       margin:"0 0 20px",
-      borderRadius:28,
-      padding:"26px 22px 22px",
-      position:"relative",
-      overflow:"hidden",
-      background:"linear-gradient(145deg,#0e0c1e 0%,#160f30 45%,#0a1628 100%)",
-      boxShadow:"0 24px 48px rgba(0,0,0,.45)",
+      borderRadius:20,
+      padding:"24px 20px 20px",
+      background:G.card,
+      border:`1px solid ${G.border}`,
     }}>
-      {/* mesh blobs */}
-      <div style={{position:"absolute",top:-60,left:-40,width:220,height:220,borderRadius:"50%",background:"radial-gradient(circle,rgba(124,106,247,.22),transparent 65%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",bottom:-50,right:-30,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle,rgba(46,204,142,.14),transparent 65%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",top:"30%",right:"20%",width:80,height:80,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,.1),transparent 65%)",pointerEvents:"none"}}/>
-
       {/* top row: greeting + hide */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
         <div>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"rgba(255,255,255,.35)",marginBottom:2}}>Olá,</div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"#fff",lineHeight:1}}>
-            {(user?.displayName||user?.email||"").split(" ")[0]||"bem-vindo"} 👋
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:2}}>Olá,</div>
+          <div style={{fontSize:19,fontWeight:700,color:G.text,lineHeight:1.1}}>
+            {(user?.displayName||user?.email||"").split(" ")[0]||"bem-vindo"}
           </div>
         </div>
-        <button onClick={()=>setHide(h=>!h)} style={{background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.4)",flexShrink:0,marginLeft:8}}>
-          {hide?"👁 Ver":"👁 Ocultar"}
+        <button onClick={()=>setHide(h=>!h)} className="press" style={{background:G.card2,border:`1px solid ${G.border}`,borderRadius:20,padding:"6px 12px",cursor:"pointer",fontSize:11,fontWeight:600,color:G.muted,flexShrink:0,marginLeft:8,display:"flex",alignItems:"center",gap:5}}>
+          <Ic d={ICON.eye} size={13} color={G.muted}/>{hide?"Ver":"Ocultar"}
         </button>
       </div>
 
       {/* saldo grande */}
       <div style={{marginBottom:4}}>
-        <div style={{fontSize:10,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",marginBottom:6}}>Saldo do mês</div>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,letterSpacing:-2,lineHeight:1,
-          color:hide?"transparent":sal>=0?"#2ECC8E":"#F87171",
-          textShadow:hide?"none":sal>=0?"0 0 40px rgba(46,204,142,.3)":"0 0 40px rgba(248,113,113,.3)",
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:1.6,textTransform:"uppercase",color:G.muted,marginBottom:6}}>Saldo do mês</div>
+        <div className="num" style={{fontSize:40,fontWeight:800,letterSpacing:-1.5,lineHeight:1,
+          color:hide?"transparent":sal>=0?G.green:G.red,
           filter:hide?"blur(12px)":"none",transition:"filter .3s,color .3s",userSelect:hide?"none":"auto"}}>
           {fmt(sal)}
         </div>
-        {diff!==null&&!hide&&<div style={{fontSize:12,color:diff>=0?"rgba(46,204,142,.7)":"rgba(248,113,113,.7)",marginTop:6,display:"flex",alignItems:"center",gap:4}}>
-          <Ic d={diff>=0?ICON.arrow_up:ICON.arrow_down} size={11} color={diff>=0?"rgba(46,204,142,.7)":"rgba(248,113,113,.7)"}/>
+        {diff!==null&&!hide&&<div style={{fontSize:12,fontWeight:500,color:diff>=0?G.green:G.red,marginTop:6,display:"flex",alignItems:"center",gap:4}}>
+          <Ic d={diff>=0?ICON.arrow_up:ICON.arrow_down} size={11} color={diff>=0?G.green:G.red}/>
           {diff>=0?"+":""}{fmt(diff)} vs mês anterior
         </div>}
       </div>
@@ -120,13 +112,13 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
           const W=320,H=48;
           const pts=vals.map((v,i)=>`${(i/(vals.length-1))*W},${H-((v-min)/range)*H*0.85-4}`).join(" ");
           const fillPts=`0,${H} ${pts} ${W},${H}`;
-          const lineColor=sal>=0?"rgba(46,204,142,.6)":"rgba(248,113,113,.6)";
+          const lineColor=sal>=0?G.green:G.red;
           return(
             <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
               <defs>
                 <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={sal>=0?"rgba(46,204,142,.25)":"rgba(248,113,113,.25)"}/>
-                  <stop offset="100%" stopColor="transparent"/>
+                  <stop offset="0%" stopColor={lineColor} stopOpacity=".18"/>
+                  <stop offset="100%" stopColor={lineColor} stopOpacity="0"/>
                 </linearGradient>
               </defs>
               <polygon points={fillPts} fill="url(#sg)"/>
@@ -139,20 +131,20 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
           );
         })()}
         <div style={{position:"absolute",bottom:-2,left:0,right:0,display:"flex",justifyContent:"space-between"}}>
-          {spark.map((s,i)=><span key={i} style={{fontSize:9,color:"rgba(255,255,255,.25)"}}>{MESES[parseInt(s.m.split("-")[1])-1]}</span>)}
+          {spark.map((s,i)=><span key={i} style={{fontSize:9,color:G.muted}}>{MESES[parseInt(s.m.split("-")[1])-1]}</span>)}
         </div>
       </div>}
 
       {/* 3 chips */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:4}}>
         {[
-          {l:"Receitas",v:"+"+fmt(tR),c:"rgba(46,204,142,1)",bg:"rgba(46,204,142,.1)",b:"rgba(46,204,142,.2)"},
-          {l:"Despesas",v:"-"+fmt(tD),c:"rgba(248,113,113,1)",bg:"rgba(248,113,113,.1)",b:"rgba(248,113,113,.2)"},
-          {l:"Poupança",v:pct+"%",c:"rgba(251,191,36,1)",bg:"rgba(251,191,36,.1)",b:"rgba(251,191,36,.2)"},
+          {l:"Receitas",v:"+"+fmt(tR),c:G.green,bg:G.greenL},
+          {l:"Despesas",v:"-"+fmt(tD),c:G.red,bg:G.redL},
+          {l:"Poupança",v:pct+"%",c:G.text,bg:G.card2},
         ].map((k,i)=>(
-          <div key={i} style={{background:k.bg,border:`1px solid ${k.b}`,borderRadius:16,padding:"10px 10px 8px"}}>
-            <div style={{fontSize:9,color:"rgba(255,255,255,.35)",marginBottom:4,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:12,fontWeight:700,color:hide?"rgba(255,255,255,.15)":k.c,filter:hide?"blur(5px)":"none",transition:"filter .3s",lineHeight:1.2}}>{hide?"•••":k.v}</div>
+          <div key={i} style={{background:k.bg,borderRadius:12,padding:"10px 10px 8px"}}>
+            <div style={{fontSize:9,color:G.muted,marginBottom:4,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
+            <div className="num" style={{fontSize:12,fontWeight:700,color:hide?G.muted:k.c,filter:hide?"blur(5px)":"none",transition:"filter .3s",lineHeight:1.2}}>{hide?"•••":k.v}</div>
           </div>
         ))}
       </div>
@@ -177,13 +169,13 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
 
 
     {/* ════ GRÁFICO SEMANAL ══════════════════════════ */}
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:24,padding:"18px 16px",marginBottom:16}}>
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"18px 16px",marginBottom:16}}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20}}>
         <div>
           <div style={{fontSize:11,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Gastos por semana</div>
           {hovWeek
-            ?<div style={{marginTop:4}}><span style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:G.red}}>{fmt(hovWeek.v)}</span><span style={{fontSize:11,color:G.muted,marginLeft:6}}>{hovWeek.name} · dia {hovWeek.s}–{hovWeek.e}</span></div>
-            :<div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:G.text,marginTop:4}}>{hv(fmt(weeks.reduce((s,w)=>s+w.v,0)))}</div>
+            ?<div style={{marginTop:4}}><span style={{fontVariantNumeric:"tabular-nums",fontSize:18,fontWeight:700,color:G.red}}>{fmt(hovWeek.v)}</span><span style={{fontSize:11,color:G.muted,marginLeft:6}}>{hovWeek.name} · dia {hovWeek.s}–{hovWeek.e}</span></div>
+            :<div style={{fontVariantNumeric:"tabular-nums",fontSize:18,fontWeight:700,color:G.text,marginTop:4}}>{hv(fmt(weeks.reduce((s,w)=>s+w.v,0)))}</div>
           }
         </div>
         <div style={{fontSize:11,color:G.muted,marginTop:2}}>{mesLblFull(mes)}</div>
@@ -202,12 +194,9 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
                 <div style={{fontSize:9,color:hov?G.red:"transparent",fontWeight:700,transition:"color .15s",textAlign:"center"}}>{fmt(w.v).replace("R$ ","")}</div>
                 <div style={{width:"100%",display:"flex",flexDirection:"column",justifyContent:"flex-end",flex:1,position:"relative"}}>
                   <div style={{
-                    width:"100%",height:Math.max(h,2),borderRadius:"8px 8px 4px 4px",
-                    background:hov
-                      ?`linear-gradient(180deg,${G.red},${G.red}88)`
-                      :w.v>0?`linear-gradient(180deg,${G.red}99,${G.red}44)`:`${G.border}`,
+                    width:"100%",height:Math.max(h,2),borderRadius:"6px 6px 2px 2px",
+                    background:hov?G.red:w.v>0?G.red+"77":G.border,
                     transition:"all .2s",
-                    boxShadow:hov?`0 0 16px ${G.red}55`:"none",
                   }}/>
                 </div>
                 <div style={{fontSize:10,color:hov?G.text:G.muted,fontWeight:hov?700:400,transition:"color .15s"}}>{w.name}</div>
@@ -220,7 +209,7 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
     </div>
 
     {/* ════ DONUT + TOP CATS ═════════════════════════ */}
-    {cats.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:24,padding:"18px 16px",marginBottom:16}}>
+    {cats.length>0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"18px 16px",marginBottom:16}}>
       <div style={{fontSize:11,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:16}}>Onde foi o dinheiro</div>
       <div style={{display:"flex",alignItems:"center",gap:20}}>
 
@@ -250,11 +239,11 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
             {selCat
               ?<><div style={{fontSize:9,color:G.muted,textAlign:"center",lineHeight:1.2,maxWidth:48}}>{selCat}</div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:12,fontWeight:700,color:cats.find(c=>c.name===selCat)?.color||G.accent}}>
+                <div style={{fontVariantNumeric:"tabular-nums",fontSize:12,fontWeight:700,color:cats.find(c=>c.name===selCat)?.color||G.accent}}>
                   {hide?"•":fmt(cats.find(c=>c.name===selCat)?.v||0).replace("R$ ","R$")}
                 </div></>
               :<><div style={{fontSize:9,color:G.muted}}>Total</div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:11,fontWeight:700,color:G.text}}>{hide?"•••":fmt(tD).replace("R$ ","R$")}</div></>
+                <div style={{fontVariantNumeric:"tabular-nums",fontSize:11,fontWeight:700,color:G.text}}>{hide?"•••":fmt(tD).replace("R$ ","R$")}</div></>
             }
           </div>
         </div>
@@ -272,7 +261,7 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
                     <div style={{width:6,height:6,borderRadius:"50%",background:cat.color,flexShrink:0}}/>
                     <span style={{fontSize:12,color:G.text,fontWeight:sel?700:400}}>{cat.name}</span>
                   </div>
-                  <span style={{fontFamily:"'Fraunces',serif",fontSize:11,fontWeight:700,color:sel?cat.color:G.muted}}>{hide?"•••":fmt(cat.v)}</span>
+                  <span style={{fontVariantNumeric:"tabular-nums",fontSize:11,fontWeight:700,color:sel?cat.color:G.muted}}>{hide?"•••":fmt(cat.v)}</span>
                 </div>
                 <div style={{height:3,background:G.border,borderRadius:3,overflow:"hidden"}}>
                   <div style={{height:"100%",width:`${p}%`,background:cat.color,borderRadius:3,opacity:sel?1:.6,transition:"width .35s ease"}}/>
@@ -299,13 +288,13 @@ function Dashboard({lancs:lancsAll,onDelete,user}){
             <div style={{fontSize:13,fontWeight:500,color:G.text}}>{l.desc||l.cat}</div>
             <div style={{fontSize:10,color:G.muted}}>{fmtD(l.data)}</div>
           </div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:isR?G.green:G.red}}>{hv((isR?"+":"-")+fmt(l.valor))}</div>
+          <div style={{fontVariantNumeric:"tabular-nums",fontSize:13,fontWeight:700,color:isR?G.green:G.red}}>{hv((isR?"+":"-")+fmt(l.valor))}</div>
         </div>
       );})}
     </div>}
 
     {/* ════ ÚLTIMOS LANÇAMENTOS ══════════════════════ */}
-    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:24,padding:"18px 16px"}}>
+    <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"18px 16px"}}>
       <div style={{fontSize:11,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:14}}>Últimos lançamentos</div>
       {dm.length===0
         ?<div style={{textAlign:"center",color:G.muted,padding:"24px 0",fontSize:13}}>Nenhum lançamento neste mês</div>

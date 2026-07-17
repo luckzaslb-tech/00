@@ -50,7 +50,7 @@ function CartoesView({uid,lancs}){
 
     {/* Header */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G.text}}>Cartões de Crédito</div>
+      <div style={{fontVariantNumeric:"tabular-nums",fontSize:20,fontWeight:700,color:G.text}}>Cartões de Crédito</div>
       <button onClick={()=>setAdding(v=>!v)} className="press"
         style={{width:36,height:36,borderRadius:10,border:"none",background:G.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
         <Ic d={adding?ICON.x:ICON.plus} size={18}/>
@@ -110,11 +110,11 @@ function CartoesView({uid,lancs}){
           <div style={{background:`linear-gradient(135deg,${k.cor}dd,${k.cor}88)`,padding:"20px 18px 16px",position:"relative"}}>
             <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
             <div style={{position:"absolute",bottom:-30,right:20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)"}}/>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:"#fff",marginBottom:12}}>{k.nome}</div>
+            <div style={{fontVariantNumeric:"tabular-nums",fontSize:17,fontWeight:700,color:"#fff",marginBottom:12}}>{k.nome}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
               <div>
                 <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8}}>Gasto</div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"#fff"}}>{fmt(gastos)}</div>
+                <div style={{fontVariantNumeric:"tabular-nums",fontSize:20,fontWeight:700,color:"#fff"}}>{fmt(gastos)}</div>
               </div>
               {k.limite>0&&<div style={{textAlign:"right"}}>
                 <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8}}>Limite</div>

@@ -52,7 +52,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
       <div style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:G.muted,marginBottom:8}}>
         {isR?"Total de Receitas":"Total de Despesas"} · {mf?mesLblFull(mf):"Todos os meses"}
       </div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,letterSpacing:-1.5,lineHeight:1,color:ac,
+      <div style={{fontVariantNumeric:"tabular-nums",fontSize:38,fontWeight:700,letterSpacing:-1.5,lineHeight:1,color:ac,
         textShadow:`0 0 32px ${ac}33`,marginBottom:16}}>
         {(isR?"+":"-")}{fmt(totalFiltro)}
       </div>
@@ -66,7 +66,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg,border:`1px solid ${k.b}`,borderRadius:14,padding:"10px 10px 8px"}}>
             <div style={{fontSize:9,color:G.muted,marginBottom:3,fontWeight:600,letterSpacing:.8,textTransform:"uppercase"}}>{k.l}</div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:13,fontWeight:700,color:k.c,lineHeight:1.2}}>{k.v}</div>
+            <div style={{fontVariantNumeric:"tabular-nums",fontSize:13,fontWeight:700,color:k.c,lineHeight:1.2}}>{k.v}</div>
           </div>
         ))}
       </div>
@@ -79,7 +79,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
         <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.accent}}>
           {isR?"Ganhos":"Custos"} recorrentes
         </span>
-        <span style={{fontSize:12,fontFamily:"'Fraunces',serif",fontWeight:700,color:ac,marginLeft:"auto"}}>{fmt(totalRec)}<span style={{fontSize:10,color:G.muted,fontWeight:400}}>/mês</span></span>
+        <span style={{fontSize:12,fontVariantNumeric:"tabular-nums",fontWeight:700,color:ac,marginLeft:"auto"}}>{fmt(totalRec)}<span style={{fontSize:10,color:G.muted,fontWeight:400}}>/mês</span></span>
       </div>
       <div style={{padding:"0 16px"}}>
         {listaRec.map(r=>(
@@ -96,7 +96,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
                 <span style={{fontSize:10,color:G.muted}}>{r.dia?`dia ${r.dia}`:""}</span>
               </div>
             </div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:r.ativo?ac:G.muted,flexShrink:0}}>{fmt(r.valor)}</div>
+            <div style={{fontVariantNumeric:"tabular-nums",fontSize:14,fontWeight:700,color:r.ativo?ac:G.muted,flexShrink:0}}>{fmt(r.valor)}</div>
             <button onClick={()=>onToggleRec(r.id)} className="press"
               style={{width:38,height:22,borderRadius:11,border:"none",cursor:"pointer",transition:"background .2s",flexShrink:0,
                 background:r.ativo?ac:G.border,position:"relative"}}>
@@ -172,7 +172,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:10,color:G.muted}}>{p.toFixed(0)}%</span>
-                <span style={{fontFamily:"'Fraunces',serif",fontSize:12,fontWeight:700,color:cat.color}}>{fmt(cat.v)}</span>
+                <span style={{fontVariantNumeric:"tabular-nums",fontSize:12,fontWeight:700,color:cat.color}}>{fmt(cat.v)}</span>
               </div>
             </div>
             <div style={{height:4,background:G.border,borderRadius:4,overflow:"hidden"}}>
@@ -189,7 +189,7 @@ function LancsView({tipo,lancs,recorrentes,onDelete,onToggleRec,onDeleteRec,isPr
         <span style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>
           {data.length} registro{data.length!==1?"s":""}
         </span>
-        <span style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:ac}}>
+        <span style={{fontVariantNumeric:"tabular-nums",fontSize:15,fontWeight:700,color:ac}}>
           {isR?"+":"-"}{fmt(totalFiltro)}
         </span>
       </div>

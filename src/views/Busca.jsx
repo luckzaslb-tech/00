@@ -89,11 +89,11 @@ function BuscaView({lancs,onDelete}){
     {resultado.length>0&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       {totalR>0&&<div style={{background:G.green+"12",border:`1px solid ${G.green}33`,borderRadius:12,padding:"10px 12px"}}>
         <div style={{fontSize:10,color:G.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8}}>Receitas</div>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.green,marginTop:2}}>{fmt(totalR)}</div>
+        <div style={{fontVariantNumeric:"tabular-nums",fontSize:16,fontWeight:700,color:G.green,marginTop:2}}>{fmt(totalR)}</div>
       </div>}
       {totalD>0&&<div style={{background:G.red+"12",border:`1px solid ${G.red}33`,borderRadius:12,padding:"10px 12px"}}>
         <div style={{fontSize:10,color:G.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8}}>Despesas</div>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:G.red,marginTop:2}}>{fmt(totalD)}</div>
+        <div style={{fontVariantNumeric:"tabular-nums",fontSize:16,fontWeight:700,color:G.red,marginTop:2}}>{fmt(totalD)}</div>
       </div>}
     </div>}
 
@@ -133,7 +133,7 @@ function BuscaView({lancs,onDelete}){
                 </div>
               </div>
               <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:cor}}>{l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}</div>
+                <div style={{fontVariantNumeric:"tabular-nums",fontSize:15,fontWeight:700,color:cor}}>{l.tipo==="Receita"?"+":"-"}{fmt(l.valor)}</div>
               </div>
             </div>
           );

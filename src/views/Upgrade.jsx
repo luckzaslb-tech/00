@@ -51,7 +51,7 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
     {destaque&&(()=>{
       const info={cartoes:["💳","Cartões de Crédito","Gerencie todos os seus cartões"],contatos:["👥","Contatos","Divida gastos com seus contatos"],casal:["💑","Modo Casal","Finanças compartilhadas"],divisoes:["🤝","Divisão de Contas","Divida contas com amigos"],financas:["📊","Relatórios","Orçamentos e análises"]}[destaque];
       if(!info)return null;
-      return(<div style={{background:`linear-gradient(135deg,${G.accent}22,${G.accent}08)`,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+      return(<div style={{background:G.accentL,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
         <span style={{fontSize:28}}>{info[0]}</span>
         <div>
           <div style={{fontSize:11,color:G.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,marginBottom:2}}>Recurso Premium</div>
@@ -62,12 +62,12 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
     })()}
     <div style={{textAlign:"center",padding:"8px 0 4px"}}>
       <div style={{fontSize:36,marginBottom:6}}>✨</div>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:G.text}}>Planos</div>
+      <div style={{fontVariantNumeric:"tabular-nums",fontSize:24,fontWeight:700,color:G.text}}>Planos</div>
       <div style={{fontSize:13,color:G.muted,marginTop:4}}>Escolha o melhor para você</div>
     </div>
 
     {/* Status atual */}
-    {isPrem&&<div style={{background:`linear-gradient(135deg,${G.accent}22,${G.accent}11)`,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+    {isPrem&&<div style={{background:G.accentL,border:`1px solid ${G.accent}44`,borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
       <span style={{fontSize:22}}>👑</span>
       <div>
         <div style={{fontSize:13,fontWeight:700,color:G.accent}}>Você é Premium!</div>
@@ -80,7 +80,7 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
       {!isPrem&&<div style={{position:"absolute",top:-10,left:20,background:G.accent,color:"#fff",fontSize:10,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:.8}}>PLANO ATUAL</div>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
         <div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:G.text}}>Gratuito</div>
+          <div style={{fontVariantNumeric:"tabular-nums",fontSize:18,fontWeight:700,color:G.text}}>Gratuito</div>
           <div style={{fontSize:22,fontWeight:700,color:G.text,marginTop:2}}>R$ 0<span style={{fontSize:13,color:G.muted,fontWeight:400}}>/mês</span></div>
         </div>
         <span style={{fontSize:28}}>🌱</span>
@@ -94,11 +94,11 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
     </div>
 
     {/* Card Premium */}
-    <div style={{background:`linear-gradient(145deg,${G.accent}18,${G.card})`,border:`1px solid ${G.accent}55`,borderRadius:20,padding:"18px 16px",position:"relative"}}>
+    <div style={{background:G.card,border:`1px solid ${G.accent}55`,borderRadius:20,padding:"18px 16px",position:"relative"}}>
       {isPrem&&<div style={{position:"absolute",top:-10,left:20,background:G.accent,color:"#fff",fontSize:10,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:.8}}>PLANO ATUAL</div>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
         <div>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:G.text}}>Premium</div>
+          <div style={{fontVariantNumeric:"tabular-nums",fontSize:18,fontWeight:700,color:G.text}}>Premium</div>
           <div style={{fontSize:22,fontWeight:700,color:G.accent,marginTop:2}}>R$ 19,90<span style={{fontSize:13,color:G.muted,fontWeight:400}}>/mês</span></div>
         </div>
         <span style={{fontSize:28}}>👑</span>
@@ -114,7 +114,7 @@ function UpgradeView({uid,plano,destaque="",onActivate}){
         {ativErr&&<div style={{fontSize:12,color:G.red,textAlign:"center",padding:"6px 0"}}>{ativErr}</div>}
         <button onClick={ativarTeste} disabled={ativando} className="press"
           style={{width:"100%",marginTop:14,padding:"14px",borderRadius:14,border:"none",
-            background:ativando?"#555":`linear-gradient(135deg,${G.accent},#9C6AF7)`,
+            background:ativando?G.muted:G.accent,
             color:"#fff",fontSize:15,fontWeight:700,cursor:ativando?"not-allowed":"pointer",
             boxShadow:`0 4px 20px ${G.accent}44`}}>
           {ativando?"Ativando...":"✨ Ativar Premium (teste grátis)"}

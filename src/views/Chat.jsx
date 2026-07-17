@@ -156,10 +156,10 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
             ?<div style={{display:"flex",alignItems:"center",flex:1,background:G.card2,border:`1px solid ${G.border}`,borderRadius:10,padding:"4px 10px"}}>
                 <span style={{color:cor,fontWeight:700,marginRight:4,fontSize:13}}>R$</span>
                 <input value={editVal} onChange={e=>setEditVal(e.target.value.replace(/[^0-9,.]/g,""))}
-                  style={{background:"none",border:"none",outline:"none",fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:cor,width:"100%",minWidth:0}}
+                  style={{background:"none",border:"none",outline:"none",fontVariantNumeric:"tabular-nums",fontSize:17,fontWeight:700,color:cor,width:"100%",minWidth:0}}
                   inputMode="decimal"/>
               </div>
-            :<span style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:cor}}>R${Number(lanc.valor).toFixed(2).replace(".",",")}</span>
+            :<span style={{fontVariantNumeric:"tabular-nums",fontSize:17,fontWeight:700,color:cor}}>R${Number(lanc.valor).toFixed(2).replace(".",",")}</span>
           }
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:isPend?12:0}}>
@@ -210,7 +210,7 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
                     :<div style={{fontSize:11,color:G.muted,marginTop:2}}>{liveItem.cat}</div>
                   }
                 </div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:700,color:cor}}>R${liveItem.valor.toFixed(2)}</div>
+                <div style={{fontVariantNumeric:"tabular-nums",fontSize:14,fontWeight:700,color:cor}}>R${liveItem.valor.toFixed(2)}</div>
               </div>
             );
           })}
@@ -236,7 +236,7 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade}){
       <div style={{position:"relative",background:G.card,borderRadius:"22px 22px 0 0",maxHeight:"72vh",display:"flex",flexDirection:"column",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
         <div style={{display:"flex",justifyContent:"center",padding:"10px 0 4px"}}><div style={{width:36,height:4,borderRadius:2,background:G.border}}/></div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 20px 14px"}}>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700}}>Mudar categoria</div>
+          <div style={{fontVariantNumeric:"tabular-nums",fontSize:18,fontWeight:700}}>Mudar categoria</div>
           <button onClick={()=>setShowCatPicker(false)} style={{width:30,height:30,borderRadius:8,border:"none",background:G.card2,color:G.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <Ic d={ICON.x} size={14}/>
           </button>

@@ -14,7 +14,7 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
       </div>
       <div style={{textAlign:"center",marginBottom:20}}>
         <Lbl>Valor (R$)</Lbl>
-        <input type="number" inputMode="decimal" placeholder="0,00" min="0" step="0.01" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} style={{width:"100%",textAlign:"center",fontFamily:"'Fraunces',serif",fontSize:36,fontWeight:700,color:ac,background:"transparent",border:"none",borderBottom:`2px solid ${ac}`,borderRadius:0,padding:"4px 0 10px",outline:"none"}}/>
+        <input type="number" inputMode="decimal" placeholder="0,00" min="0" step="0.01" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} style={{width:"100%",textAlign:"center",fontVariantNumeric:"tabular-nums",fontSize:36,fontWeight:700,color:ac,background:"transparent",border:"none",borderBottom:`2px solid ${ac}`,borderRadius:0,padding:"4px 0 10px",outline:"none"}}/>
       </div>
       <div style={{marginBottom:14}}><Lbl opt>Descrição</Lbl><input type="text" placeholder="Ex: Salário, Mercado, Uber..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} className="inp"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>

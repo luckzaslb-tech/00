@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { G } from "../theme.jsx";
 import { ICON, Ic } from "./ui.jsx";
-import { Nav } from "./Nav.jsx";
-import { Dashboard } from "../views/Dashboard.jsx";
 
 // ─── DRAWER ───────────────────────────────────────────────────────────────────
 function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,onToggleTheme}){
@@ -43,8 +41,8 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
         {/* Header */}
         <div style={{padding:"20px 20px 16px",borderBottom:`1px solid ${G2.border}`}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>fin<span style={{color:G2.accent}}>ance</span></div>
-            <button onClick={onClose} style={{width:30,height:30,borderRadius:8,border:"none",background:G2.card2,color:G2.muted,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <div style={{fontSize:22,fontWeight:800,letterSpacing:-.5}}>fin<span style={{color:G2.accent}}>ance</span></div>
+            <button onClick={onClose} aria-label="Fechar menu" style={{width:32,height:32,borderRadius:10,border:"none",background:G2.card2,color:G2.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Ic d={ICON.x} size={15}/></button>
           </div>
           {user&&<div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:38,height:38,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`2px solid ${G2.border2}`}}>
@@ -70,7 +68,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
           <button onClick={()=>setCompOpen(v=>!v)} className="press" style={btnStyle(compActive)}>
             <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.handshake} size={18}/></span>
             <span style={{flex:1}}>Compartilhados</span>
-            <span style={{fontSize:12,color:G2.muted,transform:compOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
+            <span style={{display:"flex",color:G2.muted,transform:compOpen?"rotate(180deg)":"none",transition:"transform .2s"}}><Ic d="M6 9l6 6 6-6" size={14}/></span>
           </button>
           {compOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
             {compSubs.map(s=>(
@@ -85,7 +83,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
           <button onClick={()=>setFinOpen(v=>!v)} className="press" style={btnStyle(finActive)}>
             <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.wallet} size={18}/></span>
             <span style={{flex:1}}>Finanças</span>
-            <span style={{fontSize:12,color:G2.muted,transform:finOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
+            <span style={{display:"flex",color:G2.muted,transform:finOpen?"rotate(180deg)":"none",transition:"transform .2s"}}><Ic d="M6 9l6 6 6-6" size={14}/></span>
           </button>
           {finOpen&&<div style={{paddingLeft:16,marginBottom:4}}>
             {finSubs.map(s=>(
@@ -99,7 +97,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
         {/* Footer */}
         <div style={{padding:"10px 10px 24px",borderTop:`1px solid ${G2.border}`}}>
           <button onClick={()=>{setView("planos");onClose();}} className="press" style={btnStyle(view==="planos")}>
-            <span style={{width:24,display:"flex",justifyContent:"center"}}>✨</span>Planos & Premium
+            <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.star} size={18}/></span>Planos & Premium
           </button>
           <button onClick={()=>setShowDuvidas(true)} className="press" style={btnStyle(false)}>
             <span style={{width:24,display:"flex",justifyContent:"center"}}><Ic d={ICON.help||"M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm2-1.645A3.502 3.502 0 0012 8.5a3.501 3.501 0 00-3.433 2.813l1.963.382A1.5 1.5 0 1113.5 13H12v1.355z"} size={18}/></span>Dúvidas
@@ -121,8 +119,8 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
           <div style={{display:"flex",justifyContent:"center",padding:"10px 0 4px"}}><div style={{width:36,height:4,borderRadius:2,background:G2.border}}/></div>
           {/* header */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 20px 14px",borderBottom:`1px solid ${G2.border}`}}>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:G2.text}}>❓ Dúvidas</div>
-            <button onClick={()=>setShowDuvidas(false)} style={{width:30,height:30,borderRadius:8,border:"none",background:G2.card2,color:G2.muted,cursor:"pointer",fontSize:16}}>✕</button>
+            <div style={{fontSize:19,fontWeight:700,color:G2.text}}>Dúvidas</div>
+            <button onClick={()=>setShowDuvidas(false)} aria-label="Fechar" style={{width:32,height:32,borderRadius:10,border:"none",background:G2.card2,color:G2.muted,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Ic d={ICON.x} size={15}/></button>
           </div>
           {/* content */}
           <div style={{overflowY:"auto",padding:"16px 20px 24px",display:"flex",flexDirection:"column",gap:16}}>
@@ -217,7 +215,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
               <div key={si} style={{background:G2.card2,borderRadius:16,padding:"14px 16px",border:`1px solid ${G2.border}`}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                   <span style={{fontSize:20}}>{sec.emoji}</span>
-                  <span style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:700,color:G2.text}}>{sec.titulo}</span>
+                  <span style={{fontVariantNumeric:"tabular-nums",fontSize:15,fontWeight:700,color:G2.text}}>{sec.titulo}</span>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {sec.itens.map((item,ii)=>(

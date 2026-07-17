@@ -10,13 +10,13 @@ function Head({view,onRec,onDep,user,onDrawer,divPendCount=0,onSearch}){
     <div style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",height:HH,paddingLeft:16,paddingRight:16,paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"content-box"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{position:"relative",flexShrink:0}}>
-        <button onClick={onDrawer} className="press" style={{width:34,height:34,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,padding:0,flexShrink:0}}>
-          {[0,1,2].map(i=><div key={i} style={{width:16,height:2,borderRadius:1,background:G.text}}/>)}
+        <button onClick={onDrawer} aria-label="Menu" className="press" style={{width:36,height:36,borderRadius:10,border:"none",background:G.card2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,flexShrink:0}}>
+          <Ic d={ICON.menu} size={17} color={G.text}/>
         </button>
         {divPendCount>0&&<span style={{position:"absolute",top:-3,right:-3,width:8,height:8,borderRadius:"50%",background:G.red,border:"2px solid "+G.card}}/>}
         </div>
-        <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,letterSpacing:-.5}}>fin<span style={{color:G.accent}}>ance</span>
-          <span style={{fontFamily:"'Figtree',sans-serif",fontSize:12,fontWeight:400,color:G.muted,marginLeft:8}}>{TITLES[view]||""}</span>
+        <div style={{fontSize:18,fontWeight:800,letterSpacing:-.5}}>fin<span style={{color:G.accent}}>ance</span>
+          <span style={{fontSize:12,fontWeight:400,color:G.muted,marginLeft:8}}>{TITLES[view]||""}</span>
         </div>
       </div>
       {showAdd&&<div style={{display:"flex",gap:8}}>

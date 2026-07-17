@@ -14,7 +14,7 @@ function Nav({view,setView}){
         <button key={it.id} onClick={()=>setView(it.id)} className="press" style={{flex:1,padding:"8px 0",background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:view===it.id?G.accent:G.muted,position:"relative"}}>
           {view===it.id&&<div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:2,borderRadius:"0 0 2px 2px",background:G.accent}}/>}
           <span style={{display:"flex",alignItems:"center",justifyContent:"center",height:20}}>{it.icon}</span>
-          <span style={{fontSize:9,fontWeight:600}}>{it.l}</span>
+          <span style={{fontSize:10,fontWeight:600}}>{it.l}</span>
         </button>
       ))}
     </div>

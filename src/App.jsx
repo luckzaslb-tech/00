@@ -133,9 +133,14 @@ export default function App(){
   }
   async function handleLogout(){if(window.confirm("Sair da conta?"))await signOut(auth);}
 
-  if(authLoading)return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0A0A0F"}}><Spinner size={32}/></div>);
-  if(!user)return <LoginScreen onGoogle={handleGoogle} onApple={handleApple} onEmail={handleEmail} loading={loginLoading} error={loginError}/>;
-  if(loadingPlano)return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0A0A0F"}}><Spinner size={32}/></div>);
+  // O <style> global precisa existir também nos returns antecipados (login/loaders)
+  const Loader=(
+    <><style>{CSS}</style>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:G.bg}}><Spinner size={32}/></div></>
+  );
+  if(authLoading)return Loader;
+  if(!user)return(<><style>{CSS}</style><LoginScreen onGoogle={handleGoogle} onApple={handleApple} onEmail={handleEmail} loading={loginLoading} error={loginError}/></>);
+  if(loadingPlano)return Loader;
 
   return(<>
     <style>{CSS}</style>
