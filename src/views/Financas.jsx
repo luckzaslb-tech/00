@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { db } from "../firebase.js";
 import { collection, doc, addDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { CATS_DEP, CAT_COLORS, CAT_EMOJI, MESES } from "../lib/constants.js";
 import { curMes, fmt, fmtD, getMes, isRealizado, mesLbl, pct, round2, soPessoais, today } from "../lib/utils.js";
 import { G, DARK, LIGHT, getTheme } from "../theme.jsx";
@@ -211,7 +211,6 @@ function FinancasView({uid,lancs:lancsAll,secao}){
     <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:20,padding:"20px",marginBottom:16,position:"relative",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
         <div style={{fontSize:11,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Planejamento · {mesLbl(mes)}</div>
-        {nlidos>0&&<div onClick={()=>void 0} style={{padding:"3px 10px",borderRadius:20,background:G.redL,border:`1px solid ${G.red}44`,color:G.red,fontSize:11,fontWeight:700,cursor:"pointer"}}>🔔 {nlidos} alerta{nlidos>1?"s":""}</div>}
       </div>
       <div style={{marginBottom:18}}>
         <div style={{fontVariantNumeric:"tabular-nums",fontSize:36,fontWeight:700,letterSpacing:-2,color:sal>=0?G.green:G.red,lineHeight:1}}>{sal>=0?"+":""}{fmt(sal)}</div>
@@ -259,60 +258,6 @@ function FinancasView({uid,lancs:lancsAll,secao}){
 
 
     {/* ── VISÃO ── */}
-    {secao==="visao"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 8px 8px"}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12,paddingLeft:10}}>Poupança vs Gastos</div>
-        <ResponsiveContainer width="100%" height={140}>
-          <BarChart data={trend} barGap={3} barCategoryGap="28%" margin={{left:-18,right:8}}>
-            <XAxis dataKey="name" tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-            <YAxis tick={{fill:G.muted,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
-            <Tooltip contentStyle={{background:G.card2,border:`1px solid ${G.border2}`,borderRadius:10,fontSize:11}} cursor={{fill:"#ffffff06"}}/>
-            <Bar dataKey="poupanca" name="Poupança" fill={G.green} radius={[4,4,0,0]} fillOpacity={.85}/>
-            <Bar dataKey="gasto" name="Gastos" fill={G.red} radius={[4,4,0,0]} fillOpacity={.7}/>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted}}>Orçamentos do Mês</div>
-          <button onClick={()=>void 0} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>ver todos →</button>
-        </div>
-        {orcamentos.length===0?<div style={{fontSize:13,color:G.muted}}>Nenhum orçamento cadastrado</div>
-          :orcamentos.slice(0,4).map(o=>{const g=gastosCat(o.cat);const p=o.limite>0?Math.min(100,g/o.limite*100):0;const bar=p<70?G.green:p<90?G.yellow:G.red;return(
-          <div key={o.id} style={{marginBottom:13}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-              <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:8,height:8,borderRadius:"50%",background:o.cor}}/><span style={{fontSize:13,fontWeight:500}}>{o.cat}</span>{g>o.limite&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`}}>Estourou</span>}</div>
-              <span style={{fontSize:12,color:G.muted}}><span style={{fontVariantNumeric:"tabular-nums",fontWeight:700,color:g>o.limite?G.red:G.text}}>{fmt(g)}</span> / {fmt(o.limite)}</span>
-            </div>
-            <div style={{height:4,background:G.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:bar,borderRadius:4}}/></div>
-          </div>);})}
-      </div>
-      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Onde o dinheiro foi</div>
-        {CATS_DEP.map(c=>({name:c,v:gastosCat(c),color:CAT_COLORS[c]||"#94A3B8"})).filter(c=>c.v>0).sort((a,b)=>b.v-a.v).slice(0,6).map(c=>{const p=tD>0?c.v/tD*100:0;return(
-          <div key={c.name} style={{marginBottom:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:7,height:7,borderRadius:"50%",background:c.color}}/><span style={{fontSize:13}}>{c.name}</span></div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:G.muted}}>{p.toFixed(0)}%</span><span style={{fontVariantNumeric:"tabular-nums",fontSize:13,fontWeight:700,color:c.color}}>{ fmt(c.v)}</span></div>
-            </div>
-            <div style={{height:3,background:G.border,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c.color,borderRadius:3}}/></div>
-          </div>);})}
-        {tD===0&&<div style={{fontSize:13,color:G.muted}}>Sem despesas neste mês</div>}
-      </div>
-      <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>Projeção fim do mês</div>
-        <div style={{display:"flex"}}>
-          {[{l:"Gastos projetados",v:fmt(projDep),c:G.red},{l:"Saldo projetado",v:fmt(Math.abs(projSaldo)),c:projSaldo>=0?G.green:G.red}].map((k,i)=>(
-            <div key={i} style={{flex:1,borderRight:i===0?`1px solid ${G.border}`:"none",paddingRight:i===0?14:0,paddingLeft:i>0?14:0}}>
-              <div style={{fontSize:10,color:G.muted,marginBottom:3}}>{k.l}</div>
-              <div style={{fontVariantNumeric:"tabular-nums",fontSize:16,fontWeight:700,color:k.c}}>{k.v}</div>
-            </div>))}
-        </div>
-        <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${G.border}`,fontSize:12,color:G.muted}}>
-          Baseado em {hoje.getDate()} dias de {diasNoMes} · {(frac*100).toFixed(0)}% do mês transcorrido
-        </div>
-      </div>
-    </div>}
 
     {/* ── ORÇAMENTOS ── */}
     {secao==="orcamentos"&&<div>
@@ -320,6 +265,12 @@ function FinancasView({uid,lancs:lancsAll,secao}){
         <div><div style={{fontSize:15,fontWeight:700}}>{orcamentos.length} orçamentos</div><div style={{fontSize:12,color:G.muted,marginTop:2}}>Limite mensal por categoria</div></div>
         <button onClick={()=>{setFo({cat:CATS_DEP[0],limite:"",cor:ORC_CORES[0]});setSheet("orc");}} className="press" style={{padding:"9px 18px",borderRadius:20,border:`1px solid ${G.accent}55`,background:G.accentL,color:G.accent,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Novo</button>
       </div>
+      {/* Avisos automáticos de estouro/limite (antes era a tela "Alertas") */}
+      {autoAlertas.length>0&&<div style={{marginBottom:14,display:"flex",flexDirection:"column",gap:8}}>
+        {autoAlertas.map((a,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderRadius:12,background:a.cor+"12",border:`1px solid ${a.cor}44`}}>
+          <Ic d={ICON.warning} size={16} color={a.cor}/><div style={{fontSize:12,lineHeight:1.4,flex:1,color:G.text}}>{a.msg}</div>
+        </div>)}
+      </div>}
       <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
           <div><div style={{fontSize:11,color:G.muted,marginBottom:2}}>Total gasto</div><div style={{fontVariantNumeric:"tabular-nums",fontSize:20,fontWeight:700,color:G.red}}>{fmt(totalGasto)}</div></div>
@@ -525,28 +476,6 @@ function FinancasView({uid,lancs:lancsAll,secao}){
       </div>
 
     </div>}
-    {secao==="alertas"&&<div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <div><div style={{fontSize:15,fontWeight:700}}>Alertas & Notificações</div><div style={{fontSize:12,color:G.muted,marginTop:2}}>{nlidos} não lido{nlidos!==1?"s":""}</div></div>
-        {alertas.some(a=>!a.lido)&&<button onClick={marcarTodosLidos} style={{fontSize:12,color:G.muted,background:"none",border:"none",cursor:"pointer"}}>Marcar todos lidos</button>}
-      </div>
-      {autoAlertas.length>0&&<div style={{marginBottom:14}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted,marginBottom:8}}>Automáticos</div>
-        {autoAlertas.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:12,background:a.cor+"12",border:`1px solid ${a.cor}44`,marginBottom:8}}><div style={{fontSize:13,lineHeight:1.5,flex:1}}>{a.msg}</div></div>)}
-      </div>}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:G.muted}}>Notificações</div>
-        <button onClick={()=>{setFa({msg:"",tipo:"lembrete"});setSheet("alerta");}} style={{fontSize:12,color:G.accent,background:"none",border:"none",cursor:"pointer"}}>+ Nova</button>
-      </div>
-      {alertas.length===0?<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,textAlign:"center",padding:"40px 20px",color:G.muted}}><div style={{fontSize:36,marginBottom:8}}><Ic d={ICON.bell} size={16}/></div><div>Nenhum alerta configurado</div></div>
-        :alertas.map(a=>(
-        <div key={a.id} style={{display:"flex",alignItems:"flex-start",gap:12,padding:14,borderRadius:14,background:a.lido?G.card2:G.card,border:`1px solid ${a.lido?G.border:G.border2}`,marginBottom:8,opacity:a.lido?.6:1}}>
-          <div style={{fontSize:20,flexShrink:0}}>{a.tipo==="meta"?"✓":a.tipo==="limite"?"⚠️":"!"}</div>
-          <div style={{flex:1}}><div style={{fontSize:13,fontWeight:a.lido?400:600,lineHeight:1.4}}>{a.msg}</div><div style={{fontSize:11,color:G.muted,marginTop:4}}>{fmtD(a.data)}</div></div>
-          {!a.lido&&<button onClick={()=>marcarLido(a.id)} style={{background:"none",border:"none",color:G.accent,cursor:"pointer",fontSize:11,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>✓ Lido</button>}
-          <button onClick={()=>delAlerta(a.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:0}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
-        </div>))}
-    </div>}
 
     {/* ── SHEETS ── */}
     <Sheet open={sheet==="orc"} onClose={()=>setSheet(null)} title="Novo Orçamento">
@@ -558,15 +487,6 @@ function FinancasView({uid,lancs:lancsAll,secao}){
       </div>
     </Sheet>
 
-    <Sheet open={sheet==="alerta"} onClose={()=>setSheet(null)} title="Novo Alerta">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><Lbl>Mensagem</Lbl><textarea value={fa.msg} onChange={e=>setFa(f=>({...f,msg:e.target.value}))} placeholder="Ex: Pagar fatura do cartão..." rows={3} className="inp" style={{resize:"none",lineHeight:1.5}}/></div>
-        <div><Lbl>Tipo</Lbl><div style={{display:"flex",gap:8}}>
-          {[{id:"lembrete",l:"Lembrete"},{id:"meta",l:"🎯 Meta"},{id:"limite",l:"⚠️ Limite"}].map(t=><div key={t.id} onClick={()=>setFa(f=>({...f,tipo:t.id}))} className="press" style={{flex:1,padding:"10px 6px",borderRadius:12,cursor:"pointer",fontSize:12,fontWeight:600,textAlign:"center",background:fa.tipo===t.id?G.accentL:G.card2,border:`1px solid ${fa.tipo===t.id?G.accent:G.border}`,color:fa.tipo===t.id?G.accent:G.muted}}>{t.l}</div>)}
-        </div></div>
-        <button onClick={salvarAlerta} className="press" style={{padding:"15px",borderRadius:14,border:"none",background:G.accent,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>Criar Alerta</button>
-      </div>
-    </Sheet>
   </div>);
 }
 

@@ -26,4 +26,12 @@ const isRealizado = (d, agendado) => {
 const mesLblFull = ma => { try{const[y,m]=ma.split("-");return`${MESES[+m-1]}/${y}`;}catch{return ma;} };
 const mesLbl     = mesLblFull;
 const pct = (v,t) => t>0?Math.min(100,(v/t)*100):0;
-export { fmt, fmtK, getMes, fmtD, toISO, today, round2, toPartes, curMes, prevMes, soPessoais, isRealizado, mesLblFull, mesLbl, pct };
+// Rótulo de dia no extrato: "Hoje" / "Ontem" / "12 jul"
+const lblDia = data => {
+  if(data===today())return "Hoje";
+  const o=new Date();o.setDate(o.getDate()-1);
+  if(data===toISO(o))return "Ontem";
+  const[y,m,d]=data.split("-");
+  return `${parseInt(d)} ${MESES[parseInt(m)-1].toLowerCase()}`;
+};
+export { fmt, fmtK, getMes, fmtD, toISO, today, round2, toPartes, curMes, prevMes, soPessoais, isRealizado, mesLblFull, mesLbl, pct, lblDia };

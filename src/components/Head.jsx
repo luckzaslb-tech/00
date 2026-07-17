@@ -2,10 +2,10 @@ import { G, HH } from "../theme.jsx";
 import { ICON, Ic } from "./ui.jsx";
 
 function Head({view,onRec,onDep,user,onDrawer,divPendCount=0,onSearch}){
-  const TITLES={dashboard:"Início",receitas:"Receitas",despesas:"Despesas",chat:"IA",
-    cartoes:"Cartões",familia:"Família / Casal",divisao:"Divisão de Contas",importar:"Importar Extrato",
-    "financas-visao":"Visão Geral","financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório","financas-alertas":"Alertas"};
-  const showAdd=["dashboard","receitas","despesas"].includes(view);
+  const TITLES={dashboard:"Início",transacoes:"Transações",chat:"IA",
+    cartoes:"Cartões",contatos:"Contatos","compartilhados-casal":"Casal","compartilhados-divisoes":"Divisões",importar:"Importar Extrato",
+    "financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório"};
+  const showAdd=["dashboard","transacoes"].includes(view);
   return(
     <div style={{position:"fixed",top:0,left:0,right:0,zIndex:300,background:G.card,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",height:HH,paddingLeft:16,paddingRight:16,paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"content-box"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>

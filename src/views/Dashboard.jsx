@@ -1,20 +1,9 @@
 import { useState } from "react";
 import { CATS_DEP, CAT_COLORS, MESES } from "../lib/constants.js";
-import { curMes, fmt, fmtD, getMes, isRealizado, prevMes, round2, soPessoais, today } from "../lib/utils.js";
+import { curMes, fmt, fmtD, getMes, isRealizado, lblDia, prevMes, round2, soPessoais, today } from "../lib/utils.js";
 import { G } from "../theme.jsx";
 import { ICON, Ic } from "../components/ui.jsx";
 import { TxRow } from "../components/TxRow.jsx";
-
-// Cabeçalho de dia no extrato: "Hoje" / "Ontem" / "12 jul"
-function lblDia(data){
-  const hoje=today();
-  if(data===hoje)return "Hoje";
-  const o=new Date();o.setDate(o.getDate()-1);
-  const ontem=`${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`;
-  if(data===ontem)return "Ontem";
-  const[y,m,d]=data.split("-");
-  return `${parseInt(d)} ${MESES[parseInt(m)-1].toLowerCase()}`;
-}
 
 // ─── DASHBOARD — neobank: cartão + ações + extrato ────────────────────────────
 function Dashboard({lancs:lancsAll,onDelete,user,onNovaDespesa,onNovaReceita,onIrCartoes,onIrRelatorio}){

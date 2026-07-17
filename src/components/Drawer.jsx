@@ -9,21 +9,18 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
   const [showDuvidas,setShowDuvidas]=useState(false);
   const G2=G;
   const navTo=(v)=>{setView(v);onClose();};
-  const finActive=["financas-visao","financas-orcamentos","financas-relatorio","financas-alertas"].includes(view);
+  const finActive=["financas-orcamentos","financas-relatorio"].includes(view);
   const compActive=["compartilhados-casal","compartilhados-divisoes"].includes(view);
 
   const items=[
-    {id:"dashboard",icon:<Ic d={ICON.home} size={18}/>,l:"Dashboard"},
-    {id:"busca",icon:<Ic d={ICON.search||"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"} size={18}/>,l:"Buscar Lançamentos"},
+    {id:"dashboard",icon:<Ic d={ICON.home} size={18}/>,l:"Início"},
+    {id:"transacoes",icon:<Ic d={ICON.wallet} size={18}/>,l:"Transações"},
     {id:"cartoes",icon:<Ic d={ICON.card} size={18}/>,l:"Cartões de Crédito"},
-    {id:"contatos",icon:<Ic d={ICON.users} size={18}/>,l:"Contatos"},
     {id:"importar",icon:<Ic d={ICON.import} size={18}/>,l:"Importar Extrato"},
   ];
   const finSubs=[
-    {id:"financas-visao",icon:<Ic d={ICON.eye} size={15}/>,l:"Visão Geral"},
     {id:"financas-orcamentos",icon:<Ic d={ICON.target} size={15}/>,l:"Orçamentos"},
     {id:"financas-relatorio",icon:<Ic d={ICON.chart} size={15}/>,l:"Relatório"},
-    {id:"financas-alertas",icon:<Ic d={ICON.bell} size={15}/>,l:"Alertas"},
   ];
   const compSubs=[
     {id:"compartilhados-casal",icon:<Ic d={ICON.handshake} size={15}/>,l:"Casal"},

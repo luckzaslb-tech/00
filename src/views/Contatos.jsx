@@ -7,7 +7,7 @@ import { ICON, Ic, Lbl } from "../components/ui.jsx";
 import { Sheet } from "../components/Sheet.jsx";
 
 // ─── CONTATOS VIEW ────────────────────────────────────────────────────────────
-function ContatosView({uid,user}){
+function ContatosView({uid,user,onVoltar}){
   const [contatos,setContatos]=useState([]);
   const [codInput,setCodInput]=useState("");
   const [buscando,setBuscando]=useState(false);
@@ -150,6 +150,10 @@ function ContatosView({uid,user}){
   const grupos=["Família","Casal","Amigos","Trabalho","Outros"];
 
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    {onVoltar&&<button onClick={onVoltar} className="press"
+      style={{display:"inline-flex",alignItems:"center",gap:6,background:"none",border:"none",color:G.muted,cursor:"pointer",fontSize:13,fontWeight:500,padding:0,alignSelf:"flex-start"}}>
+      <Ic d="M15 18l-6-6 6-6" size={16} color={G.muted}/> Voltar para Divisões
+    </button>}
     {/* Meu código */}
     <div style={{background:G.card,border:"1px solid "+G.border,borderRadius:16,padding:16}}>
       <div style={{fontSize:11,fontWeight:700,color:G.muted,letterSpacing:1,marginBottom:10}}>MEU CÓDIGO DE CONVITE</div>

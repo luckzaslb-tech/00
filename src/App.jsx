@@ -18,10 +18,9 @@ import { Drawer } from "./components/Drawer.jsx";
 import { Head } from "./components/Head.jsx";
 import { LancForm } from "./components/LancForm.jsx";
 import { Dashboard } from "./views/Dashboard.jsx";
-import { LancsView } from "./views/Lancs.jsx";
+import { TransacoesView } from "./views/Transacoes.jsx";
 import { FinancasView } from "./views/Financas.jsx";
 import { ChatView } from "./views/Chat.jsx";
-import { BuscaView } from "./views/Busca.jsx";
 import { ImportarView } from "./views/Importar.jsx";
 import { CartoesView } from "./views/Cartoes.jsx";
 import { UpgradeView } from "./views/Upgrade.jsx";
@@ -145,7 +144,7 @@ export default function App(){
   return(<>
     <style>{CSS}</style>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:G.bg}}>
-      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} onSearch={()=>setView("busca")} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
+      <Head view={view} onRec={()=>openModal("Receita")} onDep={()=>openModal("Despesa")} user={user} onSearch={()=>setView("transacoes")} onDrawer={()=>setDrawerOpen(true)} divPendCount={divPendCount}/>
       
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
@@ -156,11 +155,9 @@ export default function App(){
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {/* ── VIEWS GRATUITAS ── */}
-          {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user} onNovaDespesa={()=>openModal("Despesa")} onNovaReceita={()=>openModal("Receita")} onIrCartoes={()=>setView("cartoes")} onIrRelatorio={()=>setView("financas-visao")}/>}
-          {view==="receitas"&&<LancsView tipo="Receita" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
-          {view==="despesas"&&<LancsView tipo="Despesa" lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
+          {view==="dashboard"&&<Dashboard lancs={lancs} onDelete={deletar} user={user} onNovaDespesa={()=>openModal("Despesa")} onNovaReceita={()=>openModal("Receita")} onIrCartoes={()=>setView("cartoes")} onIrRelatorio={()=>setView("financas-relatorio")}/>}
+          {view==="transacoes"&&<TransacoesView lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}
-          {view==="busca"&&<BuscaView lancs={lancs} onDelete={deletar}/>}
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
 
           {/* ── VIEWS PREMIUM ── */}
@@ -168,20 +165,20 @@ export default function App(){
             ?<CartoesView uid={user.uid} lancs={lancs}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="cartoes" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="contatos"&&(isPremium
-            ?<ContatosView uid={user.uid} user={user}/>
+            ?<ContatosView uid={user.uid} user={user} onVoltar={()=>setView("compartilhados-divisoes")}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="contatos" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="compartilhados-casal"&&(isPremium
             ?<CasalView uid={user.uid} lancs={lancs} user={user}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="casal" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view==="compartilhados-divisoes"&&(isPremium
-            ?<DivisoesView uid={user.uid}/>
+            ?<DivisoesView uid={user.uid} onContatos={()=>setView("contatos")}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="divisoes" onActivate={p=>{forceSetPlano(p);}}/>)}
           {view.startsWith("financas")&&(isPremium
-            ?<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"visao":view.replace("financas-","")}/>
+            ?<FinancasView uid={user.uid} lancs={lancs} secao={view==="financas"?"orcamentos":view.replace("financas-","")}/>
             :<UpgradeView uid={user.uid} plano={plano} destaque="financas" onActivate={p=>{forceSetPlano(p);}}/>)}
         </main></ErrorBoundary>
       )}
-      <Nav view={view} setView={setView}/>
+      <Nav view={view} setView={setView} onMais={()=>setDrawerOpen(true)}/>
       <Drawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} view={view} setView={setView} user={user} divPendCount={divPendCount} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme}/>
     </div>
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">

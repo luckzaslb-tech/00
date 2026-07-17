@@ -3,11 +3,11 @@ import { db } from "../firebase.js";
 import { collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { fmt, fmtD, round2, toPartes, today } from "../lib/utils.js";
 import { G } from "../theme.jsx";
-import { Lbl } from "../components/ui.jsx";
+import { Lbl, Ic, ICON } from "../components/ui.jsx";
 import { Sheet } from "../components/Sheet.jsx";
 
 // ─── DIVISOES VIEW ─────────────────────────────────────────────────────────────
-function DivisoesView({uid}){
+function DivisoesView({uid,onContatos}){
   const [divisoes,setDivisoes]=useState([]);
   const [pendentes,setPendentes]=useState([]); // divisoes que outros enviaram pra mim
   const [contatos,setContatos]=useState([]);
@@ -133,6 +133,19 @@ function DivisoesView({uid}){
   const concluidas=divisoes.filter(d=>toPartes(d.partes).every(p=>p.pago));
 
   return(<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    {/* Gerenciar contatos */}
+    {onContatos&&<button onClick={onContatos} className="press"
+      style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:14,border:`1px solid ${G.border}`,background:G.card,cursor:"pointer",width:"100%",textAlign:"left"}}>
+      <div style={{width:34,height:34,borderRadius:11,background:G.accentL,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <Ic d={ICON.users} size={17} color={G.accent}/>
+      </div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:600,color:G.text}}>Gerenciar contatos</div>
+        <div style={{fontSize:11,color:G.muted}}>{contatos.length} contato{contatos.length!==1?"s":""} · adicione pra dividir contas</div>
+      </div>
+      <Ic d={ICON.arrowRight} size={16} color={G.muted}/>
+    </button>}
+
     {/* Pendentes (notificações) */}
     {pendentes.length>0&&<div style={{background:G.yellow+"15",border:"1px solid "+G.yellow+"44",borderRadius:16,padding:16}}>
       <div style={{fontSize:11,fontWeight:700,color:G.yellow,letterSpacing:.8,marginBottom:12}}>
