@@ -22,6 +22,7 @@ import { TransacoesView } from "./views/Transacoes.jsx";
 import { FinancasView } from "./views/Financas.jsx";
 import { ChatView } from "./views/Chat.jsx";
 import { ImportarView } from "./views/Importar.jsx";
+import { MetasView } from "./views/Metas.jsx";
 import { CartoesView } from "./views/Cartoes.jsx";
 import { UpgradeView } from "./views/Upgrade.jsx";
 import { LoginScreen } from "./views/Login.jsx";
@@ -185,6 +186,7 @@ export default function App(){
           {view==="transacoes"&&<TransacoesView lancs={lancs} recorrentes={recorrentes} onDelete={deletar} onToggleRec={toggleRec} onDeleteRec={deleteRec} isPremium={isPremium} onUpgrade={()=>setView("planos")}/>}
           {view==="planos"&&<UpgradeView uid={user.uid} plano={plano} onActivate={p=>{forceSetPlano(p);}}/>}
           {view==="importar"&&<ImportarView uid={user.uid} lancs={lancs} showT={showT}/>}
+          {view==="metas"&&<MetasView uid={user.uid}/>}
 
           {/* ── VIEWS PREMIUM ── */}
           {view==="cartoes"&&(isPremium

@@ -15,6 +15,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
   const items=[
     {id:"dashboard",icon:<Ic d={ICON.home} size={18}/>,l:"Início"},
     {id:"transacoes",icon:<Ic d={ICON.wallet} size={18}/>,l:"Transações"},
+    {id:"metas",icon:<Ic d={ICON.target} size={18}/>,l:"Metas"},
     {id:"cartoes",icon:<Ic d={ICON.card} size={18}/>,l:"Cartões de Crédito"},
     {id:"importar",icon:<Ic d={ICON.import} size={18}/>,l:"Importar Extrato"},
   ];
