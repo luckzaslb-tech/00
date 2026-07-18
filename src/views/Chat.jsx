@@ -238,7 +238,7 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade,uid,cartoes=[],orca
             <button onClick={cancelar} className="press" style={{padding:"10px 14px",borderRadius:10,border:`1px solid ${G.border}`,background:"none",color:G.muted,fontSize:13,cursor:"pointer"}}>✕</button>
           </div>}
         </div>}
-        <div style={{fontSize:10,color:G.muted,marginTop:3}}>{m.ts.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+        {m.ts instanceof Date&&<div style={{fontSize:10,color:G.muted,marginTop:3}}>{m.ts.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>}
       </div>))}
       {(busy||isProc)&&<div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{padding:"12px 16px",borderRadius:"18px 18px 18px 4px",background:G.card2,border:`1px solid ${G.border}`}}>

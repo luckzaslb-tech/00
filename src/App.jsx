@@ -177,9 +177,9 @@ export default function App(){
       {dataLoading?(
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",marginTop:HH,marginBottom:NH}}><Spinner size={28}/></div>
       ):view==="chat"?(
-        <div style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,display:"flex",flexDirection:"column"}}>
+        <ErrorBoundary key="chat"><div style={{position:"fixed",top:HH,left:0,right:0,bottom:NH,display:"flex",flexDirection:"column"}}>
           <ChatView lancs={lancs} uid={user.uid} cartoes={cartoesList} orcamentos={orcamentosList} isPremium={isPremium} onUpgrade={()=>setView("planos")} onAddLanc={l=>{addDoc(collection(db,"users",user.uid,"lancamentos"),l);showT("Salvo! ✓");}}/>
-        </div>
+        </div></ErrorBoundary>
       ):(
         <ErrorBoundary key={view}><main style={{position:"fixed",top:HH,left:0,right:0,bottom:`calc(${NH}px + env(safe-area-inset-bottom, 0px))`,overflowY:"auto",overflowX:"hidden",padding:"16px 14px",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",animation:"fadeUp .2s ease both",maxWidth:"100vw",boxSizing:"border-box"}}>
           {/* ── VIEWS GRATUITAS ── */}
