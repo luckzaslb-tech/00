@@ -5,8 +5,9 @@ import { today } from "../lib/utils.js";
 import { G } from "../theme.jsx";
 import { ICON, Ic } from "../components/ui.jsx";
 
-// Número padrão do Twilio Sandbox (igual para todas as contas)
+// Twilio Sandbox — número padrão e o join code da conta
 const SANDBOX_NUMBER = "+1 415 523 8886";
+const SANDBOX_JOIN = "surrounded-drove";
 
 function gerarCodigo() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -36,7 +37,7 @@ function WhatsappView({ uid }) {
 
   const passos = [
     { t: "Salve o número do WhatsApp", d: <>Adicione <b>{SANDBOX_NUMBER}</b> aos seus contatos.</> },
-    { t: "Entre no sandbox", d: <>Envie <b>join &lt;código-do-sandbox&gt;</b> para esse número (o código está no painel da Twilio).</> },
+    { t: "Entre no sandbox", d: <>Envie <b>join {SANDBOX_JOIN}</b> para esse número.</> },
     { t: "Vincule sua conta", d: <>Envie o <b>código de 6 dígitos</b> abaixo para o mesmo número.</> },
     { t: "Pronto!", d: <>Mande seus gastos por <b>texto</b> ("gastei 45 no uber") ou a <b>foto</b> de um comprovante.</> },
   ];
