@@ -429,10 +429,9 @@ function FinancasView({uid,lancs:lancsAll,secao}){
         <div style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:G.muted,marginBottom:12}}>📈 Projeção fim do mês</div>
         {(()=>{
           const diasRestantes=diasNoMes-hoje.getDate();
-          const taxaGastoDiaria=frac>0?tD/frac:0;
-          const taxaRecDiaria=frac>0?tR/frac:0;
-          const projRecFim=tR+(taxaRecDiaria*diasRestantes);
-          const projSaldoFim=projRecFim-projDep;
+          // Projeção linear (mesmo critério do gasto projetado): total do mês = valor até hoje / fração transcorrida
+          const projRecFim=frac>0?round2(tR/frac):tR;
+          const projSaldoFim=round2(projRecFim-projDep);
           return(
             <div>
               <div style={{marginBottom:14}}>
