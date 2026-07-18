@@ -31,7 +31,6 @@ const lblDia = data => {
   if(data===today())return "Hoje";
   const o=new Date();o.setDate(o.getDate()-1);
   if(data===toISO(o))return "Ontem";
-  const[y,m,d]=data.split("-");
-  return `${parseInt(d)} ${MESES[parseInt(m)-1].toLowerCase()}`;
+  return fmtD(data); // DD/MM/AAAA — formato brasileiro
 };
 export { fmt, fmtK, getMes, fmtD, toISO, today, round2, toPartes, curMes, prevMes, soPessoais, isRealizado, mesLblFull, mesLbl, pct, lblDia };
