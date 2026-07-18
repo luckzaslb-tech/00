@@ -1,6 +1,37 @@
 import { MESES } from "./constants.js";
 import { curMes, fmt, isRealizado, round2, soPessoais, toISO, today } from "./utils.js";
 
+const _nrm=s=>String(s).toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
+// Regras de categorização por palavra-chave — reusadas pelo chat e pelo importador
+const CAT_RULES=[
+  ["Salário",["salario","holerite","clr"]],["Freelance",["freelance","freela","bico","trampo extra"]],
+  ["Investimentos",["investimento","rendimento","cdb","fii","acoes","dividendo","tesouro"]],["Bônus",["bonus","gratificacao","13 salario","premio"]],
+  ["Reembolso",["reembolso","ressarcimento","devolucao","estorno"]],["Renda Extra",["renda extra","vendi","venda"]],
+  ["Alimentação",["mercado","supermercado","ifood","restaurante","lanche","pizza","hamburguer","sushi","acai","padaria","cafe","comida","almoco","jantar","feira","hortifruti","acougue","mercearia","atacadao","assai","carrefour","pao"]],
+  ["Transporte",["uber","99","taxi","onibus","metro","gasolina","combustivel","estacionamento","pedagio","posto","passagem","bilhete","brt","trem","moto","revisao","mecanico","oficina","pneu"]],
+  ["Moradia",["aluguel","condominio","iptu","agua","luz","energia","internet","reforma","manutencao","faxina","limpeza"]],
+  ["Saúde",["medico","consulta","plano de saude","plano saude","exame","hospital","dentista","ortopedista","psicologo","terapia","clinica"]],
+  ["Farmácia",["farmacia","remedio","drogaria","drogasil","ultrafarma","medicamento","vitamina"]],
+  ["Academia",["academia","gym","musculacao","crossfit","natacao","pilates","yoga","personal"]],
+  ["Educação",["curso","faculdade","escola","livro","udemy","alura","coursera","material escolar","idioma","ingles"]],
+  ["Lazer",["netflix","cinema","show","teatro","viagem","hotel","bar","balada","game","steam","ingresso","passeio","praia","parque","cerveja","chopp","boteco"]],
+  ["Assinaturas",["spotify","amazon prime","apple","youtube premium","deezer","hbo","disney","globoplay","assinatura","prime video"]],
+  ["Vestuário",["roupa","calcado","tenis","camisa","calca","vestido","sapato","shein","zara","renner","c&a","americanas"]],
+  ["Pets",["pet","veterinario","racao","dog","gato","cachorro"]],
+  ["Eletrônicos",["celular","notebook","computador","tablet","fone","headphone","carregador","smartwatch"]],
+  ["Presentes",["presente","gift","aniversario","natal","casamento"]],["Impostos",["imposto","multa","ipva","irpf","darf"]],
+  ["Dívidas",["parcela","prestacao","emprestimo","fatura","divida","financiamento"]],
+];
+const REC_CATS=["Salário","Freelance","Investimentos","Bônus","Reembolso","Renda Extra","Aluguel Recebido","Dividendos"];
+// Categoriza uma descrição por palavra-chave. tipo: "Receita" | "Despesa"
+function categorizar(desc,tipo="Despesa"){
+  const isRec=tipo==="Receita",fn=_nrm(desc);
+  for(const [c,words] of CAT_RULES){
+    if(words.some(w=>fn.includes(_nrm(w)))&&REC_CATS.includes(c)===isRec)return c;
+  }
+  return isRec?"Renda Extra":"Outros";
+}
+
 // ─── LOCAL AI — categorização por regras, zero API ───────────────────────────
 function localAI(msg,lancs){
   const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -232,4 +263,4 @@ Se não conseguir identificar retorne: {"erro":"não identificado"}`}
   }catch{return{erro:"parse error"};}
 }
 
-export { localAI, callAI, createSpeechRecognizer, analyzePhoto };
+export { localAI, callAI, createSpeechRecognizer, analyzePhoto, categorizar };
