@@ -66,13 +66,10 @@ function Dashboard({lancs:lancsAll,onDelete,user,onNovaDespesa,onNovaReceita,onI
     }}>
       <div style={{position:"absolute",top:-50,right:-30,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,255,255,.14),transparent 65%)",pointerEvents:"none"}}/>
 
-      {/* topo: wordmark + chip/contactless */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
-        <div style={{fontSize:16,fontWeight:800,letterSpacing:-.4,color:"#fff"}}>finance</div>
-        <div style={{display:"flex",alignItems:"center",gap:8,opacity:.9}}>
-          <Ic d={ICON.chip} size={22} color="rgba(255,255,255,.85)"/>
-          <Ic d={ICON.contactless} size={18} color="rgba(255,255,255,.85)"/>
-        </div>
+      {/* topo: saudação */}
+      <div style={{marginBottom:22}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",color:"rgba(255,255,255,.65)"}}>Olá,</div>
+        <div style={{fontSize:18,fontWeight:800,color:"#fff",lineHeight:1.1}}>{(user?.displayName||user?.email||"").split(" ")[0]||"bem-vindo"}</div>
       </div>
 
       {/* saldo */}
