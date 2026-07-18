@@ -2,7 +2,7 @@ import { G, HH } from "../theme.jsx";
 import { ICON, Ic } from "./ui.jsx";
 
 function Head({view,onRec,onDep,user,onDrawer,divPendCount=0,onSearch}){
-  const TITLES={dashboard:"Início",transacoes:"Transações",metas:"Metas",chat:"IA",
+  const TITLES={dashboard:"Início",transacoes:"Transações",metas:"Metas",whatsapp:"WhatsApp",chat:"IA",
     cartoes:"Cartões",contatos:"Contatos","compartilhados-casal":"Casal","compartilhados-divisoes":"Divisões",importar:"Importar Extrato",
     "financas-orcamentos":"Orçamentos","financas-relatorio":"Relatório"};
   const showAdd=["dashboard","transacoes"].includes(view);

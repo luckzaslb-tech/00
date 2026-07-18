@@ -18,6 +18,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
     {id:"metas",icon:<Ic d={ICON.target} size={18}/>,l:"Metas"},
     {id:"cartoes",icon:<Ic d={ICON.card} size={18}/>,l:"Cartões de Crédito"},
     {id:"importar",icon:<Ic d={ICON.import} size={18}/>,l:"Importar Extrato"},
+    {id:"whatsapp",icon:<Ic d={ICON.ai} size={18}/>,l:"WhatsApp"},
   ];
   const finSubs=[
     {id:"financas-orcamentos",icon:<Ic d={ICON.target} size={15}/>,l:"Orçamentos"},
