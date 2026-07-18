@@ -213,7 +213,7 @@ function Drawer({open,onClose,view,setView,user,divPendCount=0,onLogout,theme,on
               <div key={si} style={{background:G2.card2,borderRadius:16,padding:"14px 16px",border:`1px solid ${G2.border}`}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                   <span style={{fontSize:20}}>{sec.emoji}</span>
-                  <span style={{fontVariantNumeric:"tabular-nums",fontSize:15,fontWeight:700,color:G2.text}}>{sec.titulo}</span>
+                  <span style={{fontSize:15,fontWeight:700,color:G2.text}}>{sec.titulo}</span>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {sec.itens.map((item,ii)=>(

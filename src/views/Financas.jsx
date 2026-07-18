@@ -9,7 +9,6 @@ import { ICON, Ic, Lbl } from "../components/ui.jsx";
 import { Sheet } from "../components/Sheet.jsx";
 
 // ─── FINANÇAS VIEW ────────────────────────────────────────────────────────────
-const CAT_ICONS={"Moradia":"🏠","Alimentação":"🍔","Transporte":"🚗","Saúde":"❤️","Educação":"📚","Lazer":"🎮","Vestuário":"👕","Assinaturas":"📱","Pets":"🐾","Beleza e Cuidados":"💅","Eletrônicos":"💻","Presentes":"🎁","Impostos":"🧾","Dívidas":"💳","Seguros":"🛡️","Academia":"💪","Farmácia":"💊","Outros":"","Salário":"","Freelance":"🖥️","Investimentos":<Ic d={ICON.chart} size={15}/>,"Aluguel Recebido":"🏡","Bônus":"⭐","Reembolso":"↩️","Renda Extra":"💡","Dividendos":"💰"};
 const ORC_CORES=["#FB923C","#A78BFA","#F472B6","#34D399","#FBBF24","#60A5FA","#818CF8","#2DD4BF","#F97316","#E879F9"];
 
 function FinancasView({uid,lancs:lancsAll,secao}){
@@ -92,8 +91,8 @@ function FinancasView({uid,lancs:lancsAll,secao}){
   const autoAlertas=orcamentos.map(o=>{
     const g=gastosCat(o.cat);
     const p=o.limite>0?g/o.limite*100:0;
-    if(p>=100)return{cor:G.red,msg:`⚠ ${o.cat} estourou! Gasto: ${fmt(g)} / Limite: ${fmt(o.limite)}`};
-    if(p>=80)return{cor:G.yellow,msg:`⚠️ ${o.cat} atingiu ${p.toFixed(0)}% do limite (${fmt(g)} de ${fmt(o.limite)})`};
+    if(p>=100)return{cor:G.red,msg:`${o.cat} estourou! Gasto: ${fmt(g)} / Limite: ${fmt(o.limite)}`};
+    if(p>=80)return{cor:G.yellow,msg:`${o.cat} atingiu ${p.toFixed(0)}% do limite (${fmt(g)} de ${fmt(o.limite)})`};
     return null;
   }).filter(Boolean);
 
@@ -232,7 +231,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
       <div style={{position:"relative"}} ref={exportRef}>
         <button onClick={()=>setExportMenu(v=>!v)} className="press"
           style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:20,border:`1px solid ${G.border2}`,background:G.card2,color:G.muted,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:14}}>↗</span> Exportar
+          <Ic d={ICON.share} size={14} color={G.muted}/> Exportar
         </button>
         {exportMenu&&<>
           <div onClick={()=>setExportMenu(false)} style={{position:"fixed",inset:0,zIndex:299}}/>
@@ -284,7 +283,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
         {orcamentos.map(o=>{const g=gastosCat(o.cat);const p=o.limite>0?Math.min(100,g/o.limite*100):0;const over=g>o.limite;const bar=p<70?G.green:p<90?G.yellow:G.red;return(
           <div key={o.id} style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-              <div style={{width:42,height:42,borderRadius:12,flexShrink:0,background:o.cor+"22",display:"flex",alignItems:"center",justifyContent:"center"}}>{CAT_ICONS[o.cat]||"💰"}</div>
+              <div style={{width:42,height:42,borderRadius:12,flexShrink:0,background:o.cor+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:12,height:12,borderRadius:"50%",background:o.cor}}/></div>
               <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{o.cat}</div><div style={{fontSize:11,color:G.muted}}>Limite: {fmt(o.limite)}/mês</div></div>
               {over&&<span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:G.redL,color:G.red,border:`1px solid ${G.red}44`,flexShrink:0}}>+{fmt(g-o.limite)}</span>}
               <button onClick={()=>delOrc(o.id)} style={{background:"none",border:"none",color:G.border2,cursor:"pointer",fontSize:18,padding:2}} onMouseEnter={e=>e.currentTarget.style.color=G.red} onMouseLeave={e=>e.currentTarget.style.color=G.border2}>×</button>
@@ -451,7 +450,7 @@ function FinancasView({uid,lancs:lancsAll,secao}){
               {[
                 {l:"Gasto projetado",v:fmt(projDep),sub:`${fmt(tD)} até hoje`,c:G.red},
                 {l:"Receita projetada",v:fmt(projRecFim),sub:`${fmt(tR)} até hoje`,c:G.green},
-                {l:"Saldo projetado",v:fmt(projSaldoFim),sub:projSaldoFim>=0?"Positivo ✓":"Déficit ⚠️",c:projSaldoFim>=0?G.green:G.red},
+                {l:"Saldo projetado",v:fmt(projSaldoFim),sub:projSaldoFim>=0?"Positivo":"Déficit",c:projSaldoFim>=0?G.green:G.red},
                 {l:"Dias restantes",v:String(diasRestantes),sub:`de ${diasNoMes} dias`,c:G.accent},
               ].map(r=>(
                 <div key={r.l} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:`1px solid ${G.border}`}}>
@@ -465,8 +464,8 @@ function FinancasView({uid,lancs:lancsAll,secao}){
                 border:`1px solid ${projSaldoFim>=0?G.green:G.red}33`}}>
                 <div style={{fontSize:12,lineHeight:1.5,color:projSaldoFim>=0?G.green:G.red}}>
                   {projSaldoFim>=0
-                    ?`✅ No ritmo atual você deve terminar o mês com ${fmt(projSaldoFim)} de saldo positivo.`
-                    :`⚠️ No ritmo atual você pode terminar o mês com ${fmt(Math.abs(projSaldoFim))} de déficit. Considere reduzir gastos.`
+                    ?`No ritmo atual você deve terminar o mês com ${fmt(projSaldoFim)} de saldo positivo.`
+                    :`No ritmo atual você pode terminar o mês com ${fmt(Math.abs(projSaldoFim))} de déficit. Considere reduzir gastos.`
                   }
                 </div>
               </div>
