@@ -56,20 +56,7 @@ Se não conseguir identificar retorne: {"erro":"não identificado"}` }
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    // Diagnóstico temporário: /api/whatsapp?diag=1
-    if (String(req.url || "").includes("diag=1")) {
-      let adminOk = false, err = null;
-      try { getAdminDb(); adminOk = true; } catch (e) { err = e.message; }
-      return res.status(200).json({
-        serviceAccountPresente: !!process.env.FIREBASE_SERVICE_ACCOUNT,
-        formato: process.env.FIREBASE_SERVICE_ACCOUNT ? (process.env.FIREBASE_SERVICE_ACCOUNT.trim().startsWith("{") ? "json" : "base64") : null,
-        validate: process.env.WHATSAPP_VALIDATE || null,
-        adminOk, err
-      });
-    }
-    return res.status(200).send("finance whatsapp webhook");
-  }
+  if (req.method !== "POST") return res.status(200).send("finance whatsapp webhook");
   res.setHeader("Content-Type", "text/xml");
 
   const url = `https://${req.headers.host}${req.url}`;
