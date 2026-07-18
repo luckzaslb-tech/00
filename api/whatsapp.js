@@ -56,27 +56,7 @@ Se não conseguir identificar retorne: {"erro":"não identificado"}` }
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    if (String(req.url || "").includes("diag=foto")) {
-      let anthropicStatus = null, anthropicBody = null;
-      try {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_KEY || "", "anthropic-version": "2023-06-01" },
-          body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 5, messages: [{ role: "user", content: "oi" }] })
-        });
-        anthropicStatus = r.status;
-        anthropicBody = (await r.text()).slice(0, 400);
-      } catch (e) { anthropicStatus = "erro:" + e.message; }
-      return res.status(200).json({
-        twilioSid: !!process.env.TWILIO_ACCOUNT_SID,
-        twilioToken: !!process.env.TWILIO_AUTH_TOKEN,
-        anthropicKey: !!process.env.ANTHROPIC_KEY,
-        anthropicStatus, anthropicBody
-      });
-    }
-    return res.status(200).send("finance whatsapp webhook");
-  }
+  if (req.method !== "POST") return res.status(200).send("finance whatsapp webhook");
   res.setHeader("Content-Type", "text/xml");
 
   const url = `https://${req.headers.host}${req.url}`;
