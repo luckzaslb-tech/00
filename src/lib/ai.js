@@ -133,11 +133,27 @@ function localAI(msg,lancs){
   }
 
   // ── single lançamento ─────────────────────────────
+  function extrairValor(nt){
+    // Coleta todos os números e escolhe o que é o valor: marcadores de dinheiro
+    // ("R$ 90", "por 4500", "90 reais") têm prioridade; sem marcador, o maior.
+    const re=/(\d{1,3}(?:[.]\d{3})+(?:[,]\d{1,2})?|\d+[.,]\d{1,2}|\d+)/g;
+    const cands=[];let mm;
+    while((mm=re.exec(nt))!==null){
+      const num=mm[1],i=mm.index;
+      const before=nt.slice(Math.max(0,i-6),i);
+      const after=nt.slice(i+num.length,i+num.length+8);
+      let pri=0;
+      if(/(?:r?\$\s*|por\s+)$/.test(before))pri=2;
+      if(/^\s*(?:reais|real|contos?|pilas?|paus?|mangos?|dinheiros?|pratas?)\b/.test(after))pri=2;
+      cands.push({v:parseValor(num),pri});
+    }
+    if(!cands.length)return 0;
+    cands.sort((a,b)=>b.pri-a.pri||b.v-a.v);
+    return cands[0].v;
+  }
   function parseSingle(fragment){
     const nt=norm(fragment);
-    const vm=nt.match(/r?\$?\s*(\d{1,3}(?:[.]\d{3})+(?:[,]\d{1,2})?|\d+[.,]\d{1,2}|\d+)/);
-    if(!vm)return null;
-    const valor=parseValor(vm[1]);
+    const valor=extrairValor(nt);
     if(!valor)return null;
     const isRec=recW.some(w=>nt.includes(norm(w)));
     const cat=detectCat(fragment,isRec);
