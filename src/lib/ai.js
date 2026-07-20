@@ -86,9 +86,12 @@ function localAI(msg,lancs){
     return parseFloat(s)||0;
   }
   function limpDesc(fragment,cat){
+    const money=String.raw`\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+[.,]\d{1,2}|\d+`;
     let d=fragment
-      .replace(/r?\$\s*\d+(?:[.,]\d{1,2})?/gi,"")
-      .replace(/\b(gastei|paguei|comprei|recebi|ganhei|transferi|debitou|caiu|saiu|com|de|no|na|nos|nas|um|uma|o|a)\b/gi," ")
+      .replace(new RegExp(String.raw`r?\$\s*(?:${money})`,"gi"),"")                                                    // R$ 350 / r$350,00
+      .replace(new RegExp(String.raw`\b(?:${money})\s*(?:reais|real|contos?|pilas?|paus?|mangos?|dinheiros?|pratas?)\b`,"gi"),"") // 350 reais / 50 conto
+      .replace(new RegExp(String.raw`\b(?:${money})\b`,"g"),"")                                                        // número solto (o valor)
+      .replace(/\b(gastei|paguei|comprei|recebi|ganhei|transferi|debitou|caiu|saiu|com|de|do|da|no|na|nos|nas|em|num|numa|pra|para|por|um|uma)\b/gi," ")
       .replace(/\s+/g," ").trim();
     if(d.length<2)d=cat;
     return d.charAt(0).toUpperCase()+d.slice(1);
