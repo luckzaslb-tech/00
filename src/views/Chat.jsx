@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { db } from "../firebase.js";
+import { db, auth } from "../firebase.js";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { CATS_DEP, CATS_REC, CAT_COLORS, CAT_EMOJI } from "../lib/constants.js";
 import { fmt, fmtD, today } from "../lib/utils.js";
@@ -97,8 +97,8 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade,uid,cartoes=[],orca
   function confirmar(){
     if(!pending)return;
     const valorFinal=parseFloat((editVal||"0").replace(",","."))||pending.valor;
-    if(pending.action==="multiplos"){pending.itens.forEach(i=>onAddLanc({tipo:i.tipo,desc:i.desc,cat:i.cat,forma:i.forma||"PIX",valor:i.valor,data:i.data||today()}));}
-    else{onAddLanc({tipo:pending.tipo,desc:pending.desc,cat:pending.cat,forma:pending.forma||"PIX",valor:valorFinal,data:pending.data||today()});}
+    if(pending.action==="multiplos"){pending.itens.forEach(i=>onAddLanc({tipo:i.tipo,desc:i.desc,cat:i.cat,...(i.subcat?{subcat:i.subcat}:{}),forma:i.forma||"PIX",valor:i.valor,data:i.data||today()}));}
+    else{onAddLanc({tipo:pending.tipo,desc:pending.desc,cat:pending.cat,...(pending.subcat?{subcat:pending.subcat}:{}),forma:pending.forma||"PIX",valor:valorFinal,data:pending.data||today()});}
     push("ai","✅ Lançamento salvo!");
     setPending(null);setEditVal("");setShowCatPicker(false);
   }
@@ -121,7 +121,8 @@ function ChatView({lancs,onAddLanc,isPremium=false,onUpgrade,uid,cartoes=[],orca
       });
       const mime=file.type||"image/jpeg";
       push("ai","🔍 Analisando comprovante...");
-      const result=await analyzePhoto(base64,mime);
+      const token=await auth.currentUser?.getIdToken().catch(()=>null);
+      const result=await analyzePhoto(base64,mime,token);
       if(result.erro){
         push("ai","😕 Não consegui identificar os dados. Pode digitar o valor e descrição?");
       } else {

@@ -2,7 +2,7 @@
 // pelo número, interpreta texto (parser reusado) ou foto (Claude vision) e grava
 // o lançamento no Firestore via Admin. Responde com TwiML.
 import crypto from "crypto";
-import { getAdminDb } from "./_firebaseAdmin.js";
+import { getAdminDb, consumirQuota } from "./_firebaseAdmin.js";
 import { localAI } from "../src/lib/ai.js";
 import { subDe } from "../src/lib/taxonomia.js";
 import { fmt } from "../src/lib/utils.js";
@@ -95,6 +95,8 @@ export default async function handler(req, res) {
 
     // 2. Foto de comprovante
     if (numMedia > 0 && /^image\//.test(body.MediaContentType0 || "")) {
+      const q = await consumirQuota(db, uid, "foto");
+      if (!q.ok) return res.status(200).send(twiml(`Você atingiu o limite de ${q.limite} análises de foto neste mês 😕. Você ainda pode lançar por texto.`));
       const b64 = await baixarMidia(body.MediaUrl0, body.MediaContentType0);
       const info = await analisarFoto(b64, body.MediaContentType0);
       if (info.erro || !info.valor) return res.status(200).send(twiml("Não consegui ler o valor no comprovante 😕. Tente uma foto mais nítida ou me diga por texto."));

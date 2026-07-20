@@ -253,25 +253,17 @@ function createSpeechRecognizer(onResult, onError){
 }
 
 // ─── ANÁLISE DE FOTO/COMPROVANTE ──────────────────────────────────────────────
-async function analyzePhoto(base64,mimeType="image/jpeg"){
-  // Passa pelo proxy serverless (/api/chat) que injeta a ANTHROPIC_KEY — nunca chamar a API direto do browser
+// token: ID token do Firebase (o servidor exige usuário logado). O prompt e o
+// modelo agora vivem no servidor (/api/chat) — aqui só mandamos a imagem.
+async function analyzePhoto(base64,mimeType="image/jpeg",token){
   const r=await fetch("/api/chat",{
     method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      model:"claude-haiku-4-5-20251001",
-      max_tokens:400,
-      messages:[{role:"user",content:[
-        {type:"image",source:{type:"base64",media_type:mimeType,data:base64}},
-        {type:"text",text:`Você é um assistente financeiro. Analise esta imagem (comprovante, recibo, nota fiscal ou print de pagamento) e extraia as informações financeiras.
-Responda SOMENTE em JSON com este formato exato (sem markdown, sem explicação):
-{"desc":"descrição curta","valor":0.00,"tipo":"Despesa","cat":"Categoria","forma":"forma de pagamento"}
-Categorias válidas: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Vestuário, Assinaturas, Outros
-Se for receita use tipo "Receita" e categorias: Salário, Freelance, Investimentos, Bônus, Outros
-Se não conseguir identificar retorne: {"erro":"não identificado"}`}
-      ]}]
-    })
+    headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},
+    body:JSON.stringify({image:base64,mimeType}),
   });
+  if(r.status===429){const e=await r.json().catch(()=>({}));return{erro:e.error||"limite mensal atingido"};}
+  if(r.status===401)return{erro:"Faça login novamente para usar a análise de foto."};
+  if(!r.ok)return{erro:"falha ao analisar"};
   const d=await r.json();
   const txt=d.content?.[0]?.text||"{}";
   try{
