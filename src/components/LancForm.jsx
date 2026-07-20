@@ -1,10 +1,15 @@
 import { CATS_DEP, CATS_REC, FORMAS_DEP, FORMAS_REC, FREQ_OPTS } from "../lib/constants.js";
+import { subDe, subcategoriasDe } from "../lib/taxonomia.js";
 import { G } from "../theme.jsx";
 import { Lbl } from "./ui.jsx";
 
 // ─── LANC FORM ────────────────────────────────────────────────────────────────
 function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
-  const sw=t=>{setTipo(t);setForm(f=>({...f,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}));};
+  const sw=t=>{setTipo(t);setForm(f=>({...f,cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],subcat:undefined,forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0]}));};
+  const catEfetiva=tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat;
+  const subs=tipo==="Despesa"?subcategoriasDe(catEfetiva):[];
+  // subcategoria mostrada: a escolhida manualmente, ou a sugerida pela descrição
+  const subValor=form.subcat!==undefined?form.subcat:subDe(form.desc,catEfetiva);
   const ac=tipo==="Receita"?G.green:G.red;
   const isRec=form.recorrente;
   return(
@@ -19,8 +24,14 @@ function LancForm({tipo,setTipo,form,setForm,onSave,cartoes=[]}){
       <div style={{marginBottom:14}}><Lbl opt>Descrição</Lbl><input type="text" placeholder="Ex: Salário, Mercado, Uber..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} className="inp"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
         <div><Lbl>Data</Lbl><input type="date" value={form.data} onChange={e=>setForm(f=>({...f,data:e.target.value}))} className="inp"/></div>
-        <div><Lbl>Categoria</Lbl>{tipo==="Despesa"&&form.forma==="Cartão Crédito"?(<div className="inp" style={{color:G.muted,fontSize:14}}>💳 Cartão de Crédito</div>):(<select value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))} className="inp">{(tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}</select>)}</div>
+        <div><Lbl>Categoria</Lbl>{tipo==="Despesa"&&form.forma==="Cartão Crédito"?(<div className="inp" style={{color:G.muted,fontSize:14}}>💳 Cartão de Crédito</div>):(<select value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value,subcat:undefined}))} className="inp">{(tipo==="Receita"?CATS_REC:CATS_DEP).map(c=><option key={c}>{c}</option>)}</select>)}</div>
       </div>
+      {subs.length>0&&<div style={{marginBottom:14}}><Lbl opt>Subcategoria</Lbl>
+        <select value={subValor} onChange={e=>setForm(f=>({...f,subcat:e.target.value}))} className="inp">
+          <option value="">— (opcional)</option>
+          {subs.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>}
       <div style={{marginBottom:16}}><Lbl>Forma de Pagamento</Lbl>
         <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
           {(tipo==="Receita"?FORMAS_REC:FORMAS_DEP).map(f=><div key={f} onClick={()=>setForm(fm=>({...fm,forma:f}))} className="press" style={{padding:"8px 14px",borderRadius:20,cursor:"pointer",flexShrink:0,fontSize:12,fontWeight:600,background:form.forma===f?ac+"22":G.card2,border:`1px solid ${form.forma===f?ac+"88":G.border}`,color:form.forma===f?ac:G.muted}}>{f}</div>)}

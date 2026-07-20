@@ -18,6 +18,7 @@ function TxRow({l,onDelete,full,hideValor,hideDate}){
         <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3,flexWrap:"wrap"}}>
           {!hideDate&&<span style={{fontSize:11,color:G.muted}}>{fmtD(l.data)}</span>}
           <Tag color={CAT_COLORS[l.cat]||G.muted}>{l.cat}</Tag>
+          {l.subcat&&<span style={{fontSize:11,color:G.muted}}>· {l.subcat}</span>}
           {full&&<span style={{fontSize:11,color:G.muted}}>{l.forma}</span>}
           {l.auto&&<Tag color={G.accent}>auto</Tag>}
           {isPendente&&<Tag color={G.yellow}>agendado</Tag>}

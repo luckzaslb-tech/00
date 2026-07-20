@@ -4,6 +4,7 @@ import { collection, addDoc } from "firebase/firestore";
 import { CAT_COLORS } from "../lib/constants.js";
 import { fmt, fmtD, getMes, round2, today } from "../lib/utils.js";
 import { categorizar } from "../lib/ai.js";
+import { subDe } from "../lib/taxonomia.js";
 import { G } from "../theme.jsx";
 import { ICON, Ic, Tag } from "../components/ui.jsx";
 
@@ -59,9 +60,10 @@ function ImportarView({uid,lancs,showT,__seedCsv}){
       else if(iTipo<0&&/^\s*-/.test(String(rawVal)))tipo="Despesa";
       else if(iTipo<0&&/^\s*\+/.test(String(rawVal)))tipo="Receita";
       const cat=(iCat>=0&&c[iCat])?c[iCat]:categorizar(desc,tipo);
+      const subcat=tipo==="Despesa"?subDe(desc,cat):"";
       const data=(iData>=0&&c[iData])?normData(c[iData]):today();
       const chave=`${data}|${round2(valor)}|${desc.toLowerCase().trim()}`;
-      return{data,desc,valor:round2(valor),tipo,cat,forma:"Transferência",dup:existentes.has(chave),incluir:!existentes.has(chave)};
+      return{data,desc,valor:round2(valor),tipo,cat,subcat,forma:"Transferência",dup:existentes.has(chave),incluir:!existentes.has(chave)};
     }).filter(r=>r.valor>0);
     setRows(parsed);
   }
@@ -89,7 +91,7 @@ function ImportarView({uid,lancs,showT,__seedCsv}){
     setImporting(true);
     try{
       for(const r of incluidos){
-        await addDoc(collection(db,"users",uid,"lancamentos"),{tipo:r.tipo,desc:r.desc,cat:r.cat,forma:r.forma,valor:r.valor,data:r.data,agendado:false,origem:"import"});
+        await addDoc(collection(db,"users",uid,"lancamentos"),{tipo:r.tipo,desc:r.desc,cat:r.cat,...(r.subcat?{subcat:r.subcat}:{}),forma:r.forma,valor:r.valor,data:r.data,agendado:false,origem:"import"});
       }
       showT(`${incluidos.length} lançamentos importados!`);
       setCsv("");setRows([]);

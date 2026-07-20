@@ -4,6 +4,7 @@
 import crypto from "crypto";
 import { getAdminDb } from "./_firebaseAdmin.js";
 import { localAI } from "../src/lib/ai.js";
+import { subDe } from "../src/lib/taxonomia.js";
 import { fmt } from "../src/lib/utils.js";
 
 const phoneFrom = from => String(from || "").replace(/^whatsapp:/, "").trim();
@@ -97,7 +98,9 @@ export default async function handler(req, res) {
       const b64 = await baixarMidia(body.MediaUrl0, body.MediaContentType0);
       const info = await analisarFoto(b64, body.MediaContentType0);
       if (info.erro || !info.valor) return res.status(200).send(twiml("Não consegui ler o valor no comprovante 😕. Tente uma foto mais nítida ou me diga por texto."));
-      await col.add({ tipo: info.tipo || "Despesa", desc: info.desc || "Comprovante", cat: info.cat || "Outros", forma: info.forma || "Outros", valor: Number(info.valor), data, agendado: false, origem: "whatsapp" });
+      const catF = info.cat || "Outros";
+      const subF = (info.tipo || "Despesa") === "Despesa" ? subDe(info.desc || "", catF) : "";
+      await col.add({ tipo: info.tipo || "Despesa", desc: info.desc || "Comprovante", cat: catF, ...(subF ? { subcat: subF } : {}), forma: info.forma || "Outros", valor: Number(info.valor), data, agendado: false, origem: "whatsapp" });
       return res.status(200).send(twiml(`✅ ${info.tipo || "Despesa"} de ${fmt(info.valor)} em ${info.cat || "Outros"} registrada (${info.desc || "comprovante"}).`));
     }
 
@@ -105,11 +108,11 @@ export default async function handler(req, res) {
     if (texto) {
       const r = localAI(texto, []);
       if (r.action === "lancamento") {
-        await col.add({ tipo: r.tipo, desc: r.desc, cat: r.cat, forma: r.forma, valor: r.valor, data, agendado: false, origem: "whatsapp" });
-        return res.status(200).send(twiml(`✅ ${r.tipo} de ${fmt(r.valor)} em ${r.cat} registrada.`));
+        await col.add({ tipo: r.tipo, desc: r.desc, cat: r.cat, ...(r.subcat ? { subcat: r.subcat } : {}), forma: r.forma, valor: r.valor, data, agendado: false, origem: "whatsapp" });
+        return res.status(200).send(twiml(`✅ ${r.tipo} de ${fmt(r.valor)} em ${r.cat}${r.subcat ? " (" + r.subcat + ")" : ""} registrada.`));
       }
       if (r.action === "multiplos") {
-        for (const it of r.itens) await col.add({ tipo: it.tipo, desc: it.desc, cat: it.cat, forma: it.forma, valor: it.valor, data, agendado: false, origem: "whatsapp" });
+        for (const it of r.itens) await col.add({ tipo: it.tipo, desc: it.desc, cat: it.cat, ...(it.subcat ? { subcat: it.subcat } : {}), forma: it.forma, valor: it.valor, data, agendado: false, origem: "whatsapp" });
         const total = r.itens.reduce((s, i) => s + i.valor, 0);
         return res.status(200).send(twiml(`✅ ${r.itens.length} lançamentos registrados (total ${fmt(total)}).`));
       }

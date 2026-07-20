@@ -1,5 +1,6 @@
 import { MESES } from "./constants.js";
 import { curMes, fmt, isRealizado, round2, soPessoais, toISO, today } from "./utils.js";
+import { catDaTaxonomia, subDe } from "./taxonomia.js";
 
 const _nrm=s=>String(s).toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
 // Regras de categorização por palavra-chave — reusadas pelo chat e pelo importador
@@ -26,11 +27,15 @@ const REC_CATS=["Salário","Freelance","Investimentos","Bônus","Reembolso","Ren
 // Categoriza uma descrição por palavra-chave. tipo: "Receita" | "Despesa"
 function categorizar(desc,tipo="Despesa"){
   const isRec=tipo==="Receita",fn=_nrm(desc);
+  // Despesa: taxonomia (rica em sinônimos) tem prioridade
+  if(!isRec){const t=catDaTaxonomia(desc);if(t)return t;}
   for(const [c,words] of CAT_RULES){
     if(words.some(w=>fn.includes(_nrm(w)))&&REC_CATS.includes(c)===isRec)return c;
   }
   return isRec?"Renda Extra":"Outros";
 }
+// Subcategoria sugerida (despesa). tipo receita não tem subcategoria.
+function subcategorizar(desc,cat,tipo="Despesa"){return tipo==="Receita"?"":subDe(desc,cat);}
 
 // ─── LOCAL AI — categorização por regras, zero API ───────────────────────────
 function localAI(msg,lancs){
@@ -66,16 +71,8 @@ function localAI(msg,lancs){
   const formas=[["Cartão Crédito",["credito","cartao cred","no credito"]],["Cartão Débito",["debito","cartao deb","no debito"]],["PIX",["pix"]],["Dinheiro",["dinheiro","especie","fisico"]]];
   const icons={"Alimentação":"🍔","Transporte":"🚗","Moradia":"🏠","Saúde":"❤️","Academia":"💪","Educação":"📚","Lazer":"🎮","Assinaturas":"📱","Vestuário":"👕","Pets":"🐾","Eletrônicos":"💻","Presentes":"🎁","Impostos":"📄","Dívidas":"💳","Farmácia":"💊","Outros":"💰","Salário":"💰","Freelance":"🖥","Investimentos":"📈","Bônus":"🏆","Reembolso":"↩","Renda Extra":"⭐"};
 
-  function detectCat(fragment,isRec){
-    let cat=isRec?"Renda Extra":"Outros";
-    const fn=norm(fragment);
-    for(const [c,words] of rules){
-      if(words.some(w=>fn.includes(norm(w)))){
-        if(recCats.includes(c)===isRec){cat=c;break;}
-      }
-    }
-    return cat;
-  }
+  // Usa o categorizador compartilhado (taxonomia + regras) — chat e WhatsApp entram aqui
+  function detectCat(fragment,isRec){return categorizar(fragment,isRec?"Receita":"Despesa");}
   function detectForma(fragment){
     const fn=norm(fragment);
     for(const [f,words] of formas){if(words.some(w=>fn.includes(norm(w))))return f;}
@@ -141,11 +138,12 @@ function localAI(msg,lancs){
     if(!valor)return null;
     const isRec=recW.some(w=>nt.includes(norm(w)));
     const cat=detectCat(fragment,isRec);
+    const subcat=isRec?"":subDe(fragment,cat);
     const forma=detectForma(fragment);
     const desc=limpDesc(fragment,cat);
     const tipo=isRec?"Receita":"Despesa";
     const emoji=icons[cat]||"💰";
-    return{action:"lancamento",tipo,desc,cat,forma,valor,data,confirmacao:`${emoji} ${tipo} de R$${valor.toFixed(2)} em ${cat}. Confirma?`};
+    return{action:"lancamento",tipo,desc,cat,subcat,forma,valor,data,confirmacao:`${emoji} ${tipo} de R$${valor.toFixed(2)} em ${cat}${subcat?" ("+subcat+")":""}. Confirma?`};
   }
 
   if(segments.length>=2){
@@ -263,4 +261,4 @@ Se não conseguir identificar retorne: {"erro":"não identificado"}`}
   }catch{return{erro:"parse error"};}
 }
 
-export { localAI, callAI, createSpeechRecognizer, analyzePhoto, categorizar };
+export { localAI, callAI, createSpeechRecognizer, analyzePhoto, categorizar, subcategorizar };

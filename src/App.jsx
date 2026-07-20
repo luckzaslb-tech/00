@@ -9,6 +9,7 @@ import { G, NH, HH, getCSS, setThemeVar } from "./theme.jsx";
 import { CATS_REC, CATS_DEP, FORMAS_REC, FORMAS_DEP } from "./lib/constants.js";
 import { today, round2 } from "./lib/utils.js";
 import { gerarRecorrentesDoMes } from "./lib/recorrentes.js";
+import { subDe } from "./lib/taxonomia.js";
 import { usePlano } from "./lib/usePlano.js";
 import { Spinner } from "./components/ui.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
@@ -96,7 +97,9 @@ export default function App(){
     if(!form.data||!v||v<=0){showT("Informe o valor e a data.","error");return;}
     const modo=form.modo||"normal";
     const cat=tipo==="Despesa"&&form.forma==="Cartão Crédito"?"Cartão de Crédito":form.cat;
-    const base={tipo,desc:form.desc,cat,forma:form.forma,...(form.cartaoId?{cartaoId:form.cartaoId}:{})};
+    // subcategoria: a escolhida ou a sugerida pela descrição (só despesa)
+    const subcat=tipo==="Despesa"?(form.subcat!==undefined?form.subcat:subDe(form.desc,cat)):"";
+    const base={tipo,desc:form.desc,cat,forma:form.forma,...(subcat?{subcat}:{}),...(form.cartaoId?{cartaoId:form.cartaoId}:{})};
     const parcelas=tipo==="Despesa"&&form.forma==="Cartão Crédito"&&modo==="normal"?(form.parcelas||1):1;
 
     if(parcelas>1){
