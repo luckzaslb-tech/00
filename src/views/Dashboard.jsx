@@ -191,7 +191,7 @@ function Dashboard({lancs:lancsAll,onDelete,user,onNovaDespesa,onNovaReceita,onI
         <div key={g.data} style={{marginBottom:10}}>
           <div style={{fontSize:11,fontWeight:600,color:G.muted,padding:"6px 2px 4px",textTransform:"capitalize"}}>{lblDia(g.data)}</div>
           <div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:"2px 16px"}}>
-            {g.itens.map(l=><TxRow key={l.id} l={l} onDelete={onDelete} hideValor={hide} hideDate/>)}
+            {g.itens.map(l=><TxRow key={l.id} l={l} onDelete={onDelete} hideValor={hide} hideDate minimal/>)}
           </div>
         </div>
       ))
