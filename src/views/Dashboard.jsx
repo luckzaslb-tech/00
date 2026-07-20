@@ -76,9 +76,13 @@ function Dashboard({lancs:lancsAll,onDelete,user,onNovaDespesa,onNovaReceita,onI
       <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
         <div>
           <div style={{fontSize:11,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",color:"rgba(255,255,255,.7)",marginBottom:4}}>Saldo em {mesNome} '{yy.slice(2)}</div>
-          <div className="num" style={{fontSize:34,fontWeight:800,letterSpacing:-1,lineHeight:1,color:"#fff",filter:hide?"blur(11px)":"none",transition:"filter .3s",userSelect:hide?"none":"auto"}}>
+          <div className="num" style={{fontSize:34,fontWeight:800,letterSpacing:-1,lineHeight:1,color:sal<0?"#FECACA":"#fff",filter:hide?"blur(11px)":"none",transition:"filter .3s",userSelect:hide?"none":"auto"}}>
             {fmt(sal)}
           </div>
+          {sal<0&&!hide&&<div style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:8,background:"rgba(0,0,0,.22)",borderRadius:8,padding:"3px 9px"}}>
+            <Ic d={ICON.warning} size={12} color="#FECACA"/>
+            <span style={{fontSize:11,fontWeight:700,color:"#FECACA"}}>Saldo negativo</span>
+          </div>}
           {diff!==null&&!hide&&<div style={{fontSize:12,fontWeight:500,color:"rgba(255,255,255,.85)",marginTop:7,display:"flex",alignItems:"center",gap:4}}>
             <Ic d={diff>=0?ICON.arrow_up:ICON.arrow_down} size={12} color="rgba(255,255,255,.85)"/>
             {diff>=0?"+":""}{fmt(diff)} vs mês anterior
@@ -90,6 +94,25 @@ function Dashboard({lancs:lancsAll,onDelete,user,onNovaDespesa,onNovaReceita,onI
         </button>
       </div>
     </div>
+
+    {/* ════ PRIMEIROS PASSOS (só quando não há lançamentos) ══ */}
+    {lancs.length===0&&<div style={{background:G.card,border:`1px solid ${G.border}`,borderRadius:16,padding:16,marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:G.text,marginBottom:3}}>Bem-vindo ao Fine 👋</div>
+      <div style={{fontSize:12,color:G.muted,marginBottom:14}}>Comece a controlar seu dinheiro em 3 passos:</div>
+      {[
+        {ic:ICON.plus,c:G.green,t:"Adicione um lançamento",d:"Toque em Despesa ou Receita aqui embaixo.",fn:onNovaDespesa},
+        {ic:ICON.ai,c:G.accent,t:"Fale com a IA",d:'Escreva "gastei 30 no mercado" na aba IA.',fn:null},
+        {ic:ICON.card,c:G.accent,t:"Cadastre seus cartões",d:"Acompanhe faturas e parcelas.",fn:onIrCartoes},
+      ].map((p,i)=>(
+        <button key={i} onClick={p.fn||undefined} className={p.fn?"press":""} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"9px 2px",background:"none",border:"none",cursor:p.fn?"pointer":"default",fontFamily:"inherit",textAlign:"left"}}>
+          <div style={{width:32,height:32,borderRadius:9,background:p.c+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic d={p.ic} size={15} color={p.c}/></div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,color:G.text}}>{p.t}</div>
+            <div style={{fontSize:11,color:G.muted}}>{p.d}</div>
+          </div>
+        </button>
+      ))}
+    </div>}
 
     {/* ════ AÇÕES RÁPIDAS ════════════════════════════════════ */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:20}}>

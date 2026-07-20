@@ -88,7 +88,7 @@ export default function App(){
     });
   },[recorrentes,user,lancsLoaded,lancs]);
 
-  const showT=useCallback((msg,type="success")=>{setToast({msg,type});clearTimeout(tRef.current);tRef.current=setTimeout(()=>setToast(null),2400);},[]);
+  const showT=useCallback((msg,type="success",action=null)=>{setToast({msg,type,action});clearTimeout(tRef.current);tRef.current=setTimeout(()=>setToast(null),action?5000:2400);},[]);
 
   function openModal(t){setTipo(t);setForm({data:today(),desc:"",cat:t==="Receita"?CATS_REC[0]:CATS_DEP[0],forma:t==="Receita"?FORMAS_REC[0]:FORMAS_DEP[0],valor:"",modo:"normal",freq:"mensal",dia:1,cartaoId:""});setModal(true);}
 
@@ -127,7 +127,11 @@ export default function App(){
     const label=modo==="recorrente"?" ↻":modo==="agendado"?" ":"";
     showT(`${tipo} adicionada!${label}`);setModal(false);
   }
-  async function deletar(id){await deleteDoc(doc(db,"users",user.uid,"lancamentos",id));showT("Removido.","error");}
+  async function deletar(id){
+    const prev=lancs.find(l=>l.id===id);
+    await deleteDoc(doc(db,"users",user.uid,"lancamentos",id));
+    showT("Removido.","error",prev?{label:"Desfazer",fn:async()=>{const{id:_ig,...rest}=prev;await addDoc(collection(db,"users",user.uid,"lancamentos"),rest);showT("Restaurado! ✓");}}:null);
+  }
   async function toggleRec(id){const r=recorrentes.find(r=>r.id===id);if(r)await updateDoc(doc(db,"users",user.uid,"recorrentes",id),{ativo:!r.ativo});}
   async function deleteRec(id){
     await deleteDoc(doc(db,"users",user.uid,"recorrentes",id));
@@ -217,6 +221,6 @@ export default function App(){
     <Sheet open={modal} onClose={()=>setModal(false)} title="Novo Lançamento">
       <LancForm tipo={tipo} setTipo={setTipo} form={form} setForm={setForm} onSave={salvar} cartoes={cartoesList}/>
     </Sheet>
-    {toast&&<div style={{position:"fixed",bottom:NH+12,left:"50%",transform:"translateX(-50%)",background:G.card2,border:`1px solid ${toast.type==="success"?G.green:G.red}55`,borderRadius:20,padding:"10px 18px",fontSize:13,fontWeight:600,zIndex:9999,display:"flex",alignItems:"center",gap:8,animation:"fadeUp .28s ease",boxShadow:"0 6px 24px rgba(0,0,0,.5)",whiteSpace:"nowrap",color:toast.type==="success"?G.green:G.red}}>{toast.type==="success"?"✓":"✕"} {toast.msg}</div>}
+    {toast&&<div style={{position:"fixed",bottom:NH+12,left:"50%",transform:"translateX(-50%)",background:G.card2,border:`1px solid ${toast.type==="success"?G.green:G.red}55`,borderRadius:20,padding:"10px 18px",fontSize:13,fontWeight:600,zIndex:9999,display:"flex",alignItems:"center",gap:8,animation:"fadeUp .28s ease",boxShadow:"0 6px 24px rgba(0,0,0,.5)",whiteSpace:"nowrap",color:toast.type==="success"?G.green:G.red}}>{toast.type==="success"?"✓":"✕"} {toast.msg}{toast.action&&<button onClick={()=>{toast.action.fn();clearTimeout(tRef.current);setToast(null);}} style={{marginLeft:4,background:"none",border:"none",color:G.accent,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline",padding:0}}>{toast.action.label}</button>}</div>}
   </>);
 }
